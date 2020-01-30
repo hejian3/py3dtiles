@@ -313,7 +313,8 @@ def init_parser(subparser, str2bool):
     c_help = 'geometry column name'
     parser.add_argument('-c', metavar='COLUMN', type=str, help=c_help)
 
-    parser.add_argument('-i', metavar='IDCOLUMN', type=str, help=c_help)
+    i_help = 'id column name'
+    parser.add_argument('-i', metavar='IDCOLUMN', type=str, help=i_help)
 
     u_help = 'database user name'
     parser.add_argument('-u', metavar='USER', type=str, help=u_help)
