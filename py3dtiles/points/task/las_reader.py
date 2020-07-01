@@ -1,12 +1,14 @@
+import json
 import numpy as np
 import math
 import traceback
 import laspy
-import pyproj
 import struct
+import subprocess
 from laspy.file import File
-import liblas
 from pickle import dumps as pdumps
+
+from py3dtiles.utils import SrsInMissingException
 
 
 def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
@@ -51,12 +53,10 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
             pointcloud_file_portions += [(filename, p)]
 
         if (srs_out is not None and srs_in is None):
-            f = liblas.file.File(filename)
-            if (f.header.srs.proj4 is not None
-                    and f.header.srs.proj4 != ''):
-                srs_in = pyproj.Proj(f.header.srs.proj4)
-            else:
-                raise Exception('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
+            summary = json.loads(subprocess.check_output(['pdal', 'info', '--summary', filename]))['summary']
+            if 'srs' not in summary:
+                raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
+            srs_in = summary['srs']['proj4']
 
     return {
         'portions': pointcloud_file_portions,
@@ -68,7 +68,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(_id, filename, offset_scale, portion, queue, projection, verbose):
+def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
     '''
     Reads points from a las file
     '''
@@ -106,8 +106,8 @@ def run(_id, filename, offset_scale, portion, queue, projection, verbose):
             y = Y[start_offset:start_offset + num] * f.header.scale[1] + f.header.offset[1]
             z = Z[start_offset:start_offset + num] * f.header.scale[2] + f.header.offset[2]
 
-            if projection:
-                x, y, z = pyproj.transform(projection[0], projection[1], x, y, z)
+            if transformer:
+                x, y, z = transformer.transform(x, y, z)
 
             x = (x + offset_scale[0][0]) * offset_scale[1][0]
             y = (y + offset_scale[0][1]) * offset_scale[1][1]

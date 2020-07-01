@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import traceback
-import pyproj
 import struct
 from pickle import dumps as pdumps
 
@@ -81,7 +80,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(_id, filename, offset_scale, portion, queue, projection, verbose):
+def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
     """
     Reads points from a xyz file
 
@@ -124,8 +123,8 @@ def run(_id, filename, offset_scale, portion, queue, projection, verbose):
 
             x, y, z = [points[:, c] for c in [0, 1, 2]]
 
-            if projection:
-                x, y, z = pyproj.transform(projection[0], projection[1], x, y, z)
+            if transformer:
+                x, y, z = transformer.transform(x, y, z)
 
             x = (x + offset_scale[0][0]) * offset_scale[1][0]
             y = (y + offset_scale[0][1]) * offset_scale[1][1]

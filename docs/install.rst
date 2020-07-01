@@ -1,6 +1,20 @@
 Install
 -------
 
+Dependencies:
+- PDAL > 1.7
+
+From pypi
+~~~~~~~~~~~~
+
+`py3dtiles` is published on pypi.org.
+
+```
+pip install py3dtiles
+```
+
+
+
 From sources
 ~~~~~~~~~~~~
 
