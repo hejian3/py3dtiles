@@ -74,8 +74,9 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
     log_enabled = log_file is not None
 
     if log_enabled:
-        print('[>] process_node: "{}", {}'.format(
-            name, len(raw_datas), file=log_file, flush=True))
+        print('[>] process_node: "{}", {}'.format(name, len(raw_datas)),
+              file=log_file,
+              flush=True)
 
     node = node_catalog.get_node(name)
 
