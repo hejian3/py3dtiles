@@ -1,0 +1,29 @@
+.job_template: &job_definition
+  stage: test
+  before_script:
+    - apt update
+    - apt install -y pdal
+  script:
+    - pip install .
+    - pip install .[dev]
+    - pytest
+    - flake8 setup.py py3dtiles/
+    # TODO move that in unit tests
+    - py3dtiles info tests/pointCloudRGB.pnts
+  tags:
+    - gitlab-org-docker
+
+# oldest supported
+test:python35:
+  <<: *job_definition
+  image: python:3.5
+
+# latest
+test:python-latest:
+  <<: *job_definition
+  image: python:latest
+
+# stretch
+test:python-stretch:
+  <<: *job_definition
+  image: python:3.7-stretch

@@ -39,7 +39,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
             if 'red' in f.point_format.lookup:
                 color_test_field = 'red'
                 if np.max(f.get_points()['point'][color_test_field][0:min(10000, f.header.count)]) > 255:
-                        color_scale = 1.0 / 255
+                    color_scale = 1.0 / 255
             else:
                 color_test_field = 'intensity'
                 color_scale = 1.0 / 255
