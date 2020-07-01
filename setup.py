@@ -11,16 +11,15 @@ requirements = (
     'cython',
     'triangle',
     'psycopg2-binary',
-    'liblas',
     'laspy',
     'numba',
-    'pyproj',
     'psutil',
     'lz4',
     'pyzmq'
 )
 
 dev_requirements = (
+    'flake8',
     'pytest',
     'pytest-cov',
     'pytest-benchmark',

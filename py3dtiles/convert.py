@@ -8,11 +8,12 @@ import json
 from collections import namedtuple
 import pickle
 import zmq
-import pyproj
+from pyproj import CRS, Transformer
 import psutil
 import struct
 import concurrent.futures
 import argparse
+from py3dtiles.utils import SrsInMissingException
 from py3dtiles.points.transformations import rotation_matrix, angle_between_vectors, vector_product, inverse_matrix, scale_matrix, translation_matrix
 from py3dtiles.points.utils import compute_spacing, name_to_filename
 from py3dtiles.points.node import Node
@@ -27,11 +28,7 @@ import py3dtiles.points.task.pnts_writer as pnts_writer
 total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 
 
-class SrsInMissingException(Exception):
-    pass
-
-
-def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, projection, rotation_matrix, include_rgb):
+def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
     # compute tile transform matrix
     if rotation_matrix is None:
         transform = np.identity(4)
@@ -98,7 +95,7 @@ def make_rotation_matrix(z1, z2):
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
 
 
-def zmq_process(activity_graph, projection, node_store, octree_metadata, folder, write_rgb, verbosity):
+def zmq_process(activity_graph, transformer, node_store, octree_metadata, folder, write_rgb, verbosity):
     context = zmq.Context()
 
     # Socket to receive messages on
@@ -144,7 +141,7 @@ def zmq_process(activity_graph, projection, node_store, octree_metadata, folder,
                 command['offset_scale'],
                 command['portion'],
                 skt,
-                projection,
+                transformer,
                 verbosity)
         elif command[0] == b'pnts':
             command_type = 3
@@ -368,34 +365,30 @@ def convert(files,
     # read all input files headers and determine the aabb/spacing
     _, ext = os.path.splitext(files[0])
     init_reader_fn = las_reader.init if ext == '.las' else xyz_reader.init
-    infos = init_reader_fn(files, color_scale=color_scale, srs_in=srs_in)
+    infos = init_reader_fn(files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
     avg_min = infos['avg_min']
     rotation_matrix = None
     # srs stuff
-    projection = None
+    transformer = None
     if srs_out is not None:
-        p2 = pyproj.Proj(init='epsg:{}'.format(srs_out))
+        crs_out = CRS('epsg:{}'.format(srs_out))
         if srs_in is not None:
-            p1 = pyproj.Proj(init='epsg:{}'.format(srs_in))
-        else:
-            p1 = infos['srs_in']
-        if srs_in is None:
+            crs_in = CRS('epsg:{}'.format(srs_in))
+        elif infos['srs_in'] is None:
             raise SrsInMissingException('No SRS informations in the provided files')
-        projection = [p1, p2]
+        else:
+            crs_in = CRS(infos['srs_in'])
+        transformer = Transformer.from_crs(crs_in, crs_out)
 
-        bl = np.array(list(pyproj.transform(
-            projection[0], projection[1],
+        bl = np.array(list(transformer.transform(
             infos['aabb'][0][0], infos['aabb'][0][1], infos['aabb'][0][2])))
-        tr = np.array(list(pyproj.transform(
-            projection[0], projection[1],
+        tr = np.array(list(transformer.transform(
             infos['aabb'][1][0], infos['aabb'][1][1], infos['aabb'][1][2])))
-        br = np.array(list(pyproj.transform(
-            projection[0], projection[1],
+        br = np.array(list(transformer.transform(
             infos['aabb'][1][0], infos['aabb'][0][1], infos['aabb'][0][2])))
 
-        avg_min = np.array(list(pyproj.transform(
-            projection[0], projection[1],
+        avg_min = np.array(list(transformer.transform(
             avg_min[0], avg_min[1], avg_min[2])))
 
         x_axis = br - bl
@@ -501,7 +494,7 @@ def convert(files,
     zmq_processes = [multiprocessing.Process(
         target=zmq_process,
         args=(
-            graph, projection, node_store, octree_metadata, outfolder, rgb, verbose)) for i in range(jobs)]
+            graph, transformer, node_store, octree_metadata, outfolder, rgb, verbose)) for i in range(jobs)]
 
     for p in zmq_processes:
         p.start()
@@ -658,7 +651,6 @@ def convert(files,
                               octree_metadata,
                               avg_min,
                               root_scale,
-                              projection,
                               rotation_matrix,
                               rgb)
                 shutil.rmtree(working_dir)
