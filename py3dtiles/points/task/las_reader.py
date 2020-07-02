@@ -53,7 +53,9 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
             pointcloud_file_portions += [(filename, p)]
 
         if (srs_out is not None and srs_in is None):
-            summary = json.loads(subprocess.check_output(['pdal', 'info', '--summary', filename]))['summary']
+            # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
+            output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
+            summary = json.loads(output)['summary']
             if 'srs' not in summary:
                 raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
             srs_in = summary['srs']['proj4']
