@@ -2,7 +2,7 @@
   stage: test
   before_script:
     - apt update
-    - apt install -y pdal
+    - apt install -y pdal llvm
   script:
     - pip install .
     - pip install .[dev]
