@@ -24,14 +24,6 @@ project = u'py3dtiles'
 copyright = u'2019, Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
 author = u'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
 
-# The short X.Y version
-latest_tag = subprocess.check_output(['git', 'describe', '--tags', '--abbrev=0'])
-print(latest_tag)
-version = latest_tag
-# The full version, including alpha/beta/rc tags
-#release = u'1.0.2, 1.0.1, 0.0.9'
-
-
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
