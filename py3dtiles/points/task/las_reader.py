@@ -56,7 +56,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
             # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
             output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
             summary = json.loads(output)['summary']
-            if 'srs' not in summary:
+            if 'srs' not in summary or 'proj4' not in summary['srs'] or not summary['srs']['proj4']:
                 raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
             srs_in = summary['srs']['proj4']
 
