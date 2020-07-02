@@ -27,3 +27,22 @@ test:python-latest:
 test:python-stretch:
   <<: *job_definition
   image: python:3.7-stretch
+
+#########
+# PAGES #
+#########
+pages:
+  stage: deploy
+  image: python:latest
+  script:
+    - pip install .
+    - pip install .[doc]
+    - sphinx-multiversion docs public
+    - cp -rv docs/index_redirect.html public/index.html
+    - current_version="$(git describe --tags --abbrev=0)"
+    - sed -i "s/VERSION/$current_version/g" public/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
