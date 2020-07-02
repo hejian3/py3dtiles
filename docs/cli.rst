@@ -72,10 +72,10 @@ correctly placed. Usage example:
 
     $ export_tileset -d my_directory -o 10000 10000 0
 
-The database export requires a user name, a database name, the name of the table
-and its column that contains the geometry and (optionaly) the name of the column
-that contains the object's ID and the host and port. Usage example:
+The database export requires a connexion info string, the name of the table and its
+column that contains the geometry and (optionally) the name of the column that contains
+the object's ID. Usage example:
 
 .. code-block:: shell
 
-    $ py3dtiles export -t table -D database -c geometry_column -i id -u oslandia -H localhost -P 5432
+    $ py3dtiles export -D "dbame=mydb user=me host=localhost port=5432" -t table -c geometry_column -i id
