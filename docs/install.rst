@@ -3,6 +3,7 @@ Install
 
 Dependencies:
 - PDAL > 1.7
+- llvm for numba
 
 From pypi
 ~~~~~~~~~~~~

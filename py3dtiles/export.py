@@ -164,7 +164,7 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
 
     # Export b3dm & tileset
     tileset = tree.to_tileset(transform)
-    f = open("tileset.json".format(node.id), 'w')
+    f = open("tileset.json", 'w')
     f.write(json.dumps(tileset))
     print("Creating tiles...")
     nodes = tree.all_nodes()

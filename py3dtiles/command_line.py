@@ -45,7 +45,7 @@ def main():
             export.main(args)
         else:
             parser.print_help()
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         print('')
         parser.print_help()
