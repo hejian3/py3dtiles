@@ -7,7 +7,7 @@
     - pip install .
     - pip install .[dev]
     - pytest
-    - flake8 setup.py py3dtiles/
+    - flake8 setup.py py3dtiles/ docs/
     # TODO move that in unit tests
     - py3dtiles info tests/pointCloudRGB.pnts
   tags:

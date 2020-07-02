@@ -25,7 +25,7 @@ copyright = u'2019, Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludov
 author = u'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
 
 # The short X.Y version
-latest_tag=subprocess.check_output(['git', 'describe', '--tags', '--abbrev=0'])
+latest_tag = subprocess.check_output(['git', 'describe', '--tags', '--abbrev=0'])
 print(latest_tag)
 version = latest_tag
 # The full version, including alpha/beta/rc tags
