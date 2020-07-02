@@ -105,7 +105,8 @@ smv_tag_whitelist = r'^.*$'
 smv_branch_whitelist = r'^master$'
 
 # Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None
+# set to upstream because we add this remote for gitlab, see .gitlab-ci.yml
+smv_remote_whitelist = r'^upstream|origin$'
 
 # Pattern for released versions
 smv_released_pattern = r'^tags/.*$'

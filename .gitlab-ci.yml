@@ -37,9 +37,12 @@ pages:
   script:
     - pip install .
     - pip install .[doc]
+    # sphinx-multiversion needs to have all the branches
+    - git remote add upstream https://gitlab.com/Oslandia/py3dtiles.git
+    - git fetch upstream
     - sphinx-multiversion docs public
     - cp -rv docs/index_redirect.html public/index.html
-    - current_version="$(git describe --tags --abbrev=0)"
+    - current_version="$(git tag --list | tail -n1)"
     - sed -i "s/VERSION/$current_version/g" public/index.html
   artifacts:
     paths:
