@@ -219,7 +219,7 @@ class FeatureTableHeader(object):
         fth : FeatureTableHeader
         """
 
-        jsond = json.loads(array.tostring().decode('utf-8'))
+        jsond = json.loads(array.tobytes().decode('utf-8'))
         fth = FeatureTableHeader()
 
         # search position
