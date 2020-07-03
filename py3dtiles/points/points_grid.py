@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit
+from numba.typed import List
 
 from py3dtiles.points.utils import SubdivisionType, aabb_size_to_subdivision_type
 from py3dtiles.points.distance import is_point_far_enough, xyz_to_key
@@ -42,8 +43,25 @@ class Grid(object):
         self.cell_count = np.array([initial_count, initial_count, initial_count], dtype=np.int32)
         self.spacing = node.spacing * node.spacing
 
-        self.cells_xyz = [np.zeros((0, 3), dtype=np.float32) for _ in range(self.max_key_value)]
-        self.cells_rgb = [np.zeros((0, 3), dtype=np.uint8) for _ in range(self.max_key_value)]
+        self.cells_xyz = List()
+        self.cells_rgb = List()
+        for _ in range(self.max_key_value):
+            self.cells_xyz.append(np.zeros((0, 3), dtype=np.float32))
+            self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
+
+    def __getstate__(self):
+        return {
+            "cell_count": self.cell_count,
+            "spacing": self.spacing,
+            "cells_xyz": list(self.cells_xyz),
+            "cells_rgb": list(self.cells_rgb),
+        }
+
+    def __setstate__(self, state):
+        self.cell_count = state['cell_count']
+        self.spacing = state['spacing']
+        self.cells_xyz = List(state['cells_xyz'])
+        self.cells_rgb = List(state['cells_rgb'])
 
     @property
     def max_key_value(self):
@@ -78,8 +96,11 @@ class Grid(object):
 
         old_cells_xyz = self.cells_xyz
         old_cells_rgb = self.cells_rgb
-        self.cells_xyz = [np.zeros((0, 3), dtype=np.float32) for _ in range(self.max_key_value)]
-        self.cells_rgb = [np.zeros((0, 3), dtype=np.uint8) for _ in range(self.max_key_value)]
+        self.cells_xyz = List()
+        self.cells_rgb = List()
+        for _ in range(self.max_key_value):
+            self.cells_xyz.append(np.zeros((0, 3), dtype=np.float32))
+            self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
 
         for cellxyz, cellrgb in zip(old_cells_xyz, old_cells_rgb):
             self.insert(aabmin, inv_aabb_size, cellxyz, cellrgb, True)
