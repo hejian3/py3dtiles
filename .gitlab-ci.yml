@@ -7,7 +7,7 @@
     - pip install .
     - pip install .[dev]
     - pytest
-    - flake8 setup.py py3dtiles/
+    - flake8 setup.py py3dtiles/ docs/
     # TODO move that in unit tests
     - py3dtiles info tests/pointCloudRGB.pnts
   tags:
@@ -27,3 +27,25 @@ test:python-latest:
 test:python-stretch:
   <<: *job_definition
   image: python:3.7-stretch
+
+#########
+# PAGES #
+#########
+pages:
+  stage: deploy
+  image: python:latest
+  script:
+    - pip install .
+    - pip install .[doc]
+    # sphinx-multiversion needs to have all the branches
+    - git remote add upstream https://gitlab.com/Oslandia/py3dtiles.git
+    - git fetch upstream
+    - sphinx-multiversion docs public
+    - cp -rv docs/index_redirect.html public/index.html
+    - current_version="$(git tag --list | tail -n1)"
+    - sed -i "s/VERSION/$current_version/g" public/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

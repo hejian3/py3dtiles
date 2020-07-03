@@ -15,9 +15,15 @@ SPHINX_APIDOC_OPTIONS="members,show-inheritance" sphinx-apidoc -o ./api ../py3dt
 ```
 This command needs to be used only when new files are added (TODO check if sphinx-autoapi wouldn't do this job for us?)
 
-To regenerate the doc:
+To regenerate the doc for one version:
 
 ```
 make clean && make html
 ```
 (For some reason, make clean is often necessary if the toctree changes)
+
+To generate the doc as gitlab does it:
+
+```
+sphinx-multiversion . <outfolder>
+```

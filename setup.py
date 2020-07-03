@@ -29,6 +29,7 @@ dev_requirements = (
 doc_requirements = (
     'sphinx',
     'sphinx_rtd_theme',
+    'sphinx-multiversion',
 )
 
 
@@ -59,7 +60,7 @@ setup(
     version=find_version('py3dtiles', '__init__.py'),
     description="Python module for 3D tiles format",
     long_description=read('README.rst'),
-    url='https://github.com/Oslandia/py3dtiles',
+    url='https://gitlab.com/Oslandia/py3dtiles',
     author='Oslandia',
     author_email='contact@oslandia.com',
     license='Apache License Version 2.0',

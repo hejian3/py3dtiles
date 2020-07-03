@@ -24,6 +24,6 @@ p3dtiles is a Python tool and library for manipulating `3D Tiles`_.
 
 py3dtiles is distributed under the Apache 2 Licence.
 
-GitHub repository: https://github.com/Oslandia/py3dtiles
+Gitlab repository: https://gitlab.com/Oslandia/py3dtiles
 
-Documentation : https://oslandia.github.io/py3dtiles
+Documentation : https://oslandia.gitlab.io/py3dtiles
