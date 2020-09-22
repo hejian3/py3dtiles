@@ -245,7 +245,7 @@ def build_secure_conn(db_conninfo):
         connection = psycopg2.connect(db_conninfo)
     except psycopg2.OperationalError:
         pw = getpass.getpass("Postgres password: ")
-        connection = psycopg2.connect(db_conninfo + f" password={pw}")
+        connection = psycopg2.connect(db_conninfo + " password={pw}".format(pw=pw))
     return connection
 
 
