@@ -229,15 +229,29 @@ def wkbs2tileset(wkbs, ids, transform):
     arrays2tileset(positions, normals, bboxes, transform, ids)
 
 
-def from_db(db_name, table_name, column_name, id_column_name, user_name, host=None, port=None):
-    user = getpass.getuser() if user_name is None else user_name
+def build_secure_conn(db_conninfo):
+    """Get a psycopg2 connexion securely, e.g. without writing the password explicitely
+    in the terminal
 
+    Parameters
+    ----------
+    db_conninfo : str
+
+    Returns
+    -------
+    psycopg2.extensions.connection
+    """
     try:
-        connection = psycopg2.connect(dbname=db_name, user=user, host=host, port=port)
+        connection = psycopg2.connect(db_conninfo)
     except psycopg2.OperationalError:
-        pw = getpass.getpass("Postgres password for user {}\n".format(user))
-        connection = psycopg2.connect(dbname=db_name, user=user, password=pw, host=host, port=port)
+        pw = getpass.getpass("Postgres password: ")
+        connection = psycopg2.connect(db_conninfo + " password={pw}".format(pw=pw))
+    return connection
 
+
+def from_db(db_conninfo, table_name, column_name, id_column_name):
+
+    connection = build_secure_conn(db_conninfo)
     cur = connection.cursor()
 
     print("Loading data from database...")
@@ -293,37 +307,31 @@ def from_directory(directory, offset):
 
 
 def init_parser(subparser, str2bool):
-    descr = 'Generate a tileset from a set of geometries'
+    descr = "Generate a tileset from a set of geometries"
     parser = subparser.add_parser('export', help=descr)
 
     group = parser.add_mutually_exclusive_group()
 
-    d_help = 'name of the directory containing the geometries'
+    d_help = "Name of the directory containing the geometries"
     group.add_argument('-d', metavar='DIRECTORY', type=str, help=d_help)
 
-    o_help = 'offset of the geometries (only with -d)'
+    o_help = "Offset of the geometries (only with '-d')"
     parser.add_argument('-o', nargs=3, metavar=('X', 'Y', 'Z'), type=float, help=o_help)
 
-    D_help = 'database name'
-    group.add_argument('-D', metavar='DATABASE', type=str, help=D_help)
+    D_help = """
+    Database connexion info (e.g. 'service=py3dtiles' or \
+    'dbname=py3dtiles host=localhost port=5432 user=yourname password=yourpwd')
+    """
+    group.add_argument('-D', metavar='DB_CONNINFO', type=str, help=D_help)
 
-    t_help = 'table name'
+    t_help = "Table name (required if '-D' option is activated)"
     parser.add_argument('-t', metavar='TABLE', type=str, help=t_help)
 
-    c_help = 'geometry column name'
+    c_help = "Geometry column name (required if '-D' option is activated)"
     parser.add_argument('-c', metavar='COLUMN', type=str, help=c_help)
 
-    i_help = 'id column name'
+    i_help = "Id column name (only with '-D')"
     parser.add_argument('-i', metavar='IDCOLUMN', type=str, help=i_help)
-
-    u_help = 'database user name'
-    parser.add_argument('-u', metavar='USER', type=str, help=u_help)
-
-    H_help = 'database host'
-    parser.add_argument('-H', metavar='HOST', type=str, help=H_help)
-
-    P_help = 'database port'
-    parser.add_argument('-P', metavar='PORT', type=int, help=P_help)
 
 
 def main(args):
@@ -332,7 +340,7 @@ def main(args):
             print('Error: please define a table (-t) and column (-c)')
             exit()
 
-        from_db(args.D, args.t, args.c, args.i, args.u, args.H, args.P)
+        from_db(args.D, args.t, args.c, args.i)
     elif args.d is not None:
         from_directory(args.d, args.o)
     else:
