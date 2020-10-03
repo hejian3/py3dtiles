@@ -95,7 +95,12 @@ def make_rotation_matrix(z1, z2):
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
 
 
-def zmq_process(activity_graph, transformer, node_store, octree_metadata, folder, write_rgb, verbosity):
+def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_metadata, folder, write_rgb, verbosity):
+    transformer = None
+    if srs_out_wkt is not None:
+        crs_out = CRS(srs_out_wkt)
+        crs_in = CRS(srs_in_wkt)
+        transformer = Transformer.from_crs(crs_in, crs_out)
     context = zmq.Context()
 
     # Socket to receive messages on
@@ -371,6 +376,8 @@ def convert(files,
     rotation_matrix = None
     # srs stuff
     transformer = None
+    srs_out_wkt = None
+    srs_in_wkt = None
     if srs_out is not None:
         crs_out = CRS('epsg:{}'.format(srs_out))
         if srs_in is not None:
@@ -379,6 +386,10 @@ def convert(files,
             raise SrsInMissingException('No SRS informations in the provided files')
         else:
             crs_in = CRS(infos['srs_in'])
+
+        srs_out_wkt = crs_out.to_wkt()
+        srs_in_wkt = crs_in.to_wkt()
+
         transformer = Transformer.from_crs(crs_in, crs_out)
 
         bl = np.array(list(transformer.transform(
@@ -494,7 +505,7 @@ def convert(files,
     zmq_processes = [multiprocessing.Process(
         target=zmq_process,
         args=(
-            graph, transformer, node_store, octree_metadata, outfolder, rgb, verbose)) for i in range(jobs)]
+            graph, srs_out_wkt, srs_in_wkt, node_store, octree_metadata, outfolder, rgb, verbose)) for i in range(jobs)]
 
     for p in zmq_processes:
         p.start()
