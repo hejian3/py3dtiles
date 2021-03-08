@@ -180,10 +180,8 @@ def triangulate(polygon, additionalPolygons=[]):
     """
     vectProd = np.array([0, 0, 0], dtype=np.float32)
     for i in range(len(polygon[0])):
-        vect1 = (polygon[0][(i) % len(polygon[0])] -
-                 polygon[0][(i+1) % len(polygon[0])])
-        vect2 = (polygon[0][(i) % len(polygon[0])] -
-                 polygon[0][(i-1) % len(polygon[0])])
+        vect1 = (polygon[0][(i) % len(polygon[0])] - polygon[0][(i + 1) % len(polygon[0])])
+        vect2 = (polygon[0][(i) % len(polygon[0])] - polygon[0][(i - 1) % len(polygon[0])])
         vect1 /= np.linalg.norm(vect1)
         vect2 /= np.linalg.norm(vect2)
         vectProd += np.cross(vect1, vect2)
