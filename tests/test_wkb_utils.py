@@ -86,3 +86,15 @@ def test_triangulate_winding_order_complex(complex_polygon):
 
 def test_benchmark_triangulate(complex_polygon, benchmark):
     benchmark(wkb_utils.triangulate, complex_polygon)
+
+def test_benchmark_triangulate_bigger_polygon(benchmark):
+    complex_polygon = [ 
+        [
+            np.array([0, 1, 0], dtype=np.float32),
+            np.array([0.5, 0.5, 0], dtype=np.float32),
+            np.array([0, 0, 0], dtype=np.float32),
+            np.array([1, 0, 0], dtype=np.float32),
+            np.array([1, 1, 0], dtype=np.float32)
+        ]
+    ]
+    benchmark(wkb_utils.triangulate, complex_polygon)
