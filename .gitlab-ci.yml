@@ -14,9 +14,9 @@
     - gitlab-org-docker
 
 # oldest supported
-test:python35:
+test:python36:
   <<: *job_definition
-  image: python:3.5
+  image: python:3.6
 
 # latest
 test:python-latest:
