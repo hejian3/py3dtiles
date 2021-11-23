@@ -2,7 +2,7 @@
 import struct
 import numpy as np
 
-from .tile import TileContent, TileHeader, TileBody, TileType
+from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
 from .gltf import GlTF
 from .batch_table import BatchTable
 
@@ -70,11 +70,11 @@ class B3dm(TileContent):
         return t
 
 
-class B3dmHeader(TileHeader):
+class B3dmHeader(TileContentHeader):
     BYTELENGTH = 28
 
     def __init__(self):
-        self.type = TileType.BATCHED3DMODEL
+        self.type = TileContentType.BATCHED3DMODEL
         self.magic_value = b"b3dm"
         self.version = 1
         self.tile_byte_length = 0
@@ -146,12 +146,12 @@ class B3dmHeader(TileHeader):
         h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
         h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
 
-        h.type = TileType.BATCHED3DMODEL
+        h.type = TileContentType.BATCHED3DMODEL
 
         return h
 
 
-class B3dmBody(TileBody):
+class B3dmBody(TileContentBody):
     def __init__(self):
         self.batch_table = BatchTable()
         # self.feature_table = FeatureTable()
