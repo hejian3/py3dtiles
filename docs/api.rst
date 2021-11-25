@@ -9,9 +9,9 @@ Generic Tile
 The py3dtiles module provides some classes to fit into the
 specification:
 
-- *TileContent* with a header *TileHeader* and a body *TileBody*
-- *TileHeader* represents the metadata of the tile (magic value, version, ...)
-- *TileBody* contains varying semantic and geometric data depending on the the tile's type
+- *TileContent* with a header *TileContentHeader* and a body *TileContentBody*
+- *TileContentHeader* represents the metadata of the tile (magic value, version, ...)
+- *TileContentBody* contains varying semantic and geometric data depending on the the tile's type
 
 Moreover, a utility class *TileContentReader* is available to read a tile
 file as well as a simple command line tool to retrieve basic information
@@ -48,7 +48,7 @@ In the current implementation, the *Pnts* class only contains a *FeatureTable*
     >>> # extract information about the tile_content header
     >>> th = tile_content.header
     >>> th
-    <py3dtiles.tile.TileHeader>
+    <py3dtiles.tile.TileContentHeader>
     >>> th.magic_value
     'pnts'
     >>> th.tile_byte_length

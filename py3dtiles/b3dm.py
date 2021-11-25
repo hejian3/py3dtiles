@@ -130,7 +130,7 @@ class B3dmHeader(TileContentHeader):
 
         Returns
         -------
-        h : TileHeader
+        h : TileContentHeader
         """
 
         h = B3dmHeader()
@@ -169,13 +169,13 @@ class B3dmBody(TileContentBody):
         """
         Parameters
         ----------
-        th : TileHeader
+        th : TileContentHeader
 
         glTF : GlTF
 
         Returns
         -------
-        b : TileBody
+        b : TileContentBody
         """
 
         # build tile body
@@ -189,13 +189,13 @@ class B3dmBody(TileContentBody):
         """
         Parameters
         ----------
-        th : TileHeader
+        th : TileContentHeader
 
         array : numpy.array
 
         Returns
         -------
-        b : TileBody
+        b : TileContentBody
         """
 
         # build feature table

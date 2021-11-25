@@ -117,7 +117,7 @@ class PntsHeader(TileContentHeader):
 
         Returns
         -------
-        h : TileHeader
+        h : TileContentHeader
         """
 
         h = PntsHeader()
@@ -151,13 +151,13 @@ class PntsBody(TileContentBody):
         """
         Parameters
         ----------
-        th : TileHeader
+        th : TileContentHeader
 
         array : numpy.array
 
         Returns
         -------
-        b : TileBody
+        b : TileContentBody
         """
 
         # build feature table
