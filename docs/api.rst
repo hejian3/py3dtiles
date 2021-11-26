@@ -43,12 +43,12 @@ In the current implementation, the *Pnts* class only contains a *FeatureTable*
     >>>
     >>> # tile_content is an instance of the TileContent class
     >>> tile_content
-    <py3dtiles.tile.TileContent>
+    <py3dtiles.tile_content.TileContent>
     >>>
     >>> # extract information about the tile_content header
     >>> th = tile_content.header
     >>> th
-    <py3dtiles.tile.TileContentHeader>
+    <py3dtiles.tile_content.TileContentHeader>
     >>> th.magic_value
     'pnts'
     >>> th.tile_byte_length
@@ -127,7 +127,7 @@ https://github.com/AnalyticalGraphicsInc/3d-tiles/tree/master/TileFormats/Batche
     >>>
     >>> # tile_content is an instance of the TileContent class
     >>> tile_content
-    <py3dtiles.tile.TileContent>
+    <py3dtiles.tile_content.TileContent>
     >>>
     >>> # extract information about the tile header
     >>> th = tile.header
