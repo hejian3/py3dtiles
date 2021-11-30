@@ -33,14 +33,6 @@ To use py3dtiles from sources:
 
 If you wan to run unit tests:
 
-`pdal` must be installed in order to run the tests locally:
-
-.. code-block:: shell
-
-    $ apt update
-    $ apt install -y pdal
-
-
 .. code-block:: shell
 
     (venv)$ pip install pytest pytest-benchmark
