@@ -5,7 +5,6 @@ import traceback
 import laspy
 import struct
 import subprocess
-from laspy.file import File
 from pickle import dumps as pdumps
 
 from py3dtiles.utils import SrsInMissingException
@@ -19,28 +18,28 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
 
     for filename in files:
         try:
-            f = File(filename, mode='r')
+            f = laspy.read(filename)
         except Exception as e:
             print('Error opening {filename}. Skipping.'.format(**locals()))
             print(e)
             continue
-        avg_min += (np.array(f.header.min) / len(files))
+        avg_min += (np.array(f.header.mins) / len(files))
 
         if aabb is None:
-            aabb = np.array([f.header.get_min(), f.header.get_max()])
+            aabb = np.array([f.header.mins, f.header.maxs])
         else:
-            bb = np.array([f.header.get_min(), f.header.get_max()])
+            bb = np.array([f.header.mins, f.header.maxs])
             aabb[0] = np.minimum(aabb[0], bb[0])
             aabb[1] = np.maximum(aabb[1], bb[1])
 
-        count = int(f.header.count * fraction / 100)
+        count = f.header.point_count * fraction // 100
         total_point_count += count
 
         # read the first points red channel
         if color_scale is None:
-            if 'red' in f.point_format.lookup:
+            if 'red' in f.point_format.dimension_names:
                 color_test_field = 'red'
-                if np.max(f.get_points()['point'][color_test_field][0:min(10000, f.header.count)]) > 255:
+                if np.max(f.points[color_test_field][:min(10000, f.header.point_count)]) > 255:
                     color_scale = 1.0 / 255
             else:
                 color_test_field = 'intensity'
@@ -75,7 +74,7 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
     Reads points from a las file
     '''
     try:
-        f = laspy.file.File(filename, mode='r')
+        f = laspy.read(filename)
 
         point_count = portion[1] - portion[0]
 
@@ -85,28 +84,27 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
 
         color_scale = offset_scale[3]
 
-        file_points = f.get_points()['point']
-        X = file_points['X']
-        Y = file_points['Y']
-        Z = file_points['Z']
+        X = f.points['X']
+        Y = f.points['Y']
+        Z = f.points['Z']
         # todo: attributes
-        if 'red' in f.point_format.lookup:
-            RED = file_points['red']
-            GREEN = file_points['green']
-            BLUE = file_points['blue']
+        if 'red' in f.point_format.dimension_names:
+            RED = f.points['red']
+            GREEN = f.points['green']
+            BLUE = f.points['blue']
         else:
-            RED = file_points['intensity']
-            GREEN = file_points['intensity']
-            BLUE = file_points['intensity']
+            RED = f.points['intensity']
+            GREEN = f.points['intensity']
+            BLUE = f.points['intensity']
 
         for index in indices:
             start_offset = portion[0] + index * step
             num = min(step, portion[1] - start_offset)
 
             # read scaled values and apply offset
-            x = X[start_offset:start_offset + num] * f.header.scale[0] + f.header.offset[0]
-            y = Y[start_offset:start_offset + num] * f.header.scale[1] + f.header.offset[1]
-            z = Z[start_offset:start_offset + num] * f.header.scale[2] + f.header.offset[2]
+            x = X[start_offset:start_offset + num] * f.header.scales[0] + f.header.offsets[0]
+            y = Y[start_offset:start_offset + num] * f.header.scales[1] + f.header.offsets[1]
+            z = Z[start_offset:start_offset + num] * f.header.scales[2] + f.header.offsets[2]
 
             if transformer:
                 x, y, z = transformer.transform(x, y, z)

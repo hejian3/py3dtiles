@@ -11,7 +11,7 @@ requirements = (
     'cython',
     'triangle',
     'psycopg2-binary',
-    'laspy<2.0.0',
+    'laspy>=2.0,<3.0',
     'numba',
     'psutil',
     'lz4',
