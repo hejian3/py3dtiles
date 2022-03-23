@@ -64,11 +64,11 @@ setup(
     author='Oslandia',
     author_email='contact@oslandia.com',
     license='Apache License Version 2.0',
-    python_requires='>=3.5',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.7',
     ],
     packages=find_packages(),
     install_requires=requirements,
