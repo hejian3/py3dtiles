@@ -15,6 +15,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     total_point_count = 0
     pointcloud_file_portions = []
     avg_min = np.array([0., 0., 0.])
+    color_scale_by_file = {}
 
     for filename in files:
         try:
@@ -32,13 +33,15 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
                 total_point_count += count
 
                 # read the first points red channel
-                if color_scale is None:
-                    if 'red' in f.header.point_format.dimension_names:
-                        points = next(f.chunk_iterator(10000))['red']
-                        if np.max(points) > 255:
-                            color_scale = 1.0 / 255
-                    else:
-                        color_scale = 1.0 / 255
+                if color_scale is not None:
+                    color_scale_by_file[filename] = color_scale
+                elif 'red' in f.header.point_format.dimension_names:
+                    points = next(f.chunk_iterator(10000))['red']
+                    if np.max(points) > 255:
+                        color_scale_by_file[filename] = 1.0 / 255
+                else:
+                    # the intensity is then used as color
+                    color_scale_by_file[filename] = 1.0 / 255
 
                 _1M = min(count, 1000000)
                 steps = math.ceil(count / _1M)
@@ -61,7 +64,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     return {
         'portions': pointcloud_file_portions,
         'aabb': aabb,
-        'color_scale': color_scale,
+        'color_scale': color_scale_by_file,
         'srs_in': srs_in,
         'point_count': total_point_count,
         'avg_min': avg_min
