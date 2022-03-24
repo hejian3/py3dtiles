@@ -18,46 +18,45 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
 
     for filename in files:
         try:
-            f = laspy.read(filename)
+            with laspy.open(filename) as f:
+                avg_min += (np.array(f.header.mins) / len(files))
+
+                if aabb is None:
+                    aabb = np.array([f.header.mins, f.header.maxs])
+                else:
+                    bb = np.array([f.header.mins, f.header.maxs])
+                    aabb[0] = np.minimum(aabb[0], bb[0])
+                    aabb[1] = np.maximum(aabb[1], bb[1])
+
+                count = f.header.point_count * fraction // 100
+                total_point_count += count
+
+                # read the first points red channel
+                if color_scale is None:
+                    if 'red' in f.header.point_format.dimension_names:
+                        points = next(f.chunk_iterator(10000))['red']
+                        if np.max(points) > 255:
+                            color_scale = 1.0 / 255
+                    else:
+                        color_scale = 1.0 / 255
+
+                _1M = min(count, 1000000)
+                steps = math.ceil(count / _1M)
+                portions = [(i * _1M, min(count, (i + 1) * _1M)) for i in range(steps)]
+                for p in portions:
+                    pointcloud_file_portions += [(filename, p)]
+
+                if (srs_out is not None and srs_in is None):
+                    # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
+                    output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
+                    summary = json.loads(output)['summary']
+                    if 'srs' not in summary or 'proj4' not in summary['srs'] or not summary['srs']['proj4']:
+                        raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
+                    srs_in = summary['srs']['proj4']
         except Exception as e:
             print('Error opening {filename}. Skipping.'.format(**locals()))
             print(e)
             continue
-        avg_min += (np.array(f.header.mins) / len(files))
-
-        if aabb is None:
-            aabb = np.array([f.header.mins, f.header.maxs])
-        else:
-            bb = np.array([f.header.mins, f.header.maxs])
-            aabb[0] = np.minimum(aabb[0], bb[0])
-            aabb[1] = np.maximum(aabb[1], bb[1])
-
-        count = f.header.point_count * fraction // 100
-        total_point_count += count
-
-        # read the first points red channel
-        if color_scale is None:
-            if 'red' in f.point_format.dimension_names:
-                color_test_field = 'red'
-                if np.max(f.points[color_test_field][:min(10000, f.header.point_count)]) > 255:
-                    color_scale = 1.0 / 255
-            else:
-                color_test_field = 'intensity'
-                color_scale = 1.0 / 255
-
-        _1M = min(count, 1000000)
-        steps = math.ceil(count / _1M)
-        portions = [(i * _1M, min(count, (i + 1) * _1M)) for i in range(steps)]
-        for p in portions:
-            pointcloud_file_portions += [(filename, p)]
-
-        if (srs_out is not None and srs_in is None):
-            # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
-            output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
-            summary = json.loads(output)['summary']
-            if 'srs' not in summary or 'proj4' not in summary['srs'] or not summary['srs']['proj4']:
-                raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
-            srs_in = summary['srs']['proj4']
 
     return {
         'portions': pointcloud_file_portions,
@@ -74,80 +73,73 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
     Reads points from a las file
     '''
     try:
-        f = laspy.read(filename)
+        with laspy.open(filename) as f:
 
-        point_count = portion[1] - portion[0]
+            point_count = portion[1] - portion[0]
 
-        step = min(point_count, max((point_count) // 10, 100000))
+            step = min(point_count, max((point_count) // 10, 100000))
 
-        indices = [i for i in range(math.ceil((point_count) / step))]
+            indices = [i for i in range(math.ceil((point_count) / step))]
 
-        color_scale = offset_scale[3]
+            color_scale = offset_scale[3]
 
-        X = f.points['X']
-        Y = f.points['Y']
-        Z = f.points['Z']
-        # todo: attributes
-        if 'red' in f.point_format.dimension_names:
-            RED = f.points['red']
-            GREEN = f.points['green']
-            BLUE = f.points['blue']
-        else:
-            RED = f.points['intensity']
-            GREEN = f.points['intensity']
-            BLUE = f.points['intensity']
+            for index in indices:
+                start_offset = portion[0] + index * step
+                num = min(step, portion[1] - start_offset)
 
-        for index in indices:
-            start_offset = portion[0] + index * step
-            num = min(step, portion[1] - start_offset)
+                # read scaled values and apply offset
+                f.seek(start_offset)
+                points = next(f.chunk_iterator(num))
 
-            # read scaled values and apply offset
-            x = X[start_offset:start_offset + num] * f.header.scales[0] + f.header.offsets[0]
-            y = Y[start_offset:start_offset + num] * f.header.scales[1] + f.header.offsets[1]
-            z = Z[start_offset:start_offset + num] * f.header.scales[2] + f.header.offsets[2]
+                x, y, z = points.x, points.y, points.z
+                if transformer:
+                    x, y, z = transformer.transform(x, y, z)
 
-            if transformer:
-                x, y, z = transformer.transform(x, y, z)
+                x = (x + offset_scale[0][0]) * offset_scale[1][0]
+                y = (y + offset_scale[0][1]) * offset_scale[1][1]
+                z = (z + offset_scale[0][2]) * offset_scale[1][2]
 
-            x = (x + offset_scale[0][0]) * offset_scale[1][0]
-            y = (y + offset_scale[0][1]) * offset_scale[1][1]
-            z = (z + offset_scale[0][2]) * offset_scale[1][2]
+                coords = np.vstack((x, y, z)).transpose()
 
-            coords = np.vstack((x, y, z)).transpose()
+                if offset_scale[2] is not None:
+                    # Apply transformation matrix (because the tile's transform will contain
+                    # the inverse of this matrix)
+                    coords = np.dot(coords, offset_scale[2])
 
-            if offset_scale[2] is not None:
-                # Apply transformation matrix (because the tile's transform will contain
-                # the inverse of this matrix)
-                coords = np.dot(coords, offset_scale[2])
+                coords = np.ascontiguousarray(coords.astype(np.float32))
 
-            coords = np.ascontiguousarray(coords.astype(np.float32))
+                # Read colors
 
-            # Read colors
-            red = RED[start_offset:start_offset + num]
-            green = GREEN[start_offset:start_offset + num]
-            blue = BLUE[start_offset:start_offset + num]
+                # todo: attributes
+                if 'red' in f.header.point_format.dimension_names:
+                    red = points['red']
+                    green = points['green']
+                    blue = points['blue']
+                else:
+                    red = points['intensity']
+                    green = points['intensity']
+                    blue = points['intensity']
 
-            if color_scale is None:
-                red = red.astype(np.uint8)
-                green = green.astype(np.uint8)
-                blue = blue.astype(np.uint8)
-            else:
-                red = (red * color_scale).astype(np.uint8)
-                green = (green * color_scale).astype(np.uint8)
-                blue = (blue * color_scale).astype(np.uint8)
+                if color_scale is None:
+                    red = red.astype(np.uint8)
+                    green = green.astype(np.uint8)
+                    blue = blue.astype(np.uint8)
+                else:
+                    red = (red * color_scale).astype(np.uint8)
+                    green = (green * color_scale).astype(np.uint8)
+                    blue = (blue * color_scale).astype(np.uint8)
 
-            colors = np.vstack((red, green, blue)).transpose()
+                colors = np.vstack((red, green, blue)).transpose()
 
-            queue.send_multipart([
-                ''.encode('ascii'),
-                pdumps({'xyz': coords, 'rgb': colors}),
-                struct.pack('>I', len(coords))], copy=False)
+                queue.send_multipart([
+                    ''.encode('ascii'),
+                    pdumps({'xyz': coords, 'rgb': colors}),
+                    struct.pack('>I', len(coords))], copy=False)
 
-        queue.send_multipart([pdumps({'name': _id, 'total': 0})])
-        # notify we're idle
-        queue.send_multipart([b''])
+            queue.send_multipart([pdumps({'name': _id, 'total': 0})])
+            # notify we're idle
+            queue.send_multipart([b''])
 
-        f.close()
     except Exception as e:
         print('Exception while reading points from las file')
         print(e)
