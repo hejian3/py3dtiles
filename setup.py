@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 
 requirements = (
-    'numpy>=1.20.0,<1.23',  # the real requirements might be higher than that
+    'numpy>=1.20.0,<1.23',
     'pyproj',
     'cython',
     'triangle',
