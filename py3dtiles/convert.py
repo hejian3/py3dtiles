@@ -139,7 +139,7 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
                 break
 
             _, ext = os.path.splitext(command['filename'])
-            init_reader_fn = las_reader.run if ext == '.las' else xyz_reader.run
+            init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
             init_reader_fn(
                 command['id'],
                 command['filename'],
@@ -254,7 +254,7 @@ def init_parser(subparser, str2bool):
     parser.add_argument(
         'files',
         nargs='+',
-        help='Filenames to process. The file must use the .las or .xyz format.')
+        help='Filenames to process. The file must use the .las, .laz or .xyz format.')
     parser.add_argument(
         '--out',
         type=str,
@@ -332,9 +332,9 @@ def convert(files,
             verbose=False):
     """convert
 
-    Convert pointclouds (xyz or las) to 3dtiles tileset containing pnts node
+    Convert pointclouds (xyz, las or laz) to 3dtiles tileset containing pnts node
 
-    :param files: Filenames to process. The file must use the .las or .xyz format.
+    :param files: Filenames to process. The file must use the .las, .laz or .xyz format.
     :type files: list of str, or str
     :param outfolder: The folder where the resulting tileset will be written.
     :type outfolder: path-like object
@@ -369,7 +369,7 @@ def convert(files,
 
     # read all input files headers and determine the aabb/spacing
     _, ext = os.path.splitext(files[0])
-    init_reader_fn = las_reader.init if ext == '.las' else xyz_reader.init
+    init_reader_fn = las_reader.init if ext in ('.las', '.laz') else xyz_reader.init
     infos = init_reader_fn(files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
     avg_min = infos['avg_min']
