@@ -6,12 +6,12 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 
 requirements = (
-    'numpy>=1.9.0,<1.21',  # the real requirements is probably higher than that
+    'numpy>=1.20.0,<1.23',
     'pyproj',
     'cython',
     'triangle',
     'psycopg2-binary',
-    'laspy<2.0.0',
+    'laspy>=2.0,<3.0',
     'numba',
     'psutil',
     'lz4',
@@ -64,11 +64,11 @@ setup(
     author='Oslandia',
     author_email='contact@oslandia.com',
     license='Apache License Version 2.0',
-    python_requires='>=3.5',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.7',
     ],
     packages=find_packages(),
     install_requires=requirements,

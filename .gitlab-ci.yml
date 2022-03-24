@@ -14,19 +14,19 @@
     - gitlab-org-docker
 
 # oldest supported
-test:python36:
+test:python37:
   <<: *job_definition
-  image: python:3.6
+  image: python:3.7
 
 # latest
 test:python-latest:
   <<: *job_definition
   image: python:latest
 
-# stretch
-test:python-stretch:
+# buster
+test:python-buster:
   <<: *job_definition
-  image: python:3.7-stretch
+  image: python:3.9-buster
 
 #########
 # PAGES #
