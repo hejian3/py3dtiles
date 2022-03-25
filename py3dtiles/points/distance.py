@@ -18,7 +18,7 @@ def is_point_far_enough(points, tested_point, squared_min_distance):
 @jit(cache=True, nogil=True)
 def xyz_to_child_index(xyz, aabb_center):
     test = np.greater_equal(xyz - aabb_center, 0).astype(np.int8)
-    return np.sum(np.left_shift(test, [2, 1, 0]), axis=1)
+    return np.sum(np.left_shift(test, np.array([2, 1, 0])), axis=1)
 
 
 @njit("int32[:](float32[:,:], int32[:], float32[:], float32[:], int32)", cache=True, nogil=True)
