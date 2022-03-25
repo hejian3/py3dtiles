@@ -254,7 +254,7 @@ def init_parser(subparser, str2bool):
     parser.add_argument(
         'files',
         nargs='+',
-        help='Filenames to process. The file must use the .las, .laz or .xyz format.')
+        help='Filenames to process. The file must use the .las, .laz (lastools must be installed) or .xyz format.')
     parser.add_argument(
         '--out',
         type=str,
