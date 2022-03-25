@@ -178,9 +178,41 @@ def triangulate(polygon, additionalPolygons=[]):
     """
     Triangulates 3D polygons
     """
-    vect1 = polygon[0][1] - polygon[0][0]
-    vect2 = polygon[0][2] - polygon[0][0]
-    vectProd = np.cross(vect1, vect2)
+    # let's find out if the polygon is *mostly* clockwise or counter-clockwise
+    # and triangulate accordingly
+    # for 2D explanations:
+    # https://stackoverflow.com/a/1165943/1528985
+    # and https://www.element84.com/blog/determining-the-winding-of-a-polygon-given-as-a-set-of-ordered-points
+    #
+    # Quick explanation in case it goes down: for each edge we calculate the
+    # area of the polygon formed by this edge, the x axis and the 2 vertical.
+    # It's (x2-x1) / ((y2+y1 / 2) (draw it if you don't believe me). This
+    # results will be positive for a edge that goes toward positive x.  Summing
+    # all these areas will give plus or minus the total polygon area.  it would
+    # be positive for a clockwise polygon (upper edges contributing positively)
+    # and negative for counter-clockwise polygons (upper edges contributing
+    # negatively)
+    #
+    # Adaptations here:
+    # - we prefer to reason with counter-clockwise positive, hence the x1-x2 instead of x2-x1
+    # - in 3D, we calcule this value for each axis planes (xy, yz, zx),
+    # looking in the other axis negative direction.
+    # - comparing these 3 results actually give us the most interesting plane
+    # to triangulate in (the plane were the projected area is the biggest)
+    # - we drop the 1/2 factor because we are only interesting in the sign and relative comparison
+    vectProd = np.array([0, 0, 0], dtype=np.float32)
+    for i in range(len(polygon[0])):
+        curr_edge = polygon[0][i]
+        next_edge = polygon[0][(i + 1) % len(polygon[0])]
+        vectProd += np.array([
+            # yz plane, seen from negative x
+            (curr_edge[1] - next_edge[1]) * (next_edge[2] + curr_edge[2]),
+            # zx plane, seen from negative y
+            (curr_edge[2] - next_edge[2]) * (next_edge[0] + curr_edge[0]),
+            # xy plane, seen from negative z
+            (curr_edge[0] - next_edge[0]) * (next_edge[1] + curr_edge[1]),
+        ], dtype=np.float32)
+
     polygon2D = []
     holes = []
     delta = 0
@@ -215,6 +247,7 @@ def triangulate(polygon, additionalPolygons=[]):
         p2 = unflatten(polygon, holes, t[2])
         # triangulation may break triangle orientation, test it before
         # adding triangles
+        # FIXME fix / change the triangulation code instead?
         crossProduct = np.cross(p1 - p0, p2 - p0)
         invert = np.dot(vectProd, crossProduct) < 0
         if invert:
