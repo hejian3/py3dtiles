@@ -75,8 +75,6 @@ sonarcloud-check:
       - develop
       - tags
       - master
-    changes:
-      - "**/*.py"
 
 # -- DEPLOY JOBS -------------------------------------------------------------------------
 pages:
