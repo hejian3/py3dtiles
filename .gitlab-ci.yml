@@ -1,5 +1,31 @@
-.job_template: &job_definition
-  stage: test
+stages:
+  - 🐍 lint
+  - 🤞 test
+  - 🚀 deploy
+
+# -- LINT JOBS --------------------------------------------------------------------------
+flake8:
+  stage: 🐍 lint
+  image:
+    name: python:3.10-slim-buster
+  before_script:
+    - python -m pip install -U flake8
+  script:
+    - flake8 setup.py py3dtiles/ docs/
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+    changes:
+      - "**/*.py"
+
+# -- TEST JOBS --------------------------------------------------------------------------
+test:
+  stage: 🤞 test
+  image:
+    name: python:$PYTHON_VERSION-slim-buster
   before_script:
     - apt update
     - apt install -y pdal llvm
@@ -7,32 +33,54 @@
     - pip install .
     - pip install .[dev]
     - pytest
-    - flake8 setup.py py3dtiles/ docs/
     # TODO move that in unit tests
     - py3dtiles info tests/pointCloudRGB.pnts
-  tags:
-    - gitlab-org-docker
+  artifacts:
+    when: always
+    paths:
+      - coverage.xml
+      - junit/test-results.xml
+    reports:
+      junit: junit/test-results.xml
+      cobertura: coverage.xml
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+    changes:
+      - "**/*.py"
+  parallel:
+    matrix:
+      - PYTHON_VERSION: ['3.7', '3.8', '3.9', '3.10']
 
-# oldest supported
-test:python37:
-  <<: *job_definition
-  image: python:3.7
+sonarcloud-check:
+  stage: 🤞 test
+  needs: [test]
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+    changes:
+      - "**/*.py"
 
-# latest
-test:python-latest:
-  <<: *job_definition
-  image: python:latest
-
-# buster
-test:python-buster:
-  <<: *job_definition
-  image: python:3.9-buster
-
-#########
-# PAGES #
-#########
+# -- DEPLOY JOBS -------------------------------------------------------------------------
 pages:
-  stage: deploy
+  stage: 🚀 deploy
   image: python:latest
   script:
     - pip install .
