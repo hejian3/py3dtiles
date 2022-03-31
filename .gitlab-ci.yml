@@ -49,8 +49,6 @@ test:
       - develop
       - tags
       - master
-    changes:
-      - "**/*.py"
   parallel:
     matrix:
       - PYTHON_VERSION: ['3.7', '3.8', '3.9', '3.10']
