@@ -5,6 +5,7 @@ import time
 import traceback
 
 from py3dtiles.points.node_catalog import NodeCatalog
+from py3dtiles.points.utils import ResponseType
 
 
 def _forward_unassigned_points(node, queue, log_file):
@@ -171,7 +172,7 @@ def run(work, octree_metadata, queue, verbose):
             total += result
 
             queue.send_multipart(
-                [pickle.dumps(
+                [ResponseType.SAVE.value, pickle.dumps(
                     {
                         'name': name,
                         'total': result,
@@ -187,11 +188,7 @@ def run(work, octree_metadata, queue, verbose):
                     time.time() - begin
                 ), file=log_file, flush=True
             )
-            if log_file:
-                log_file.close()
-
-        # notify we're idle
-        queue.send_multipart([b''])
+            log_file.close()
 
         return total
 

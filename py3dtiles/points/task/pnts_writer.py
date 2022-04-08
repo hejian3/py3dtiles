@@ -6,7 +6,7 @@ import lz4.frame as gzip
 import numpy as np
 
 import py3dtiles
-from py3dtiles.points.utils import name_to_filename
+from py3dtiles.points.utils import ResponseType, name_to_filename
 
 
 class _DummyNode():
@@ -65,4 +65,4 @@ def run(sender, data, node_name, folder, write_rgb):
             node = _DummyNode(pickle.loads(root[name]))
             total += node_to_pnts(name, node, folder, write_rgb)[0]
 
-        sender.send_multipart([b'pnts', struct.pack('>I', total), node_name])
+        sender.send_multipart([ResponseType.PNTS.value, struct.pack('>I', total), node_name])

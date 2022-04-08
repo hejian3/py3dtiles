@@ -1,9 +1,11 @@
 import math
+import pickle
 import struct
 import traceback
-from pickle import dumps as pdumps
 
 import numpy as np
+
+from py3dtiles.points.utils import ResponseType
 
 
 def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
@@ -66,11 +68,9 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
         for p in portions:
             pointcloud_file_portions += [(filename, p)]
 
-        if srs_out is not None and srs_in is None:
+        if srs_out and not srs_in:
             raise Exception(
-                "'{}' file doesn't contain srs information. Please use the --srs_in option to declare it.".format(
-                    filename
-                )
+                f"'{filename}' file doesn't contain srs information. Please use the --srs_in option to declare it."
             )
 
     return {
@@ -148,15 +148,13 @@ def run(_id, filename, offset_scale, portion, queue, transformer):
             queue.send_multipart(
                 [
                     "".encode("ascii"),
-                    pdumps({"xyz": coords, "rgb": colors}),
+                    pickle.dumps({"xyz": coords, "rgb": colors}),
                     struct.pack(">I", len(coords)),
                 ],
                 copy=False,
             )
 
-        queue.send_multipart([pdumps({"name": _id, "total": 0})])
-        # notify we're idle
-        queue.send_multipart([b""])
+        queue.send_multipart([ResponseType.RESULT.value, pickle.dumps({"name": _id, "total": 0})])
 
         f.close()
     except Exception as e:

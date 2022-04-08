@@ -28,6 +28,7 @@ from py3dtiles.points.transformations import (
 )
 from py3dtiles.points.utils import compute_spacing, name_to_filename
 from py3dtiles.utils import SrsInMissingException
+from py3dtiles.points.utils import CommandType, ResponseType
 
 total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 
@@ -111,11 +112,12 @@ def make_rotation_matrix(z1, z2):
 
 
 def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_metadata, folder, write_rgb, verbosity):
-    transformer = None
     if srs_out_wkt is not None:
         crs_out = CRS(srs_out_wkt)
         crs_in = CRS(srs_in_wkt)
         transformer = Transformer.from_crs(crs_in, crs_out)
+    else:
+        transformer = None
     context = zmq.Context()
 
     # Socket to receive messages on
@@ -129,7 +131,7 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
         activity = open('activity.{}.csv'.format(os.getpid()), 'w')
 
     # notify we're ready
-    skt.send_multipart([b''])
+    skt.send_multipart([ResponseType.IDLE.value])
 
     while True:
         before = time.time() - startup_time
@@ -145,36 +147,39 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
             print('{} / {} : Delta time: {}'.format(os.getpid(), round(after, 2), round(delta, 3)))
         command = command[1:]
 
-        if len(command) == 1:
-            command = pickle.loads(command[0])
+        if command[0] == CommandType.READ.value:
+            content = pickle.loads(command[1])
             command_type = 1
 
-            if command == b'shutdown':
-                # ack
-                break
-
-            _, ext = os.path.splitext(command['filename'])
+            _, ext = os.path.splitext(content['filename'])
             init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
             init_reader_fn(
-                command['id'],
-                command['filename'],
-                command['offset_scale'],
-                command['portion'],
+                content['id'],
+                content['filename'],
+                content['offset_scale'],
+                content['portion'],
                 skt,
-                transformer,
+                transformer
             )
-        elif command[0] == b'pnts':
+        elif command[0] == CommandType.PNTS.value:
             command_type = 3
             pnts_writer.run(skt, command[2], command[1], folder, write_rgb)
-            skt.send_multipart([b''])
-        else:
+        elif command[0] == CommandType.JOBS.value:
             command_type = 2
-            node_process.run(
-                command,
+            result = node_process.run(
+                command[1:],
                 octree_metadata,
                 skt,
                 verbosity
             )
+        elif command[0] == CommandType.SHUTDOWN.value:
+            # ack
+            break
+        else:
+            raise ValueError('Unknown command')
+
+        # notify we're idle
+        skt.send_multipart([ResponseType.IDLE.value])
 
         if activity_graph:
             print('{before}, {command_type}'.format(**locals()), file=activity)
@@ -193,7 +198,7 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
             )
         )
 
-    skt.send_multipart([b'halted'])
+    skt.send_multipart([ResponseType.HALTED.value])
 
 
 def zmq_send_to_process(idle_clients, socket, message):
@@ -584,73 +589,77 @@ def convert(files,
             # Blocking read but it's fine because either all our child processes are busy
             # or we know that there's something to read (zmq.POLLIN)
             start = time.time()
-            result = zmq_skt.recv_multipart()
+            raw_result = zmq_skt.recv_multipart()
 
-            client_id = result[0]
-            result = result[1:]
+            client_id = raw_result[0]
+            result = raw_result[1:]
+            return_type = result[0]
 
-            if len(result) == 1:
-                if len(result[0]) == 0:
-                    assert client_id not in zmq_idle_clients  # TODO should be a raise
-                    zmq_idle_clients += [client_id]
+            # this need to be flattened,
 
-                    if all_processes_busy:
-                        time_waiting_an_idle_process += time.time() - start
-                    all_processes_busy = False
-                elif result[0] == b'halted':
-                    zmq_processes_killed += 1
-                    all_processes_busy = False
-                else:
-                    result = pickle.loads(result[0])
-                    processed_points += result['total']
-                    points_in_progress -= result['total']
+            if return_type == ResponseType.IDLE.value:
+                assert client_id not in zmq_idle_clients  # TODO should be a raise
+                zmq_idle_clients += [client_id]
 
-                    if 'save' in result and len(result['save']) > 0:
-                        node_store.put(result['name'], result['save'])
+                if all_processes_busy:
+                    time_waiting_an_idle_process += time.time() - start
+                all_processes_busy = False
+            elif return_type == ResponseType.HALTED.value:
+                zmq_processes_killed += 1
+                all_processes_busy = False
+            elif return_type == ResponseType.RESULT.value:
+                content = pickle.loads(result[-1])
+                processed_points += content['total']
+                points_in_progress -= content['total']
 
-                    if result['name'][0:4] == b'root':
-                        state.reader.active.remove(result['name'])
-                    else:
-                        del state.node_process.active[result['name']]
+                state.reader.active.remove(content['name'])
 
-                        if len(result['name']) > 0:
-                            state.node_process.inactive.append(result['name'])
+                at_least_one_job_ended = True
+            elif return_type == ResponseType.SAVE.value:
+                content = pickle.loads(result[-1])
+                processed_points += content['total']
+                points_in_progress -= content['total']
 
-                            if not state.reader.input and not state.reader.active:
-                                if state.node_process.active or state.node_process.input:
-                                    finished_node = result['name']
-                                    if not can_pnts_be_written(
-                                        finished_node,
-                                        finished_node,
+                node_store.put(content['name'], content['save'])
+
+                del state.node_process.active[content['name']]
+
+                if content['name']:
+                    state.node_process.inactive.append(content['name'])
+
+                    if not state.reader.input and not state.reader.active:
+                        if state.node_process.active or state.node_process.input:
+                            finished_node = content['name']
+                            if can_pnts_be_written(
+                                finished_node,
+                                finished_node,
+                                state.node_process.input,
+                                state.node_process.active
+                            ):
+                                state.node_process.inactive.pop(-1)
+                                state.to_pnts.input.append(finished_node)
+
+                                for i in range(len(state.node_process.inactive) - 1, -1, -1):
+                                    candidate = state.node_process.inactive[i]
+
+                                    if can_pnts_be_written(
+                                        candidate, finished_node,
                                         state.node_process.input,
                                         state.node_process.active
                                     ):
-                                        pass
-                                    else:
-                                        state.node_process.inactive.pop(-1)
-                                        state.to_pnts.input.append(finished_node)
+                                        state.node_process.inactive.pop(i)
+                                        state.to_pnts.input.append(candidate)
 
-                                        for i in range(len(state.node_process.inactive) - 1, -1, -1):
-                                            candidate = state.node_process.inactive[i]
+                        else:
+                            for c in state.node_process.inactive:
+                                state.to_pnts.input.append(c)
+                            state.node_process.inactive.clear()
 
-                                            if can_pnts_be_written(
-                                                candidate, finished_node,
-                                                state.node_process.input,
-                                                state.node_process.active
-                                            ):
-                                                state.node_process.inactive.pop(i)
-                                                state.to_pnts.input.append(candidate)
-
-                                else:
-                                    for c in state.node_process.inactive:
-                                        state.to_pnts.input.append(c)
-                                    state.node_process.inactive.clear()
-
-                    at_least_one_job_ended = True
-            elif result[0] == b'pnts':
+                at_least_one_job_ended = True
+            elif return_type == ResponseType.PNTS.value:
                 points_in_pnts += struct.unpack('>I', result[1])[0]
                 state.to_pnts.active.remove(result[2])
-            else:
+            else:  # not yet understood...
                 count = struct.unpack('>I', result[2])[0]
                 add_tasks_to_process(state, result[0], result[1], count)
 
@@ -659,7 +668,7 @@ def convert(files,
             datas = node_store.get(node_name)
             if not datas:
                 raise ValueError(f'{node_name} has no data')
-            zmq_send_to_process(zmq_idle_clients, zmq_skt, [b'pnts', node_name, datas])
+            zmq_send_to_process(zmq_idle_clients, zmq_skt, [CommandType.PNTS.value, node_name, datas])
             node_store.remove(node_name)
             state.to_pnts.active.append(node_name)
 
@@ -691,7 +700,7 @@ def convert(files,
                     idx -= 1
 
                 if job_list:
-                    zmq_send_to_process(zmq_idle_clients, zmq_skt, job_list)
+                    zmq_send_to_process(zmq_idle_clients, zmq_skt, [CommandType.JOBS.value] + job_list)
 
         while (state.reader.input
                and (points_in_progress < 60000000 or not state.reader.active)
@@ -704,7 +713,7 @@ def convert(files,
             points_in_progress += portion[1] - portion[0]
 
             zmq_send_to_process(
-                zmq_idle_clients, zmq_skt, [pickle.dumps(
+                zmq_idle_clients, zmq_skt, [CommandType.READ.value, pickle.dumps(
                     {
                         'filename': file,
                         'offset_scale': (
@@ -721,7 +730,7 @@ def convert(files,
         # if at this point we have no work in progress => we're done
         if len(zmq_idle_clients) == jobs or zmq_processes_killed == jobs:
             if zmq_processes_killed < 0:
-                zmq_send_to_all_process(zmq_idle_clients, zmq_skt, [pickle.dumps(b'shutdown')])
+                zmq_send_to_all_process(zmq_idle_clients, zmq_skt, [CommandType.SHUTDOWN.value])
                 zmq_processes_killed = 0
             else:
                 assert points_in_pnts == infos['point_count'], \

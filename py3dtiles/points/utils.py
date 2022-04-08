@@ -4,6 +4,22 @@ from enum import Enum
 from io import StringIO
 
 
+class CommandType(Enum):
+    READ = b'co1'
+    PNTS = b'co2'
+    JOBS = b'co3'
+    SHUTDOWN = b'co4'
+
+
+class ResponseType(Enum):
+    IDLE = b're1'
+    HALTED = b're2'
+    RESULT = b're3'
+    SAVE = b're4'
+    PNTS = b're5'
+    OTHER = b're6'
+
+
 def profile(func):
     from line_profiler import LineProfiler
 
