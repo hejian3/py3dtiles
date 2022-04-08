@@ -1,8 +1,9 @@
-import numpy as np
 import math
-import traceback
 import struct
+import traceback
 from pickle import dumps as pdumps
+
+import numpy as np
 
 
 def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
@@ -40,9 +41,11 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
                 seek_values += [offset]
 
             count += points.shape[0]
-            batch_aabb = np.array([
-                np.min(points, axis=0), np.max(points, axis=0)
-            ])
+            batch_aabb = np.array(
+                [
+                    np.min(points, axis=0), np.max(points, axis=0)
+                ]
+            )
 
             # Update aabb
             if aabb is None:
@@ -80,7 +83,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
+def run(_id, filename, offset_scale, portion, queue, transformer):
     """
     Reads points from a xyz file
 

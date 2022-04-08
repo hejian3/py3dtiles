@@ -1,8 +1,8 @@
 import os
-import time
-import traceback
 import pickle
 import struct
+import time
+import traceback
 
 from py3dtiles.points.node_catalog import NodeCatalog
 
@@ -17,10 +17,12 @@ def _forward_unassigned_points(node, queue, log_file):
             if log_file is not None:
                 print('    -> put on queue ({},{})'.format(r[0], r[2]), file=log_file)
             total += r[2]
-            queue.send_multipart([
-                r[0],
-                r[1],
-                struct.pack('>I', r[2])], copy=False, block=False)
+            queue.send_multipart(
+                [
+                    r[0],
+                    r[1],
+                    struct.pack('>I', r[2])], copy=False, block=False
+            )
 
     return total
 
@@ -42,7 +44,9 @@ def _flush(node_catalog, scale, node, queue, max_depth=1, force_forward=False, l
         # release node
         del node
         for name in children:
-            total += _flush(node_catalog, scale, node_catalog.get_node(name), queue, max_depth, force_forward, log_file, depth + 1)
+            total += _flush(
+                node_catalog, scale, node_catalog.get_node(name), queue, max_depth, force_forward, log_file, depth + 1
+                                                                                                             )
 
     return total
 
@@ -65,7 +69,8 @@ def _balance(node_catalog, node, max_depth=1, depth=0):
                 node_catalog,
                 node_catalog.get_node(name),
                 max_depth,
-                depth + 1)
+                depth + 1
+            )
 
 
 def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
@@ -74,9 +79,11 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
     log_enabled = log_file is not None
 
     if log_enabled:
-        print('[>] process_node: "{}", {}'.format(name, len(raw_datas)),
-              file=log_file,
-              flush=True)
+        print(
+            '[>] process_node: "{}", {}'.format(name, len(raw_datas)),
+            file=log_file,
+            flush=True
+        )
 
     node = node_catalog.get_node(name)
 
@@ -102,9 +109,12 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
         point_count = len(data['xyz'])
 
         if log_enabled:
-            print('  -> insert {} [{} points]/ {} files [{}]'.format(
-                index + 1, point_count,
-                len(raw_datas), time.time() - begin), file=log_file, flush=True)
+            print(
+                '  -> insert {} [{} points]/ {} files [{}]'.format(
+                    index + 1, point_count,
+                    len(raw_datas), time.time() - begin
+                ), file=log_file, flush=True
+            )
 
         # insert points in node (no children handling here)
         node.insert(node_catalog, octree_metadata.scale, data['xyz'], data['rgb'], halt_at_depth == 0)
@@ -115,7 +125,9 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
             print('  -> _flush [{}]'.format(time.time() - begin), file=log_file, flush=True)
         # _flush push pending points (= call insert) from level N to level N + 1
         # (_flush is recursive)
-        written = _flush(node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(raw_datas) - 1, log_file)
+        written = _flush(
+            node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(raw_datas) - 1, log_file
+                                                              )
         total -= written
 
         index += 1
@@ -133,7 +145,7 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
     if log_enabled:
         print('saved on disk [{}]'.format(time.time() - begin), file=log_file)
 
-    return (total, data)
+    return total, data
 
 
 def run(work, octree_metadata, queue, verbose):
@@ -158,17 +170,24 @@ def run(work, octree_metadata, queue, verbose):
             result, data = _process(node, octree_metadata, name, filenames, queue, begin, log_file)
             total += result
 
-            queue.send_multipart([pickle.dumps({
-                'name': name,
-                'total': result,
-                'save': data,
-            })], copy=False)
+            queue.send_multipart(
+                [pickle.dumps(
+                    {
+                        'name': name,
+                        'total': result,
+                        'save': data,
+                    }
+                )], copy=False
+            )
 
         if log_enabled:
-            print('[<] return result [{} sec] [{}]'.format(
-                round(time.time() - begin, 2),
-                time.time() - begin), file=log_file, flush=True)
-            if log_file is not None:
+            print(
+                '[<] return result [{} sec] [{}]'.format(
+                    round(time.time() - begin, 2),
+                    time.time() - begin
+                ), file=log_file, flush=True
+            )
+            if log_file:
                 log_file.close()
 
         # notify we're idle
@@ -177,11 +196,8 @@ def run(work, octree_metadata, queue, verbose):
         return total
 
     except Exception as e:
-        if log_enabled or True:
-            print('OH NO. {}'.format(name))
-        if log_enabled or True:
-            print(e)
-        if log_enabled or True:
-            traceback.print_exc()
+        print(f'OH NO. {name}')
+        print(e)
+        traceback.print_exc()
 
     return 0

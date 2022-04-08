@@ -1,11 +1,12 @@
 import json
-import numpy as np
 import math
-import traceback
-import laspy
 import struct
 import subprocess
+import traceback
 from pickle import dumps as pdumps
+
+import laspy
+import numpy as np
 
 from py3dtiles.utils import SrsInMissingException
 
@@ -49,12 +50,14 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
                 for p in portions:
                     pointcloud_file_portions += [(filename, p)]
 
-                if (srs_out is not None and srs_in is None):
+                if srs_out and not srs_in:
                     # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
                     output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
                     summary = json.loads(output)['summary']
-                    if 'srs' not in summary or 'proj4' not in summary['srs'] or not summary['srs']['proj4']:
-                        raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
+                    if not summary.get('srs') or not summary.get('srs').get('proj4'):
+                        raise SrsInMissingException(
+                            "'{filename}' file doesn't contain srs information. Please use the --srs_in option to declare it."
+                        )
                     srs_in = summary['srs']['proj4']
         except Exception as e:
             print('Error opening {filename}. Skipping.'.format(**locals()))
@@ -71,7 +74,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
+def run(_id, filename, offset_scale, portion, queue, transformer):
     '''
     Reads points from a las file
     '''
@@ -134,16 +137,18 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
 
                 colors = np.vstack((red, green, blue)).transpose()
 
-                queue.send_multipart([
-                    ''.encode('ascii'),
-                    pdumps({'xyz': coords, 'rgb': colors}),
-                    struct.pack('>I', len(coords))], copy=False)
+                queue.send_multipart(
+                    [
+                        ''.encode('ascii'),
+                        pdumps({'xyz': coords, 'rgb': colors}),
+                        struct.pack('>I', len(coords))], copy=False
+                )
 
             queue.send_multipart([pdumps({'name': _id, 'total': 0})])
             # notify we're idle
             queue.send_multipart([b''])
 
-    except Exception as e:
+    except Exception as e:  # really wanted to catch any exception ?
         print('Exception while reading points from las file')
         print(e)
         traceback.print_exc()
