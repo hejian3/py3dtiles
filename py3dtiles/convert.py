@@ -26,9 +26,9 @@ from py3dtiles.points.transformations import (
     angle_between_vectors, inverse_matrix, rotation_matrix, scale_matrix,
     translation_matrix, vector_product,
 )
+from py3dtiles.points.utils import CommandType, ResponseType
 from py3dtiles.points.utils import compute_spacing, name_to_filename
 from py3dtiles.utils import SrsInMissingException
-from py3dtiles.points.utils import CommandType, ResponseType
 
 total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 
@@ -550,7 +550,6 @@ def convert(files,
 
     processed_points = 0
     points_in_progress = 0
-    previous_percent = 0
     points_in_pnts = 0
 
     max_splitting_jobs_count = max(1, jobs // 2)
@@ -733,10 +732,10 @@ def convert(files,
                 zmq_send_to_all_process(zmq_idle_clients, zmq_skt, [CommandType.SHUTDOWN.value])
                 zmq_processes_killed = 0
             else:
+                # TODO should be a raise
                 assert points_in_pnts == infos['point_count'], \
-                    '!!! Invalid point count in the written .pnts (expected: {}, was: {})'.format(
-                        infos['point_count'], points_in_pnts
-                    )  # TODO should be a raise
+                    f"!!! Invalid point count in the written .pnts (expected: {infos['point_count']}, " \
+                    f"was: {points_in_pnts})"
                 if verbose >= 1:
                     print('Writing 3dtiles {}'.format(infos['avg_min']))
                 write_tileset(

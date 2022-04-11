@@ -47,7 +47,7 @@ def _flush(node_catalog, scale, node, queue, max_depth=1, force_forward=False, l
         for name in children:
             total += _flush(
                 node_catalog, scale, node_catalog.get_node(name), queue, max_depth, force_forward, log_file, depth + 1
-                                                                                                             )
+            )
 
     return total
 
@@ -128,7 +128,7 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
         # (_flush is recursive)
         written = _flush(
             node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(raw_datas) - 1, log_file
-                                                              )
+        )
         total -= written
 
         index += 1
