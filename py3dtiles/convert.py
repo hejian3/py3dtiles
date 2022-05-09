@@ -640,7 +640,12 @@ def convert(files,
 
             zmq_send_to_process(zmq_idle_clients, zmq_skt, [pickle.dumps({
                 'filename': file,
-                'offset_scale': (-avg_min, root_scale, rotation_matrix[:3, :3].T if rotation_matrix is not None else None, infos['color_scale'].get(file)),
+                'offset_scale': (
+                    -avg_min,
+                    root_scale,
+                    rotation_matrix[:3, :3].T if rotation_matrix is not None else None,
+                    infos['color_scale'].get(file) if infos['color_scale'] is not None else None,
+                ),
                 'portion': portion,
                 'id': _id
             })])
