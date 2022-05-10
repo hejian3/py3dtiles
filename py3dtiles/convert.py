@@ -13,6 +13,7 @@ import psutil
 import struct
 import concurrent.futures
 import argparse
+from py3dtiles.constants import MIN_POINT_SIZE
 from py3dtiles.utils import SrsInMissingException
 from py3dtiles.points.transformations import rotation_matrix, angle_between_vectors, vector_product, inverse_matrix, scale_matrix, translation_matrix
 from py3dtiles.points.utils import compute_spacing, name_to_filename
@@ -41,7 +42,7 @@ def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, rotatio
     if True:
         root_node = Node('', octree_metadata.aabb, octree_metadata.spacing * 2)
         root_node.children = []
-        inv_aabb_size = (1.0 / (octree_metadata.aabb[1] - octree_metadata.aabb[0])).astype(np.float32)
+        inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, octree_metadata.aabb[1] - octree_metadata.aabb[0])).astype(np.float32)
         for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
             ondisk_tile = name_to_filename(out_folder, child.encode('ascii'), '.pnts')
             if os.path.exists(ondisk_tile):
