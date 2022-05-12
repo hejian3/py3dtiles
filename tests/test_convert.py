@@ -38,13 +38,15 @@ def test_convert_without_srs(tmp_dir):
     with raises(SrsInMissingException):
         convert(os.path.join(fixtures_dir, 'without_srs.las'),
                 outfolder=tmp_dir,
-                srs_out='4978')
+                srs_out='4978',
+                jobs=1)
     assert not os.path.exists(os.path.join(tmp_dir))
 
     convert(os.path.join(fixtures_dir, 'without_srs.las'),
             outfolder=tmp_dir,
             srs_in='3949',
-            srs_out='4978')
+            srs_out='4978',
+            jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
 
@@ -52,7 +54,8 @@ def test_convert_without_srs(tmp_dir):
 def test_convert_with_srs(tmp_dir):
     convert(os.path.join(fixtures_dir, 'with_srs.las'),
             outfolder=tmp_dir,
-            srs_out='4978')
+            srs_out='4978',
+            jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
 
@@ -61,6 +64,7 @@ def test_convert_simple_xyz(tmp_dir):
     convert(os.path.join(fixtures_dir, 'simple.xyz'),
             outfolder=tmp_dir,
             srs_in='3857',
-            srs_out='4978')
+            srs_out='4978',
+            jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
