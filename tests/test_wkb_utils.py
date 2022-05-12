@@ -74,7 +74,7 @@ def complex_polygon():
     #   /        |
     # 2x---------x 3
     # the first few vertices seems to indicate an inverse winding order
-    return [ 
+    return [
         [
             np.array([0, 1, 0], dtype=np.float32),
             np.array([0.5, 0.5, 0], dtype=np.float32),
@@ -136,8 +136,9 @@ def test_triangulate_winding_order_complex(complex_polygon):
     triangles = wkb_utils.triangulate(complex_polygon)
     assert len(triangles[0]) == 3, 'Should generate 2 triangles'
     crossprod_triangle1 = np.cross(
-                    triangles[0][0][1] - triangles[0][0][0],
-                    triangles[0][0][2] - triangles[0][0][0])
+        triangles[0][0][1] - triangles[0][0][0],
+        triangles[0][0][2] - triangles[0][0][0]
+    )
     crossprod_triangle1 /= np.linalg.norm(crossprod_triangle1)
     assert \
         all(crossprod_triangle1 == np.array([0, 0, 1], dtype=np.float32)), \
@@ -147,8 +148,8 @@ def test_triangulate_winding_order_complex(complex_polygon):
 def test_triangulate_winding_order_stars(clockwise_star):
     triangles = wkb_utils.triangulate(clockwise_star)
     crossprod_triangle1 = np.cross(
-                    triangles[0][0][1] - triangles[0][0][0],
-                    triangles[0][0][2] - triangles[0][0][0])
+        triangles[0][0][1] - triangles[0][0][0],
+        triangles[0][0][2] - triangles[0][0][0])
     crossprod_triangle1 /= np.linalg.norm(crossprod_triangle1)
     assert all(crossprod_triangle1 == np.array([0, 0, -1], dtype=np.float32)), \
         'Check winding order is coherent with vertex order: clockwise'
@@ -157,8 +158,8 @@ def test_triangulate_winding_order_stars(clockwise_star):
 def test_triangulate_winding_order_counter_clockwise_stars(counterclockwise_star):
     triangles = wkb_utils.triangulate(counterclockwise_star)
     crossprod_triangle1 = np.cross(
-                    triangles[0][0][1] - triangles[0][0][0],
-                    triangles[0][0][2] - triangles[0][0][0])
+        triangles[0][0][1] - triangles[0][0][0],
+        triangles[0][0][2] - triangles[0][0][0])
     crossprod_triangle1 /= np.linalg.norm(crossprod_triangle1)
     assert all(crossprod_triangle1 == np.array([0, 0, 1], dtype=np.float32)), \
         'Check winding order is coherent with vertex order: counter-clockwise'
@@ -167,8 +168,8 @@ def test_triangulate_winding_order_counter_clockwise_stars(counterclockwise_star
 def test_triangulate_winding_order_counter_clockwise_zx_stars(counterclockwise_zx_star):
     triangles = wkb_utils.triangulate(counterclockwise_zx_star)
     crossprod_triangle1 = np.cross(
-                    triangles[0][0][1] - triangles[0][0][0],
-                    triangles[0][0][2] - triangles[0][0][0])
+        triangles[0][0][1] - triangles[0][0][0],
+        triangles[0][0][2] - triangles[0][0][0])
     crossprod_triangle1 /= np.linalg.norm(crossprod_triangle1)
     # check the 2nd dimension is the largest by far and is positive
     assert crossprod_triangle1[1] > 0.8,\
@@ -178,11 +179,12 @@ def test_triangulate_winding_order_counter_clockwise_zx_stars(counterclockwise_z
 def test_big_poly_winding_order(big_poly):
     triangles = wkb_utils.triangulate(big_poly)
     crossprod_triangle1 = np.cross(
-                    triangles[0][0][1] - triangles[0][0][0],
-                    triangles[0][0][2] - triangles[0][0][0])
+        triangles[0][0][1] - triangles[0][0][0],
+        triangles[0][0][2] - triangles[0][0][0])
     crossprod_triangle1 /= np.linalg.norm(crossprod_triangle1)
     assert all(crossprod_triangle1 == np.array([0, 0, 1], dtype=np.float32)), \
         'Check winding order is coherent with vertex order: counter-clockwise'
+
 
 ################
 # benchmarking #
