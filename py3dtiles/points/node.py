@@ -4,6 +4,7 @@ import os
 import json
 
 from py3dtiles import TileContentReader
+from py3dtiles.constants import MIN_POINT_SIZE
 from py3dtiles.feature_table import SemanticPoint
 from py3dtiles.points.utils import name_to_filename, node_from_name, SubdivisionType, aabb_size_to_subdivision_type
 from py3dtiles.points.points_grid import Grid
@@ -26,7 +27,7 @@ class Node(object):
         super(Node, self).__init__()
         self.name = name
         self.aabb = aabb.astype(np.float32)
-        self.aabb_size = (aabb[1] - aabb[0]).astype(np.float32)
+        self.aabb_size = np.maximum(aabb[1] - aabb[0], MIN_POINT_SIZE).astype(np.float32)
         self.inv_aabb_size = (1.0 / self.aabb_size).astype(np.float32)
         self.aabb_center = ((aabb[0] + aabb[1]) * 0.5).astype(np.float32)
         self.spacing = spacing

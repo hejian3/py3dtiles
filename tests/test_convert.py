@@ -55,3 +55,12 @@ def test_convert_with_srs(tmp_dir):
             srs_out='4978')
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
+
+
+def test_convert_simple_xyz(tmp_dir):
+    convert(os.path.join(fixtures_dir, 'simple.xyz'),
+            outfolder=tmp_dir,
+            srs_in='3857',
+            srs_out='4978')
+    assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
+    assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
