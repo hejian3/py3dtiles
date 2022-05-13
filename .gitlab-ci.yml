@@ -98,3 +98,4 @@ pages:
       - public
   only:
     - master
+    - tags
