@@ -2,7 +2,7 @@
 import struct
 import numpy as np
 
-from .tile import TileContent, TileHeader, TileBody, TileType
+from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
 from .feature_table import FeatureTable
 
 
@@ -68,11 +68,11 @@ class Pnts(TileContent):
         return t
 
 
-class PntsHeader(TileHeader):
+class PntsHeader(TileContentHeader):
     BYTELENGTH = 28
 
     def __init__(self):
-        self.type = TileType.POINTCLOUD
+        self.type = TileContentType.POINTCLOUD
         self.magic_value = b"pnts"
         self.version = 1
         self.tile_byte_length = 0
@@ -117,7 +117,7 @@ class PntsHeader(TileHeader):
 
         Returns
         -------
-        h : TileHeader
+        h : TileContentHeader
         """
 
         h = PntsHeader()
@@ -133,12 +133,12 @@ class PntsHeader(TileHeader):
         h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
         h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
 
-        h.type = TileType.POINTCLOUD
+        h.type = TileContentType.POINTCLOUD
 
         return h
 
 
-class PntsBody(TileBody):
+class PntsBody(TileContentBody):
     def __init__(self):
         self.feature_table = FeatureTable()
         # TODO : self.batch_table = BatchTable()
@@ -151,13 +151,13 @@ class PntsBody(TileBody):
         """
         Parameters
         ----------
-        th : TileHeader
+        th : TileContentHeader
 
         array : numpy.array
 
         Returns
         -------
-        b : TileBody
+        b : TileContentBody
         """
 
         # build feature table

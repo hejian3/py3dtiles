@@ -34,14 +34,14 @@ class TileContent(ABC):
         self.header.sync(self.body)
 
 
-class TileType(Enum):
+class TileContentType(Enum):
 
     UNKNWON = 0
     POINTCLOUD = 1
     BATCHED3DMODEL = 2
 
 
-class TileHeader(ABC):
+class TileContentHeader(ABC):
     @abstractmethod
     def from_array(self, array):
         pass
@@ -55,7 +55,7 @@ class TileHeader(ABC):
         pass
 
 
-class TileBody(object):
+class TileContentBody(object):
     @abstractmethod
     def to_array(self):
         pass

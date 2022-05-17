@@ -364,7 +364,7 @@ class FeatureTable(object):
         """
         Parameters
         ----------
-        th : TileHeader
+        th : TileContentHeader
 
         array : numpy.array
 
