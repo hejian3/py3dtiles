@@ -4,6 +4,8 @@ import traceback
 import struct
 from pickle import dumps as pdumps
 
+from py3dtiles.points.utils import ResponseType
+
 
 def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     aabb = None
@@ -144,6 +146,7 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
 
             queue.send_multipart(
                 [
+                    ResponseType.NEW_TASK.value,
                     "".encode("ascii"),
                     pdumps({"xyz": coords, "rgb": colors}),
                     struct.pack(">I", len(coords)),
@@ -151,9 +154,7 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
                 copy=False,
             )
 
-        queue.send_multipart([pdumps({"name": _id, "total": 0})])
-        # notify we're idle
-        queue.send_multipart([b""])
+        queue.send_multipart([ResponseType.READ.value, pdumps({"name": _id, "total": 0})])
 
         f.close()
     except Exception as e:

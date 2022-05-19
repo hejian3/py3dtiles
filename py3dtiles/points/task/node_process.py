@@ -5,6 +5,7 @@ import pickle
 import struct
 
 from py3dtiles.points.node_catalog import NodeCatalog
+from py3dtiles.points.utils import ResponseType
 
 
 def _forward_unassigned_points(node, queue, log_file):
@@ -18,6 +19,7 @@ def _forward_unassigned_points(node, queue, log_file):
                 print('    -> put on queue ({},{})'.format(r[0], r[2]), file=log_file)
             total += r[2]
             queue.send_multipart([
+                ResponseType.NEW_TASK.value,
                 r[0],
                 r[1],
                 struct.pack('>I', r[2])], copy=False, block=False)
@@ -158,7 +160,7 @@ def run(work, octree_metadata, queue, verbose):
             result, data = _process(node, octree_metadata, name, filenames, queue, begin, log_file)
             total += result
 
-            queue.send_multipart([pickle.dumps({
+            queue.send_multipart([ResponseType.PROCESSED.value, pickle.dumps({
                 'name': name,
                 'total': result,
                 'save': data,
@@ -170,9 +172,6 @@ def run(work, octree_metadata, queue, verbose):
                 time.time() - begin), file=log_file, flush=True)
             if log_file is not None:
                 log_file.close()
-
-        # notify we're idle
-        queue.send_multipart([b''])
 
         return total
 

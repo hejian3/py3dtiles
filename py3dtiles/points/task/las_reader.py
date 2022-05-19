@@ -7,6 +7,7 @@ import struct
 import subprocess
 from pickle import dumps as pdumps
 
+from py3dtiles.points.utils import ResponseType
 from py3dtiles.utils import SrsInMissingException
 
 
@@ -134,14 +135,15 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
 
                 colors = np.vstack((red, green, blue)).transpose()
 
-                queue.send_multipart([
-                    ''.encode('ascii'),
-                    pdumps({'xyz': coords, 'rgb': colors}),
-                    struct.pack('>I', len(coords))], copy=False)
+                queue.send_multipart(
+                    [
+                        ResponseType.NEW_TASK.value,
+                        ''.encode('ascii'),
+                        pdumps({'xyz': coords, 'rgb': colors}),
+                        struct.pack('>I', len(coords))
+                    ], copy=False)
 
-            queue.send_multipart([pdumps({'name': _id, 'total': 0})])
-            # notify we're idle
-            queue.send_multipart([b''])
+            queue.send_multipart([ResponseType.READ.value, pdumps({'name': _id, 'total': 0})])
 
     except Exception as e:
         print('Exception while reading points from las file')
