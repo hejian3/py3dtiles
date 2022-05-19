@@ -4,6 +4,22 @@ from enum import Enum
 from io import StringIO
 
 
+class CommandType(Enum):
+    READ_FILE = b'read_file'
+    WRITE_PNTS = b'write_pnts'
+    PROCESS_JOBS = b'process_jobs'
+    SHUTDOWN = b'shutdown'
+
+
+class ResponseType(Enum):
+    IDLE = b'idle'
+    HALTED = b'halted'
+    READ = b'read'
+    PROCESSED = b'processed'
+    PNTS_WRITTEN = b'pnts_written'
+    NEW_TASK = B'new_task'
+
+
 def profile(func):
     from line_profiler import LineProfiler
 
