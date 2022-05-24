@@ -561,11 +561,10 @@ def convert(files,
                 processed_points += content['total']
                 points_in_progress -= content['total']
 
-                node_store.put(content['name'], content['save'])
-
                 del state.node_process.active[content['name']]
 
                 if content['name']:
+                    node_store.put(content['name'], content['save'])
                     state.node_process.inactive.append(content['name'])
 
                     if not state.reader.input and not state.reader.active:
