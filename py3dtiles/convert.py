@@ -304,22 +304,25 @@ def convert(files,
     :type color_scale: float
 
     :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
-
-
     """
 
     # allow str directly if only one input
     files = [files] if isinstance(files, str) else files
 
     # read all input files headers and determine the aabb/spacing
-    _, ext = os.path.splitext(files[0])
-    init_reader_fn = las_reader.init if ext in ('.las', '.laz') else xyz_reader.init
+    extensions = set()
+    for file in files:
+        extensions.add(PurePath(file).suffix)
+    if len(extensions) != 1:
+        raise ValueError("All files should have the same extension, currently there are", extensions)
+    extension = extensions.pop()
+
+    init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
     infos = init_reader_fn(files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
     avg_min = infos['avg_min']
     rotation_matrix = None
     # srs stuff
-    transformer = None
     srs_out_wkt = None
     srs_in_wkt = None
     if srs_out is not None:
