@@ -1,6 +1,6 @@
-import os
 import pickle
 import struct
+from pathlib import Path
 
 import lz4.frame as gzip
 import numpy as np
@@ -9,7 +9,7 @@ import py3dtiles
 from py3dtiles.points.utils import ResponseType, name_to_filename
 
 
-class _DummyNode():
+class _DummyNode:
     def __init__(self, _bytes):
         if 'children' in _bytes:
             self.children = _bytes['children']
@@ -42,7 +42,8 @@ def points_to_pnts(name, points, out_folder, include_rgb):
 
     filename = name_to_filename(out_folder, name, '.pnts')
 
-    assert not os.path.exists(filename), '{} already written'.format(filename)
+    if Path(filename).exists():
+        raise FileExistsError(f"{filename} already written")
 
     tile.save_as(filename)
 
@@ -50,8 +51,7 @@ def points_to_pnts(name, points, out_folder, include_rgb):
 
 
 def node_to_pnts(name, node, out_folder, include_rgb):
-    from py3dtiles.points.node import Node
-    points = Node.get_points(node, include_rgb)
+    points = py3dtiles.points.node.Node.get_points(node, include_rgb)
     return points_to_pnts(name, points, out_folder, include_rgb)
 
 

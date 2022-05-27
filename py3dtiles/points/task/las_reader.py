@@ -35,31 +35,31 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
                 total_point_count += count
 
                 # read the first points red channel
-                if color_scale is not None:
+                if color_scale:
                     color_scale_by_file[filename] = color_scale
                 elif 'red' in f.header.point_format.dimension_names:
-                    points = next(f.chunk_iterator(10000))['red']
+                    points = next(f.chunk_iterator(10_000))['red']
                     if np.max(points) > 255:
                         color_scale_by_file[filename] = 1.0 / 255
                 else:
                     # the intensity is then used as color
                     color_scale_by_file[filename] = 1.0 / 255
 
-                _1M = min(count, 1000000)
+                _1M = min(count, 1_000_000)
                 steps = math.ceil(count / _1M)
                 portions = [(i * _1M, min(count, (i + 1) * _1M)) for i in range(steps)]
                 for p in portions:
                     pointcloud_file_portions += [(filename, p)]
 
-                if (srs_out is not None and srs_in is None):
-                    # NOTE: decode is necessary because in python3.5, json cannot decode bytes. Remove this once 3.5 is EOL
-                    output = subprocess.check_output(['pdal', 'info', '--summary', filename]).decode('utf-8')
+                if srs_out and not srs_in:
+                    output = subprocess.check_output(['pdal', 'info', '--summary', filename])
                     summary = json.loads(output)['summary']
-                    if 'srs' not in summary or 'proj4' not in summary['srs'] or not summary['srs']['proj4']:
-                        raise SrsInMissingException('\'{}\' file doesn\'t contain srs information. Please use the --srs_in option to declare it.'.format(filename))
+                    if 'srs' not in summary or not summary['srs'].get('proj4'):
+                        raise SrsInMissingException(f"'{filename}' file doesn't contain srs information."
+                                                    "Please use the --srs_in option to declare it.")
                     srs_in = summary['srs']['proj4']
         except Exception as e:
-            print('Error opening {filename}. Skipping.'.format(**locals()))
+            print(f'Error opening {filename}. Skipping.')
             print(e)
             continue
 
@@ -74,17 +74,17 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
 
 
 def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
-    '''
+    """
     Reads points from a las file
-    '''
+    """
     try:
         with laspy.open(filename) as f:
 
             point_count = portion[1] - portion[0]
 
-            step = min(point_count, max((point_count) // 10, 100000))
+            step = min(point_count, max(point_count // 10, 100_000))
 
-            indices = [i for i in range(math.ceil((point_count) / step))]
+            indices = [i for i in range(math.ceil(point_count / step))]
 
             color_scale = offset_scale[3]
 
@@ -125,7 +125,7 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
                     green = points['intensity']
                     blue = points['intensity']
 
-                if color_scale is None:
+                if not color_scale:
                     red = red.astype(np.uint8)
                     green = green.astype(np.uint8)
                     blue = blue.astype(np.uint8)
