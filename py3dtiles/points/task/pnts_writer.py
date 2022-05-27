@@ -1,9 +1,11 @@
-import numpy as np
+import os
 import pickle
 import struct
-import os
-import py3dtiles
+
 import lz4.frame as gzip
+import numpy as np
+
+import py3dtiles
 from py3dtiles.points.utils import ResponseType, name_to_filename
 
 

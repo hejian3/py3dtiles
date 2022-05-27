@@ -2,7 +2,7 @@ import numpy as np
 import math
 import traceback
 import struct
-from pickle import dumps as pdumps
+import pickle
 
 from py3dtiles.points.utils import ResponseType
 
@@ -148,13 +148,13 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
                 [
                     ResponseType.NEW_TASK.value,
                     "".encode("ascii"),
-                    pdumps({"xyz": coords, "rgb": colors}),
+                    pickle.dumps({"xyz": coords, "rgb": colors}),
                     struct.pack(">I", len(coords)),
                 ],
                 copy=False,
             )
 
-        queue.send_multipart([ResponseType.READ.value, pdumps({"name": _id, "total": 0})])
+        queue.send_multipart([ResponseType.READ.value, pickle.dumps({"name": _id, "total": 0})])
 
         f.close()
     except Exception as e:

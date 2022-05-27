@@ -1,11 +1,12 @@
 import json
-import numpy as np
 import math
-import traceback
-import laspy
+import pickle
 import struct
 import subprocess
-from pickle import dumps as pdumps
+import traceback
+
+import laspy
+import numpy as np
 
 from py3dtiles.points.utils import ResponseType
 from py3dtiles.utils import SrsInMissingException
@@ -139,11 +140,11 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
                     [
                         ResponseType.NEW_TASK.value,
                         ''.encode('ascii'),
-                        pdumps({'xyz': coords, 'rgb': colors}),
+                        pickle.dumps({'xyz': coords, 'rgb': colors}),
                         struct.pack('>I', len(coords))
                     ], copy=False)
 
-            queue.send_multipart([ResponseType.READ.value, pdumps({'name': _id, 'total': 0})])
+            queue.send_multipart([ResponseType.READ.value, pickle.dumps({'name': _id, 'total': 0})])
 
     except Exception as e:
         print('Exception while reading points from las file')

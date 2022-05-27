@@ -1,30 +1,29 @@
+import argparse
+import concurrent.futures
+import json
+import multiprocessing
 import os
+import pickle
 import shutil
+import struct
 import sys
 import time
-import multiprocessing
-import numpy as np
-import json
 from collections import namedtuple
-import pickle
+
+import numpy as np
+import psutil
 import zmq
 from pyproj import CRS, Transformer
-import psutil
-import struct
-import concurrent.futures
-import argparse
-from py3dtiles.constants import MIN_POINT_SIZE
-from py3dtiles.utils import SrsInMissingException
-from py3dtiles.points.transformations import rotation_matrix, angle_between_vectors, vector_product, inverse_matrix, scale_matrix, translation_matrix
-from py3dtiles.points.utils import CommandType, ResponseType, compute_spacing, name_to_filename
-from py3dtiles.points.node import Node
-from py3dtiles import TileContentReader
-from py3dtiles.points.shared_node_store import SharedNodeStore
-import py3dtiles.points.task.las_reader as las_reader
-import py3dtiles.points.task.xyz_reader as xyz_reader
-import py3dtiles.points.task.node_process as node_process
-import py3dtiles.points.task.pnts_writer as pnts_writer
 
+from py3dtiles import TileContentReader
+from py3dtiles.constants import MIN_POINT_SIZE
+from py3dtiles.points.node import Node
+from py3dtiles.points.shared_node_store import SharedNodeStore
+from py3dtiles.points.task import las_reader, xyz_reader, node_process, pnts_writer
+from py3dtiles.points.transformations import rotation_matrix, angle_between_vectors, vector_product, inverse_matrix, \
+    scale_matrix, translation_matrix
+from py3dtiles.points.utils import CommandType, ResponseType, compute_spacing, name_to_filename
+from py3dtiles.utils import SrsInMissingException
 
 total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 

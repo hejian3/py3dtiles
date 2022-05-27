@@ -1,15 +1,16 @@
-import numpy as np
-from pickle import dumps as pdumps, loads as ploads
-import os
 import json
+import os
+import pickle
+
+import numpy as np
 
 from py3dtiles import TileContentReader
 from py3dtiles.constants import MIN_POINT_SIZE
 from py3dtiles.feature_table import SemanticPoint
-from py3dtiles.points.utils import name_to_filename, node_from_name, SubdivisionType, aabb_size_to_subdivision_type
-from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.distance import xyz_to_child_index
+from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.task.pnts_writer import points_to_pnts
+from py3dtiles.points.utils import name_to_filename, node_from_name, SubdivisionType, aabb_size_to_subdivision_type
 
 
 def node_to_tileset(args):
@@ -47,11 +48,11 @@ class Node(object):
         else:
             sub_pickle['points'] = self.points
 
-        d = pdumps(sub_pickle)
+        d = pickle.dumps(sub_pickle)
         return d
 
     def load_from_bytes(self, byt):
-        sub_pickle = ploads(byt)
+        sub_pickle = pickle.loads(byt)
         if 'children' in sub_pickle:
             self.children = sub_pickle['children']
             self.grid = sub_pickle['grid']
@@ -103,7 +104,7 @@ class Node(object):
 
     def dump_pending_points(self):
         result = [
-            (name, pdumps({'xyz': xyz, 'rgb': rgb}), len(xyz))
+            (name, pickle.dumps({'xyz': xyz, 'rgb': rgb}), len(xyz))
             for name, xyz, rgb in self._get_pending_points()
         ]
 

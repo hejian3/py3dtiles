@@ -1,8 +1,10 @@
 import math
-from pickle import dumps as pdumps, loads as ploads
+import pickle
+
 import lz4.frame as gzip
-from py3dtiles.points.utils import split_aabb
+
 from py3dtiles.points.node import Node
+from py3dtiles.points.utils import split_aabb
 
 
 class NodeCatalog:
@@ -43,11 +45,11 @@ class NodeCatalog:
             for n in node.children:
                 self.dump(n, max_depth - 1)
 
-        return pdumps(self.node_bytes)
+        return pickle.dumps(self.node_bytes)
 
     def _load_from_store(self, name, data):
         if len(data) > 0:
-            out = ploads(gzip.decompress(data))
+            out = pickle.loads(gzip.decompress(data))
             for n in out:
                 spacing = self.root_spacing / math.pow(2, len(n))
                 aabb = self.root_aabb

@@ -1,8 +1,8 @@
 import os
-import time
-import traceback
 import pickle
 import struct
+import time
+import traceback
 
 from py3dtiles.points.node_catalog import NodeCatalog
 from py3dtiles.points.utils import ResponseType
