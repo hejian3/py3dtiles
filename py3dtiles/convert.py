@@ -30,9 +30,6 @@ TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 IPC_URI = "ipc:///tmp/py3dtiles1"
 
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
-Reader = namedtuple('Reader', ['input', 'active'])
-NodeProcess = namedtuple('NodeProcess', ['input', 'active', 'inactive'])
-ToPnts = namedtuple('ToPnts', ['input', 'active'])
 
 
 def write_tileset(out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
@@ -185,7 +182,6 @@ class Worker:
         ext = PurePath(parameters['filename']).suffix
         init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
         init_reader_fn(
-            parameters['id'],
             parameters['filename'],
             parameters['offset_scale'],
             parameters['portion'],
@@ -225,7 +221,8 @@ class ZmqManager:
         self.activities = [p.pid for p in self.processes]
         self.idle_clients = []
 
-        self.processes_killed = -1
+        self.killing_processes = False
+        self.processes_killed = 0
         self.time_waiting_an_idle_process = 0
 
     def send_to_process(self, message):
@@ -256,7 +253,7 @@ class ZmqManager:
 
     def kill_all_processes(self):
         self.send_to_all_process([CommandType.SHUTDOWN.value])
-        self.processes_killed = 0
+        self.killing_processes = True
 
     def terminate_all_processes(self):
         for p in self.processes:
@@ -281,40 +278,75 @@ def can_pnts_be_written(name, finished_node, input_nodes, active_nodes):
         and not is_ancestor_in_list(name, input_nodes))
 
 
-def add_tasks_to_process(state, name, task, point_count):
-    if point_count <= 0:
-        raise ValueError("point_count should be strictly positive, currently", point_count)
-    tasks_to_process = state.node_process.input
-    if name not in tasks_to_process:
-        tasks_to_process[name] = ([task], point_count)
-    else:
-        tasks, count = tasks_to_process[name]
-        tasks.append(task)
-        tasks_to_process[name] = (tasks, count + point_count)
-
-
 class State:
-    def __init__(self, pointcloud_file_portions):
-        self.reader = Reader(input=pointcloud_file_portions, active=[])
-        self.node_process = NodeProcess(input={}, active={}, inactive=[])
-        self.to_pnts = ToPnts(input=[], active=[])
+    def __init__(self, pointcloud_file_portions, max_reading_jobs):
+        """
+        pointcloud_file_portions: list of tuple (filename, (start offset, end offset))
+
+        """
+        self.processed_points = 0
+        self.max_point_in_progress = 60_000_000
+        self.points_in_progress = 0
+        self.points_in_pnts = 0
+
+        self.point_cloud_file_parts = pointcloud_file_portions
+        self.max_reading_jobs = max_reading_jobs
+        self.number_of_reading_jobs = 0
+
+        # node_to_process is a dictionary of tasks,
+        # each entry is a tile identified by its name (a string of numbers)
+        # so for each entry, they are a list of tasks
+        # a task is a tuple (list of points, point_count)
+        # points ia a dictionary {xyz: list of coordinates, color: the associated color}
+        self.node_to_process = {}
+        # at the moment that a node is sent to a process, the item move to processing_nodes
+        self.processing_nodes = {}
+        # when processing is ended, move the tile name in processed_nodes
+        # since the content is at this step, stored in the node_store,
+        # just keep the name of the node.
+        # This list will be filled until the writing could be started.
+        self.waiting_writing_nodes = []
+
+        self.pnts_to_writing = []
+        self.number_of_writing_jobs = 0
+
+    def is_reading_finish(self):
+        return not self.point_cloud_file_parts and self.number_of_reading_jobs == 0
+
+    def add_tasks_to_process(self, name, task, point_count):
+        if point_count <= 0:
+            raise ValueError("point_count should be strictly positive, currently", point_count)
+
+        if name not in self.node_to_process:
+            self.node_to_process[name] = ([task], point_count)
+        else:
+            tasks, count = self.node_to_process[name]
+            tasks.append(task)
+            self.node_to_process[name] = (tasks, count + point_count)
+
+    def can_add_reading_jobs(self):
+        return (
+            self.point_cloud_file_parts
+            and self.points_in_progress < self.max_point_in_progress
+            and self.number_of_reading_jobs < self.max_reading_jobs
+        )
 
     def print_debug(self):
         print('{:^16}|{:^8}|{:^8}|{:^8}'.format('Step', 'Input', 'Active', 'Inactive'))
         print('{:^16}|{:^8}|{:^8}|{:^8}'.format(
-            'LAS reader',
-            len(self.reader.input),
-            len(self.reader.active),
+            'Reader',
+            len(self.point_cloud_file_parts),
+            self.number_of_reading_jobs,
             ''))
         print('{:^16}|{:^8}|{:^8}|{:^8}'.format(
             'Node process',
-            len(self.node_process.input),
-            len(self.node_process.active),
-            len(self.node_process.inactive)))
+            len(self.node_to_process),
+            len(self.processing_nodes),
+            len(self.waiting_writing_nodes)))
         print('{:^16}|{:^8}|{:^8}|{:^8}'.format(
             'Pnts writer',
-            len(self.to_pnts.input),
-            len(self.to_pnts.active),
+            len(self.pnts_to_writing),
+            self.number_of_writing_jobs,
             ''))
 
 
@@ -473,13 +505,7 @@ def convert(files,
     if graph:
         progression_log = open('progression.csv', 'w')
 
-    processed_points = 0
-    points_in_progress = 0
-    points_in_pnts = 0
-
-    max_splitting_jobs_count = max(1, jobs // 2)
-
-    state = State(infos['portions'])
+    state = State(infos['portions'], max(1, jobs // 2))
 
 
     # zmq setup
@@ -512,79 +538,72 @@ def convert(files,
                 all_processes_busy = False
 
             elif return_type == ResponseType.READ.value:
-                content = pickle.loads(result[-1])
-                processed_points += content['total']
-                points_in_progress -= content['total']
-
-                state.reader.active.remove(content['name'])
-
+                state.number_of_reading_jobs -= 1
                 at_least_one_job_ended = True
 
             elif return_type == ResponseType.PROCESSED.value:
                 content = pickle.loads(result[-1])
-                processed_points += content['total']
-                points_in_progress -= content['total']
+                state.processed_points += content['total']
+                state.points_in_progress -= content['total']
 
-                del state.node_process.active[content['name']]
+                del state.processing_nodes[content['name']]
 
                 if content['name']:
                     node_store.put(content['name'], content['save'])
-                    state.node_process.inactive.append(content['name'])
+                    state.waiting_writing_nodes.append(content['name'])
 
-                    if not state.reader.input and not state.reader.active:
-                        if state.node_process.active or state.node_process.input:
+                    if state.is_reading_finish():
+                        if state.processing_nodes or state.node_to_process:
                             finished_node = content['name']
                             if can_pnts_be_written(
-                                finished_node,
-                                finished_node,
-                                state.node_process.input,
-                                state.node_process.active
+                                finished_node, finished_node,
+                                state.node_to_process, state.processing_nodes
                             ):
-                                state.node_process.inactive.pop(-1)
-                                state.to_pnts.input.append(finished_node)
+                                state.waiting_writing_nodes.pop(-1)
+                                state.pnts_to_writing.append(finished_node)
 
-                                for i in range(len(state.node_process.inactive) - 1, -1, -1):
-                                    candidate = state.node_process.inactive[i]
+                                for i in range(len(state.waiting_writing_nodes) - 1, -1, -1):
+                                    candidate = state.waiting_writing_nodes[i]
 
                                     if can_pnts_be_written(
                                         candidate, finished_node,
-                                        state.node_process.input,
-                                        state.node_process.active
+                                        state.node_to_process, state.processing_nodes
                                     ):
-                                        state.node_process.inactive.pop(i)
-                                        state.to_pnts.input.append(candidate)
+                                        state.waiting_writing_nodes.pop(i)
+                                        state.pnts_to_writing.append(candidate)
 
                         else:
-                            for c in state.node_process.inactive:
-                                state.to_pnts.input.append(c)
-                            state.node_process.inactive.clear()
+                            for c in state.waiting_writing_nodes:
+                                state.pnts_to_writing.append(c)
+                            state.waiting_writing_nodes.clear()
 
                 at_least_one_job_ended = True
 
             elif return_type == ResponseType.PNTS_WRITTEN.value:
-                points_in_pnts += struct.unpack('>I', result[1])[0]
-                state.to_pnts.active.remove(result[2])
+                state.points_in_pnts += struct.unpack('>I', result[1])[0]
+                state.number_of_writing_jobs -= 1
 
             elif return_type == ResponseType.NEW_TASK.value:
                 count = struct.unpack('>I', result[3])[0]
-                add_tasks_to_process(state, result[1], result[2], count)
+                state.add_tasks_to_process(result[1], result[2], count)
 
             else:
                 raise NotImplementedError(f"The command {return_type} is not implemented")
 
-        while state.to_pnts.input and zmq_manager.can_queue_more_jobs():
-            node_name = state.to_pnts.input.pop()
-            datas = node_store.get(node_name)
-            if not datas:
+        while state.pnts_to_writing and zmq_manager.can_queue_more_jobs():
+            node_name = state.pnts_to_writing.pop()
+            data = node_store.get(node_name)
+            if not data:
                 raise ValueError(f'{node_name} has no data')
 
-            zmq_manager.send_to_process([CommandType.WRITE_PNTS.value, node_name, datas])
+            zmq_manager.send_to_process([CommandType.WRITE_PNTS.value, node_name, data])
             node_store.remove(node_name)
-            state.to_pnts.active.append(node_name)
+            state.number_of_writing_jobs += 1
 
         if zmq_manager.can_queue_more_jobs():
             potential = sorted(
-                [(k, v) for k, v in state.node_process.input.items() if k not in state.node_process.active],
+                # don't know why but it seems possible a key is in node_to_process AND processing_nodes.....
+                [(k, v) for k, v in state.node_to_process.items() if k not in state.processing_nodes],
                 key=lambda f: -len(f[0]))
 
             while zmq_manager.can_queue_more_jobs() and potential:
@@ -594,32 +613,32 @@ def convert(files,
                 idx = len(potential) - 1
                 while count < target_count and potential and idx >= 0:
                     name, (tasks, point_count) = potential[idx]
-                    if name not in state.node_process.active:
+                    if name not in state.processing_nodes:
                         count += point_count
                         job_list += [name]
                         job_list += [node_store.get(name)]
                         job_list += [struct.pack('>I', len(tasks))]
                         job_list += tasks
                         del potential[idx]
-                        del state.node_process.input[name]
-                        state.node_process.active[name] = (len(tasks), point_count, now)
 
-                        if name in state.node_process.inactive:
-                            state.node_process.inactive.pop(state.node_process.inactive.index(name))
+                        del state.node_to_process[name]
+                        state.processing_nodes[name] = (len(tasks), point_count, now)
+
+                        if name in state.waiting_writing_nodes:
+                            state.waiting_writing_nodes.pop(state.waiting_writing_nodes.index(name))
                     idx -= 1
 
                 if job_list:
                     zmq_manager.send_to_process([CommandType.PROCESS_JOBS.value] + job_list)
 
-        while (state.reader.input
-               and (points_in_progress < 60_000_000 or not state.reader.active)
-               and len(state.reader.active) < max_splitting_jobs_count
+        while (state.point_cloud_file_parts
+               and (state.points_in_progress < 60_000_000 or state.number_of_reading_jobs == 0)
+               and state.number_of_reading_jobs < state.max_reading_jobs
                and zmq_manager.can_queue_more_jobs()):
             if verbose >= 1:
-                print('Submit next portion {}'.format(state.reader.input[-1]))
-            _id = 'root_{}'.format(len(state.reader.input)).encode('ascii')
-            file, portion = state.reader.input.pop()
-            points_in_progress += portion[1] - portion[0]
+                print('Submit next portion {}'.format(state.point_cloud_file_parts[-1]))
+            file, portion = state.point_cloud_file_parts.pop()
+            state.points_in_progress += portion[1] - portion[0]
 
             zmq_manager.send_to_process([CommandType.READ_FILE.value, pickle.dumps({
                 'filename': file,
@@ -630,40 +649,38 @@ def convert(files,
                     infos['color_scale'].get(file) if infos['color_scale'] is not None else None,
                 ),
                 'portion': portion,
-                'id': _id
             })])
 
-            state.reader.active.append(_id)
+            state.number_of_reading_jobs += 1
 
         # if at this point we have no work in progress => we're done
-        if zmq_manager.are_all_processes_idle() or zmq_manager.are_all_processes_killed():
-            if zmq_manager.processes_killed < 0:
-                zmq_manager.kill_all_processes()
-            else:
-                if points_in_pnts != infos['point_count']:
-                    raise ValueError("!!! Invalid point count in the written .pnts"
-                                     + f"(expected: {infos['point_count']}, was: {points_in_pnts})")
-                if verbose >= 1:
-                    print('Writing 3dtiles {}'.format(infos['avg_min']))
-                write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
-                shutil.rmtree(working_dir)
-                if verbose >= 1:
-                    print('Done')
+        if zmq_manager.are_all_processes_idle() and not zmq_manager.killing_processes:
+            zmq_manager.kill_all_processes()
+        elif zmq_manager.are_all_processes_killed():
+            if state.points_in_pnts != infos['point_count']:
+                raise ValueError("!!! Invalid point count in the written .pnts"
+                                 + f"(expected: {infos['point_count']}, was: {state.points_in_pnts})")
+            if verbose >= 1:
+                print('Writing 3dtiles {}'.format(infos['avg_min']))
+            write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
+            shutil.rmtree(working_dir)
+            if verbose >= 1:
+                print('Done')
 
-                if benchmark:
-                    print('{},{},{},{}'.format(
-                        benchmark,
-                        ','.join([os.path.basename(f) for f in files]),
-                        points_in_pnts,
-                        round(time.time() - startup, 1)))
+            if benchmark:
+                print('{},{},{},{}'.format(
+                    benchmark,
+                    ','.join([os.path.basename(f) for f in files]),
+                    state.points_in_pnts,
+                    round(time.time() - startup, 1)))
 
-                zmq_manager.terminate_all_processes()
-                break
+            zmq_manager.terminate_all_processes()
+            break
 
         if at_least_one_job_ended:
             if verbose >= 3:
                 print('{:^16}|{:^8}|{:^8}'.format('Name', 'Points', 'Seconds'))
-                for name, v in state.node_process.active.items():
+                for name, v in state.processing_nodes.items():
                     print('{:^16}|{:^8}|{:^8}'.format(
                         '{} ({})'.format(name.decode('ascii'), v[0]),
                         v[1],
@@ -671,28 +688,28 @@ def convert(files,
                 print('')
                 print('Pending:')
                 print('  - root: {} / {}'.format(
-                    len(state.reader.input),
+                    len(state.point_cloud_file_parts),
                     initial_portion_count))
                 print('  - other: {} files for {} nodes'.format(
-                    sum([len(f[0]) for f in state.node_process.input.values()]),
-                    len(state.node_process.input)))
+                    sum([len(f[0]) for f in state.node_to_process.values()]),
+                    len(state.node_to_process)))
                 print('')
             elif verbose >= 2:
                 state.print_debug()
             if verbose >= 1:
                 print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
-                    round(100 * processed_points / infos['point_count'], 2),
+                    round(100 * state.processed_points / infos['point_count'], 2),
                     round(now, 1),
                     jobs - len(zmq_manager.idle_clients),
-                    len(state.node_process.active),
-                    points_in_progress))
+                    len(state.processing_nodes),
+                    state.points_in_progress))
             elif verbose >= 0:
-                percent = round(100 * processed_points / infos['point_count'], 2)
+                percent = round(100 * state.processed_points / infos['point_count'], 2)
                 time_left = (100 - percent) * now / (percent + 0.001)
                 print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='', flush=True)
 
             if graph:
-                percent = round(100 * processed_points / infos['point_count'], 3)
+                percent = round(100 * state.processed_points / infos['point_count'], 3)
                 print('{}, {}'.format(time.time() - startup, percent), file=progression_log)
 
         node_store.control_memory_usage(cache_size, verbose)

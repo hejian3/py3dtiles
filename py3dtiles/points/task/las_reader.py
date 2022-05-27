@@ -73,7 +73,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
+def run(filename, offset_scale, portion, queue, transformer, verbose):
     """
     Reads points from a las file
     """
@@ -144,7 +144,7 @@ def run(_id, filename, offset_scale, portion, queue, transformer, verbose):
                         struct.pack('>I', len(coords))
                     ], copy=False)
 
-            queue.send_multipart([ResponseType.READ.value, pickle.dumps({'name': _id, 'total': 0})])
+            queue.send_multipart([ResponseType.READ.value])
 
     except Exception as e:
         print('Exception while reading points from las file')
