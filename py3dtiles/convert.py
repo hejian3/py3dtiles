@@ -26,7 +26,13 @@ from py3dtiles.points.transformations import rotation_matrix, angle_between_vect
 from py3dtiles.points.utils import CommandType, ResponseType, compute_spacing, name_to_filename
 from py3dtiles.utils import SrsInMissingException
 
-total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
+TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
+IPC_URI = "ipc:///tmp/py3dtiles1"
+
+OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
+Reader = namedtuple('Reader', ['input', 'active'])
+NodeProcess = namedtuple('NodeProcess', ['input', 'active', 'inactive'])
+ToPnts = namedtuple('ToPnts', ['input', 'active'])
 
 
 def write_tileset(out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
@@ -93,9 +99,6 @@ def make_rotation_matrix(z1, z2):
         vector_product(v0, v1))
 
 
-OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
-
-
 def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_metadata, folder, write_rgb, verbosity):
     transformer = None
     if srs_out_wkt is not None:
@@ -106,7 +109,7 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
 
     # Socket to receive messages on
     skt = context.socket(zmq.DEALER)
-    skt.connect('ipc:///tmp/py3dtiles1')
+    skt.connect(IPC_URI)
 
     startup_time = time.time()
     idle_time = 0
@@ -217,9 +220,19 @@ def can_pnts_be_written(name, finished_node, input_nodes, active_nodes):
         and not is_ancestor_in_list(ln, name, input_nodes))
 
 
-Reader = namedtuple('Reader', ['input', 'active'])
-NodeProcess = namedtuple('NodeProcess', ['input', 'active', 'inactive'])
-ToPnts = namedtuple('ToPnts', ['input', 'active'])
+def add_tasks_to_process(state, name, task, point_count):
+    assert point_count > 0
+    tasks_to_process = state.node_process.input
+    if name not in tasks_to_process:
+        tasks_to_process[name] = ([task], point_count)
+    else:
+        tasks, count = tasks_to_process[name]
+        tasks.append(task)
+        tasks_to_process[name] = (tasks, count + point_count)
+
+
+def can_queue_more_jobs(idles):
+    return idles
 
 
 class State():
@@ -247,87 +260,11 @@ class State():
             ''))
 
 
-def can_queue_more_jobs(idles):
-    return idles
-
-
-def init_parser(subparser, str2bool):
-
-    parser = subparser.add_parser(
-        'convert',
-        help='Convert .las files to a 3dtiles tileset.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        'files',
-        nargs='+',
-        help='Filenames to process. The file must use the .las, .laz (lastools must be installed) or .xyz format.')
-    parser.add_argument(
-        '--out',
-        type=str,
-        help='The folder where the resulting tileset will be written.',
-        default='./3dtiles')
-    parser.add_argument(
-        '--overwrite',
-        help='Delete and recreate the ouput folder if it already exists. WARNING: be careful, there will be no confirmation!',
-        default=False,
-        type=str2bool)
-    parser.add_argument(
-        '--jobs',
-        help='The number of parallel jobs to start. Default to the number of cpu.',
-        default=multiprocessing.cpu_count(),
-        type=int)
-    parser.add_argument(
-        '--cache_size',
-        help='Cache size in MB. Default to available memory / 10.',
-        default=int(total_memory_MB / 10),
-        type=int)
-    parser.add_argument(
-        '--srs_out', help='SRS to convert the output with (numeric part of the EPSG code)', type=str)
-    parser.add_argument(
-        '--srs_in', help='Override input SRS (numeric part of the EPSG code)', type=str)
-    parser.add_argument(
-        '--fraction',
-        help='Percentage of the pointcloud to process.',
-        default=100, type=int)
-    parser.add_argument(
-        '--benchmark',
-        help='Print summary at the end of the process', type=str)
-    parser.add_argument(
-        '--rgb',
-        help='Export rgb attributes', type=str2bool, default=True)
-    parser.add_argument(
-        '--graph',
-        help='Produce debug graphes (requires pygal)', type=str2bool, default=False)
-    parser.add_argument(
-        '--color_scale',
-        help='Force color scale', type=float)
-
-
-def main(args):
-    try:
-        return convert(args.files,
-                       outfolder=args.out,
-                       overwrite=args.overwrite,
-                       jobs=args.jobs,
-                       cache_size=args.cache_size,
-                       srs_out=args.srs_out,
-                       srs_in=args.srs_in,
-                       fraction=args.fraction,
-                       benchmark=args.benchmark,
-                       rgb=args.rgb,
-                       graph=args.graph,
-                       color_scale=args.color_scale,
-                       verbose=args.verbose)
-    except SrsInMissingException:
-        print('No SRS information in input files, you should specify it with --srs_in')
-        sys.exit(1)
-
-
 def convert(files,
             outfolder='./3dtiles',
             overwrite=False,
             jobs=multiprocessing.cpu_count(),
-            cache_size=int(total_memory_MB / 10),
+            cache_size=int(TOTAL_MEMORY_MB / 10),
             srs_out=None,
             srs_in=None,
             fraction=100,
@@ -479,16 +416,6 @@ def convert(files,
     if graph:
         progression_log = open('progression.csv', 'w')
 
-    def add_tasks_to_process(state, name, task, point_count):
-        assert point_count > 0
-        tasks_to_process = state.node_process.input
-        if name not in tasks_to_process:
-            tasks_to_process[name] = ([task], point_count)
-        else:
-            tasks, count = tasks_to_process[name]
-            tasks.append(task)
-            tasks_to_process[name] = (tasks, count + point_count)
-
     processed_points = 0
     points_in_progress = 0
     previous_percent = 0
@@ -500,7 +427,7 @@ def convert(files,
     context = zmq.Context()
 
     zmq_skt = context.socket(zmq.ROUTER)
-    zmq_skt.bind('ipc:///tmp/py3dtiles1')
+    zmq_skt.bind(IPC_URI)
 
     zmq_idle_clients = []
 
@@ -780,5 +707,73 @@ def convert(files,
     context.destroy()
 
 
-if __name__ == '__main__':
-    main()
+def init_parser(subparser, str2bool):
+
+    parser = subparser.add_parser(
+        'convert',
+        help='Convert .las files to a 3dtiles tileset.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        'files',
+        nargs='+',
+        help='Filenames to process. The file must use the .las, .laz (lastools must be installed) or .xyz format.')
+    parser.add_argument(
+        '--out',
+        type=str,
+        help='The folder where the resulting tileset will be written.',
+        default='./3dtiles')
+    parser.add_argument(
+        '--overwrite',
+        help='Delete and recreate the ouput folder if it already exists. WARNING: be careful, there will be no confirmation!',
+        default=False,
+        type=str2bool)
+    parser.add_argument(
+        '--jobs',
+        help='The number of parallel jobs to start. Default to the number of cpu.',
+        default=multiprocessing.cpu_count(),
+        type=int)
+    parser.add_argument(
+        '--cache_size',
+        help='Cache size in MB. Default to available memory / 10.',
+        default=int(TOTAL_MEMORY_MB / 10),
+        type=int)
+    parser.add_argument(
+        '--srs_out', help='SRS to convert the output with (numeric part of the EPSG code)', type=str)
+    parser.add_argument(
+        '--srs_in', help='Override input SRS (numeric part of the EPSG code)', type=str)
+    parser.add_argument(
+        '--fraction',
+        help='Percentage of the pointcloud to process.',
+        default=100, type=int)
+    parser.add_argument(
+        '--benchmark',
+        help='Print summary at the end of the process', type=str)
+    parser.add_argument(
+        '--rgb',
+        help='Export rgb attributes', type=str2bool, default=True)
+    parser.add_argument(
+        '--graph',
+        help='Produce debug graphes (requires pygal)', type=str2bool, default=False)
+    parser.add_argument(
+        '--color_scale',
+        help='Force color scale', type=float)
+
+
+def main(args):
+    try:
+        return convert(args.files,
+                       outfolder=args.out,
+                       overwrite=args.overwrite,
+                       jobs=args.jobs,
+                       cache_size=args.cache_size,
+                       srs_out=args.srs_out,
+                       srs_in=args.srs_in,
+                       fraction=args.fraction,
+                       benchmark=args.benchmark,
+                       rgb=args.rgb,
+                       graph=args.graph,
+                       color_scale=args.color_scale,
+                       verbose=args.verbose)
+    except SrsInMissingException:
+        print('No SRS information in input files, you should specify it with --srs_in')
+        sys.exit(1)
