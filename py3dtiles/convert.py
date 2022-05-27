@@ -9,7 +9,7 @@ import struct
 import sys
 import time
 from collections import namedtuple
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import numpy as np
 import psutil
@@ -100,11 +100,13 @@ def make_rotation_matrix(z1, z2):
 
 
 def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_metadata, folder, write_rgb, verbosity):
-    transformer = None
-    if srs_out_wkt is not None:
+    if srs_out_wkt:
         crs_out = CRS(srs_out_wkt)
         crs_in = CRS(srs_in_wkt)
         transformer = Transformer.from_crs(crs_in, crs_out)
+    else:
+        transformer = None
+
     context = zmq.Context()
 
     # Socket to receive messages on
@@ -139,7 +141,7 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
             parameters = pickle.loads(content[1])
             command_type = 1
 
-            _, ext = os.path.splitext(parameters['filename'])
+            ext = PurePath(parameters['filename']).suffix
             init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
             init_reader_fn(
                 parameters['id'],
@@ -187,41 +189,40 @@ def zmq_process(activity_graph, srs_out_wkt, srs_in_wkt, node_store, octree_meta
 
 
 def zmq_send_to_process(idle_clients, socket, message):
-    assert idle_clients
+    if not idle_clients:
+        raise ValueError("idle_clients is empty")
     socket.send_multipart([idle_clients.pop(), pickle.dumps(time.time())] + message)
 
 
 def zmq_send_to_all_process(idle_clients, socket, message):
-    assert idle_clients
+    if not idle_clients:
+        raise ValueError("idle_clients is empty")
     for client in idle_clients:
         socket.send_multipart([client, pickle.dumps(time.time())] + message)
     idle_clients.clear()
 
 
-def is_ancestor(ln, la, name, ancestor):
-    return la <= ln and name[0:la] == ancestor
+def is_ancestor(name, ancestor):
+    return len(ancestor) <= len(name) and name[0:len(ancestor)] == ancestor
 
 
-def is_ancestor_in_list(ln, node_name, d):
+def is_ancestor_in_list(node_name, d):
     for ancestor in d:
-        k_len = len(ancestor)
-        if k_len == 0:
-            return True
-        if is_ancestor(ln, k_len, node_name, ancestor):
+        if not ancestor or is_ancestor(node_name, ancestor):
             return True
     return False
 
 
 def can_pnts_be_written(name, finished_node, input_nodes, active_nodes):
-    ln = len(name)
     return (
-        is_ancestor(ln, len(finished_node), name, finished_node)
-        and not is_ancestor_in_list(ln, name, active_nodes)
-        and not is_ancestor_in_list(ln, name, input_nodes))
+        is_ancestor(name, finished_node)
+        and not is_ancestor_in_list(name, active_nodes)
+        and not is_ancestor_in_list(name, input_nodes))
 
 
 def add_tasks_to_process(state, name, task, point_count):
-    assert point_count > 0
+    if point_count <= 0:
+        raise ValueError("point_count should be strictly positive, currently", point_count)
     tasks_to_process = state.node_process.input
     if name not in tasks_to_process:
         tasks_to_process[name] = ([task], point_count)
@@ -235,7 +236,7 @@ def can_queue_more_jobs(idles):
     return idles
 
 
-class State():
+class State:
     def __init__(self, pointcloud_file_portions):
         self.reader = Reader(input=pointcloud_file_portions, active=[])
         self.node_process = NodeProcess(input={}, active={}, inactive=[])
