@@ -9,6 +9,7 @@ import struct
 import sys
 import time
 from collections import namedtuple
+from pathlib import Path
 
 import numpy as np
 import psutil
@@ -28,7 +29,7 @@ from py3dtiles.utils import SrsInMissingException
 total_memory_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 
 
-def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
+def write_tileset(out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
     # compute tile transform matrix
     if rotation_matrix is None:
         transform = np.identity(4)
@@ -38,28 +39,27 @@ def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, rotatio
     transform = np.dot(translation_matrix(offset), transform)
 
     # build fake points
-    if True:
-        root_node = Node('', octree_metadata.aabb, octree_metadata.spacing * 2)
-        root_node.children = []
-        inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, octree_metadata.aabb[1] - octree_metadata.aabb[0])).astype(np.float32)
-        for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
-            ondisk_tile = name_to_filename(out_folder, child.encode('ascii'), '.pnts')
-            if os.path.exists(ondisk_tile):
-                tile_content = TileContentReader.read_file(ondisk_tile)
-                fth = tile_content.body.feature_table.header
-                xyz = tile_content.body.feature_table.body.positions_arr.view(np.float32).reshape((fth.points_length, 3))
-                if include_rgb:
-                    rgb = tile_content.body.feature_table.body.colors_arr.reshape((fth.points_length, 3))
-                else:
-                    rgb = np.zeros(xyz.shape, dtype=np.uint8)
+    root_node = Node('', octree_metadata.aabb, octree_metadata.spacing * 2)
+    root_node.children = []
+    inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, octree_metadata.aabb[1] - octree_metadata.aabb[0])).astype(np.float32)
+    for child in range(8):
+        ondisk_tile = name_to_filename(out_folder, str(child).encode('ascii'), '.pnts')
+        if os.path.exists(ondisk_tile):
+            tile_content = TileContentReader.read_file(ondisk_tile)
+            fth = tile_content.body.feature_table.header
+            xyz = tile_content.body.feature_table.body.positions_arr.view(np.float32).reshape((fth.points_length, 3))
+            if include_rgb:
+                rgb = tile_content.body.feature_table.body.colors_arr.reshape((fth.points_length, 3))
+            else:
+                rgb = np.zeros(xyz.shape, dtype=np.uint8)
 
-                root_node.grid.insert(
-                    octree_metadata.aabb[0].astype(np.float32),
-                    inv_aabb_size,
-                    xyz.copy(),
-                    rgb)
+            root_node.grid.insert(
+                octree_metadata.aabb[0].astype(np.float32),
+                inv_aabb_size,
+                xyz.copy(),
+                rgb)
 
-        pnts_writer.node_to_pnts(''.encode('ascii'), root_node, out_folder, include_rgb)
+    pnts_writer.node_to_pnts(''.encode('ascii'), root_node, out_folder, include_rgb)
 
     executor = concurrent.futures.ProcessPoolExecutor()
     root_tileset = Node.to_tileset(executor, ''.encode('ascii'), octree_metadata.aabb, octree_metadata.spacing, out_folder, scale)
@@ -79,7 +79,8 @@ def write_tileset(in_folder, out_folder, octree_metadata, offset, scale, rotatio
         'root': root_tileset,
     }
 
-    with open('{}/tileset.json'.format(out_folder), 'w') as f:
+    tileset_path = Path(out_folder) / "tileset.json"
+    with tileset_path.open('w') as f:
         f.write(json.dumps(tileset))
 
 
@@ -678,13 +679,7 @@ def convert(files,
                     infos['point_count'], points_in_pnts)
                 if verbose >= 1:
                     print('Writing 3dtiles {}'.format(infos['avg_min']))
-                write_tileset(working_dir,
-                              outfolder,
-                              octree_metadata,
-                              avg_min,
-                              root_scale,
-                              rotation_matrix,
-                              rgb)
+                write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
                 shutil.rmtree(working_dir)
                 if verbose >= 1:
                     print('Done')
