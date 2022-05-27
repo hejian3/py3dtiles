@@ -422,7 +422,6 @@ def convert(files,
 
     processed_points = 0
     points_in_progress = 0
-    previous_percent = 0
     points_in_pnts = 0
 
     max_splitting_jobs_count = max(1, jobs // 2)
