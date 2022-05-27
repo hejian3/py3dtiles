@@ -325,12 +325,12 @@ def convert(files,
     # srs stuff
     srs_out_wkt = None
     srs_in_wkt = None
-    if srs_out is not None:
+    if srs_out:
         crs_out = CRS('epsg:{}'.format(srs_out))
-        if srs_in is not None:
+        if srs_in:
             crs_in = CRS('epsg:{}'.format(srs_in))
-        elif infos['srs_in'] is None:
-            raise SrsInMissingException('No SRS informations in the provided files')
+        elif not infos['srs_in']:
+            raise SrsInMissingException('No SRS information in the provided files')
         else:
             crs_in = CRS(infos['srs_in'])
 
@@ -376,14 +376,13 @@ def convert(files,
 
     original_aabb = root_aabb
 
-    if True:
-        base_spacing = compute_spacing(root_aabb)
-        if base_spacing > 10:
-            root_scale = np.array([0.01, 0.01, 0.01])
-        elif base_spacing > 1:
-            root_scale = np.array([0.1, 0.1, 0.1])
-        else:
-            root_scale = np.array([1, 1, 1])
+    base_spacing = compute_spacing(root_aabb)
+    if base_spacing > 10:
+        root_scale = np.array([0.01, 0.01, 0.01])
+    elif base_spacing > 1:
+        root_scale = np.array([0.1, 0.1, 0.1])
+    else:
+        root_scale = np.array([1, 1, 1])
 
     root_aabb = root_aabb * root_scale
     root_spacing = compute_spacing(root_aabb)
@@ -391,18 +390,19 @@ def convert(files,
     octree_metadata = OctreeMetadata(aabb=root_aabb, spacing=root_spacing, scale=root_scale[0])
 
     # create folder
-    if os.path.isdir(outfolder):
+    out_folder_path = Path(outfolder)
+    if out_folder_path.is_dir():
         if overwrite:
-            shutil.rmtree(outfolder, ignore_errors=True)
+            shutil.rmtree(out_folder_path, ignore_errors=True)
         else:
-            print('Error, folder \'{}\' already exists'.format(outfolder))
+            print(f"Error, folder '{outfolder}' already exists")
             sys.exit(1)
 
-    os.makedirs(outfolder)
-    working_dir = os.path.join(outfolder, 'tmp')
-    os.makedirs(working_dir)
+    out_folder_path.mkdir()
+    working_dir = out_folder_path / "tmp"
+    working_dir.mkdir()
 
-    node_store = SharedNodeStore(working_dir)
+    node_store = SharedNodeStore(str(working_dir))
 
     if verbose >= 1:
         print('Summary:')
@@ -542,7 +542,9 @@ def convert(files,
         while state.to_pnts.input and can_queue_more_jobs(zmq_idle_clients):
             node_name = state.to_pnts.input.pop()
             datas = node_store.get(node_name)
-            assert len(datas) > 0, '{} has no data??'.format(node_name)
+            if not datas:
+                raise ValueError(f'{node_name} has no data')
+
             zmq_send_to_process(zmq_idle_clients, zmq_skt, [CommandType.WRITE_PNTS.value, node_name, datas])
             node_store.remove(node_name)
             state.to_pnts.active.append(node_name)
@@ -606,8 +608,9 @@ def convert(files,
                 zmq_send_to_all_process(zmq_idle_clients, zmq_skt, [CommandType.SHUTDOWN.value])
                 zmq_processes_killed = 0
             else:
-                assert points_in_pnts == infos['point_count'], '!!! Invalid point count in the written .pnts (expected: {}, was: {})'.format(
-                    infos['point_count'], points_in_pnts)
+                if points_in_pnts != infos['point_count']:
+                    raise ValueError("!!! Invalid point count in the written .pnts"
+                                     + f"(expected: {infos['point_count']}, was: {points_in_pnts})")
                 if verbose >= 1:
                     print('Writing 3dtiles {}'.format(infos['avg_min']))
                 write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
@@ -615,7 +618,7 @@ def convert(files,
                 if verbose >= 1:
                     print('Done')
 
-                if benchmark is not None:
+                if benchmark:
                     print('{},{},{},{}'.format(
                         benchmark,
                         ','.join([os.path.basename(f) for f in files]),
@@ -656,9 +659,6 @@ def convert(files,
                 percent = round(100 * processed_points / infos['point_count'], 2)
                 time_left = (100 - percent) * now / (percent + 0.001)
                 print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='', flush=True)
-                if False and int(percent) != previous_percent:
-                    print('')
-                    previous_percent = int(percent)
 
             if graph:
                 percent = round(100 * processed_points / infos['point_count'], 3)
@@ -676,7 +676,7 @@ def convert(files,
     if graph:
         import pygal
 
-        dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))  # , show_y_guides=False)
+        dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
         for pid in activities:
             activity = []
             filename = 'activity.{}.csv'.format(pid)
