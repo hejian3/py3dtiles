@@ -1,7 +1,8 @@
-import numpy as np
-import os
 from enum import Enum
 from io import StringIO
+from pathlib import Path, PurePath
+
+import numpy as np
 
 
 class CommandType(Enum):
@@ -17,7 +18,7 @@ class ResponseType(Enum):
     READ = b'read'
     PROCESSED = b'processed'
     PNTS_WRITTEN = b'pnts_written'
-    NEW_TASK = B'new_task'
+    NEW_TASK = b'new_task'
 
 
 def profile(func):
@@ -39,21 +40,25 @@ class SubdivisionType(Enum):
     QUADTREE = 2
 
 
-def name_to_filename(working_dir, nameb, suffix=''):
+def name_to_filename(working_dir: str, nameb: bytes, suffix: str = '', split_len: int = 8) -> str:
+    """
+    Get the filename of a tile from its name and the working directory.
+    If the name is '222262175' with the suffix '.pnts', the result is 'working_dir/22226217/r5.pnts'
+    """
     name = nameb.decode('ascii')
-    fullpath = [name[i:i + 8] for i in range(0, len(name), 8)] if name else ['']
-    folder = '{}/{}/'.format(
-        working_dir,
-        '/'.join(fullpath[:-1]))
+    folder_path = Path(working_dir)
+    if len(name) <= split_len:
+        filename = PurePath("r" + name + suffix)
+    else:
+        # the name is split on every 'split_len' char to avoid to have too many tiles on the same folder.
+        sub_folders = [name[i:i + split_len] for i in range(0, len(name), split_len)]
+        folder_path = folder_path.joinpath(*sub_folders[:-1])
+        filename = PurePath("r" + sub_folders[-1] + suffix)
 
-    if not os.path.exists(folder):
-        try:
-            os.makedirs(folder, exist_ok=True)
-        except OSError as exc:
-            print(exc)
+    full_path = folder_path / filename
+    folder_path.mkdir(parents=True, exist_ok=True)
 
-    filename = '{}r{}{}'.format(folder, fullpath[-1], suffix)
-    return filename
+    return str(full_path)
 
 
 def compute_spacing(aabb):
