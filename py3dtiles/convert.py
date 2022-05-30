@@ -511,7 +511,7 @@ def convert(files,
     # zmq setup
     zmq_manager = ZmqManager(jobs, (graph, transformer, octree_metadata, outfolder, rgb, verbose))
 
-    while True:
+    while not zmq_manager.are_all_processes_killed():
         now = time.time() - startup
         at_least_one_job_ended = False
 
@@ -553,6 +553,8 @@ def convert(files,
                     state.waiting_writing_nodes.append(content['name'])
 
                     if state.is_reading_finish():
+                        # if all nodes aren't processed yet,
+                        # we should check if linked ancestors are processed
                         if state.processing_nodes or state.node_to_process:
                             finished_node = content['name']
                             if can_pnts_be_written(
@@ -601,42 +603,39 @@ def convert(files,
             state.number_of_writing_jobs += 1
 
         if zmq_manager.can_queue_more_jobs():
-            potential = sorted(
-                # don't know why but it seems possible a key is in node_to_process AND processing_nodes.....
+            potentials = sorted(
+                # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
                 [(k, v) for k, v in state.node_to_process.items() if k not in state.processing_nodes],
                 key=lambda f: -len(f[0]))
 
-            while zmq_manager.can_queue_more_jobs() and potential:
-                target_count = 100000
+            while zmq_manager.can_queue_more_jobs() and potentials:
+                target_count = 100_000
                 job_list = []
                 count = 0
-                idx = len(potential) - 1
-                while count < target_count and potential and idx >= 0:
-                    name, (tasks, point_count) = potential[idx]
-                    if name not in state.processing_nodes:
-                        count += point_count
-                        job_list += [name]
-                        job_list += [node_store.get(name)]
-                        job_list += [struct.pack('>I', len(tasks))]
-                        job_list += tasks
-                        del potential[idx]
+                idx = len(potentials) - 1
+                while count < target_count and idx >= 0:
+                    name, (tasks, point_count) = potentials[idx]
+                    count += point_count
+                    job_list += [
+                        name,
+                        node_store.get(name),
+                        struct.pack('>I', len(tasks)),
+                    ] + tasks
+                    del potentials[idx]
 
-                        del state.node_to_process[name]
-                        state.processing_nodes[name] = (len(tasks), point_count, now)
+                    del state.node_to_process[name]
+                    state.processing_nodes[name] = (len(tasks), point_count, now)
 
-                        if name in state.waiting_writing_nodes:
-                            state.waiting_writing_nodes.pop(state.waiting_writing_nodes.index(name))
+                    if name in state.waiting_writing_nodes:
+                        state.waiting_writing_nodes.pop(state.waiting_writing_nodes.index(name))
                     idx -= 1
 
                 if job_list:
                     zmq_manager.send_to_process([CommandType.PROCESS_JOBS.value] + job_list)
 
-        while (state.point_cloud_file_parts
-               and (state.points_in_progress < 60_000_000 or state.number_of_reading_jobs == 0)
-               and state.number_of_reading_jobs < state.max_reading_jobs
-               and zmq_manager.can_queue_more_jobs()):
+        while state.can_add_reading_jobs() and zmq_manager.can_queue_more_jobs():
             if verbose >= 1:
-                print('Submit next portion {}'.format(state.point_cloud_file_parts[-1]))
+                print(f'Submit next portion {state.point_cloud_file_parts[-1]}')
             file, portion = state.point_cloud_file_parts.pop()
             state.points_in_progress += portion[1] - portion[0]
 
@@ -656,26 +655,6 @@ def convert(files,
         # if at this point we have no work in progress => we're done
         if zmq_manager.are_all_processes_idle() and not zmq_manager.killing_processes:
             zmq_manager.kill_all_processes()
-        elif zmq_manager.are_all_processes_killed():
-            if state.points_in_pnts != infos['point_count']:
-                raise ValueError("!!! Invalid point count in the written .pnts"
-                                 + f"(expected: {infos['point_count']}, was: {state.points_in_pnts})")
-            if verbose >= 1:
-                print('Writing 3dtiles {}'.format(infos['avg_min']))
-            write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
-            shutil.rmtree(working_dir)
-            if verbose >= 1:
-                print('Done')
-
-            if benchmark:
-                print('{},{},{},{}'.format(
-                    benchmark,
-                    ','.join([os.path.basename(f) for f in files]),
-                    state.points_in_pnts,
-                    round(time.time() - startup, 1)))
-
-            zmq_manager.terminate_all_processes()
-            break
 
         if at_least_one_job_ended:
             if verbose >= 3:
@@ -713,6 +692,27 @@ def convert(files,
                 print('{}, {}'.format(time.time() - startup, percent), file=progression_log)
 
         node_store.control_memory_usage(cache_size, verbose)
+
+    if state.points_in_pnts != infos['point_count']:
+        raise ValueError("!!! Invalid point count in the written .pnts"
+                         + f"(expected: {infos['point_count']}, was: {state.points_in_pnts})")
+    if verbose >= 1:
+        print('Writing 3dtiles {}'.format(infos['avg_min']))
+
+    write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
+    shutil.rmtree(working_dir)
+
+    if verbose >= 1:
+        print('Done')
+
+    if benchmark:
+        print('{},{},{},{}'.format(
+            benchmark,
+            ','.join([os.path.basename(f) for f in files]),
+            state.points_in_pnts,
+            round(time.time() - startup, 1)))
+
+    zmq_manager.terminate_all_processes()
 
     if verbose >= 1:
         print('destroy', round(zmq_manager.time_waiting_an_idle_process, 2))
