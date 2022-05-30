@@ -59,7 +59,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
         steps = math.ceil(count / _1M)
         if steps != len(seek_values):
             raise ValueError("the size of seek_values should be equal to steps,"
-                             f"currently {steps = } and {len(seek_values) = }")
+                             f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
         portions = [
             (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
         ]
