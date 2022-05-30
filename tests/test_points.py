@@ -4,7 +4,7 @@ from numpy.testing import assert_array_equal
 
 from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.node import Node
-from py3dtiles.points.utils import compute_spacing
+from py3dtiles.points.utils import compute_spacing, name_to_filename
 from py3dtiles.points.distance import is_point_far_enough
 
 # test point
@@ -73,3 +73,27 @@ def test_is_point_far_enough():
 
 def test_is_point_far_enough_perf(benchmark):
     benchmark(is_point_far_enough, sample_points, xyz, 0.25 ** 2)
+
+
+def test_short_name_to_filename():
+    short_tile_name = ''.encode("ascii")
+    filename = name_to_filename('work/', short_tile_name)
+    assert filename == 'work/r'
+
+
+def test_long_name_to_filename():
+    long_tile_name = '110542453782'.encode("ascii")
+    filename = name_to_filename('work/', long_tile_name)
+    assert filename == 'work/11054245/r3782'
+
+
+def test_long_name_to_filename_with_extension():
+    long_tile_name = '110542453782'.encode("ascii")
+    filename = name_to_filename('work/', long_tile_name, suffix='.pnts')
+    assert filename == 'work/11054245/r3782.pnts'
+
+
+def test_long_name_to_filename_with_short_split():
+    long_tile_name = '110542453782'.encode("ascii")
+    filename = name_to_filename('work/', long_tile_name, split_len=2)
+    assert filename == 'work/11/05/42/45/37/r82'
