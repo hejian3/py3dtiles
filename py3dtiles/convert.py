@@ -400,7 +400,7 @@ def convert(files,
 
     out_folder_path.mkdir()
     working_dir = out_folder_path / "tmp"
-    working_dir.mkdir()
+    working_dir.mkdir(parents=True)
 
     node_store = SharedNodeStore(str(working_dir))
 
