@@ -96,13 +96,16 @@ def make_rotation_matrix(z1, z2):
         vector_product(v0, v1))
 
 
-# Worker part
+# Worker
 def zmq_process(*args):
     process = Worker(*args)
     process.run()
 
 
 class Worker:
+    """
+    This class waits from jobs commands from the Zmq socket.
+    """
     def __init__(self, activity_graph, transformer, octree_metadata, folder, write_rgb, verbosity):
         self.activity_graph = activity_graph
         self.transformer = transformer
@@ -204,7 +207,15 @@ class Worker:
 
 # Manager
 class ZmqManager:
-    def __init__(self, number_of_jobs, process_args):
+    """
+    This class sends messages to the workers.
+    We can also request general status.
+    """
+    def __init__(self, number_of_jobs: int, process_args: tuple):
+        """
+        For the process_args argument, see the init method of Worker
+        to get the list of needed parameters.
+        """
         self.context = zmq.Context()
 
         self.number_of_jobs = number_of_jobs
@@ -222,7 +233,7 @@ class ZmqManager:
         self.idle_clients = []
 
         self.killing_processes = False
-        self.processes_killed = 0
+        self.number_processes_killed = 0
         self.time_waiting_an_idle_process = 0
 
     def send_to_process(self, message):
@@ -249,7 +260,7 @@ class ZmqManager:
         return len(self.idle_clients) == self.number_of_jobs
 
     def are_all_processes_killed(self):
-        return self.processes_killed == self.number_of_jobs
+        return self.number_processes_killed == self.number_of_jobs
 
     def kill_all_processes(self):
         self.send_to_all_process([CommandType.SHUTDOWN.value])
@@ -260,69 +271,73 @@ class ZmqManager:
             p.terminate()
 
 
-def is_ancestor(name, ancestor):
-    return len(ancestor) <= len(name) and name[0:len(ancestor)] == ancestor
+def is_ancestor(node_name, ancestor):
+    """
+    Example, the tile 22 is ancestor of 22458
+    Particular case, the tile 22 is ancestor of 22
+    """
+    return len(ancestor) <= len(node_name) and node_name[0:len(ancestor)] == ancestor
 
 
-def is_ancestor_in_list(node_name, d):
-    for ancestor in d:
+def is_ancestor_in_list(node_name, ancestors):
+    for ancestor in ancestors:
         if not ancestor or is_ancestor(node_name, ancestor):
             return True
     return False
 
 
-def can_pnts_be_written(name, finished_node, input_nodes, active_nodes):
+def can_pnts_be_written(node_name, finished_node, input_nodes, active_nodes):
     return (
-        is_ancestor(name, finished_node)
-        and not is_ancestor_in_list(name, active_nodes)
-        and not is_ancestor_in_list(name, input_nodes))
+        is_ancestor(node_name, finished_node)
+        and not is_ancestor_in_list(node_name, active_nodes)
+        and not is_ancestor_in_list(node_name, input_nodes))
 
 
 class State:
-    def __init__(self, pointcloud_file_portions, max_reading_jobs):
-        """
-        pointcloud_file_portions: list of tuple (filename, (start offset, end offset))
-
-        """
+    def __init__(self, pointcloud_file_portions, max_reading_jobs: int):
         self.processed_points = 0
         self.max_point_in_progress = 60_000_000
         self.points_in_progress = 0
         self.points_in_pnts = 0
 
+        # pointcloud_file_portions is a list of tuple (filename, (start offset, end offset))
         self.point_cloud_file_parts = pointcloud_file_portions
         self.max_reading_jobs = max_reading_jobs
         self.number_of_reading_jobs = 0
+        self.number_of_writing_jobs = 0
 
         # node_to_process is a dictionary of tasks,
         # each entry is a tile identified by its name (a string of numbers)
-        # so for each entry, they are a list of tasks
+        # so for each entry, it is a list of tasks
         # a task is a tuple (list of points, point_count)
-        # points ia a dictionary {xyz: list of coordinates, color: the associated color}
+        # points is a dictionary {xyz: list of coordinates, color: the associated color}
         self.node_to_process = {}
-        # at the moment that a node is sent to a process, the item move to processing_nodes
+        # when a node is sent to a process, the item moves to processing_nodes
+        # the structure is different. The key remains the node name. But the value is : (len(tasks), point_count, now)
+        # these values is for loging
         self.processing_nodes = {}
-        # when processing is ended, move the tile name in processed_nodes
-        # since the content is at this step, stored in the node_store,
+        # when processing is finished, move the tile name in processed_nodes
+        # since the content is at this stage, stored in the node_store,
         # just keep the name of the node.
         # This list will be filled until the writing could be started.
         self.waiting_writing_nodes = []
-
+        # when the node is writing, its name is moved from waiting_writing_nodes to pnts_to_writing
+        # the data to write are stored in a node object.
         self.pnts_to_writing = []
-        self.number_of_writing_jobs = 0
 
     def is_reading_finish(self):
         return not self.point_cloud_file_parts and self.number_of_reading_jobs == 0
 
-    def add_tasks_to_process(self, name, task, point_count):
+    def add_tasks_to_process(self, node_name, task, point_count):
         if point_count <= 0:
             raise ValueError("point_count should be strictly positive, currently", point_count)
 
-        if name not in self.node_to_process:
-            self.node_to_process[name] = ([task], point_count)
+        if node_name not in self.node_to_process:
+            self.node_to_process[node_name] = ([task], point_count)
         else:
-            tasks, count = self.node_to_process[name]
+            tasks, count = self.node_to_process[node_name]
             tasks.append(task)
-            self.node_to_process[name] = (tasks, count + point_count)
+            self.node_to_process[node_name] = (tasks, count + point_count)
 
     def can_add_reading_jobs(self):
         return (
@@ -507,7 +522,6 @@ def convert(files,
 
     state = State(infos['portions'], max(1, jobs // 2))
 
-
     # zmq setup
     zmq_manager = ZmqManager(jobs, (graph, transformer, octree_metadata, outfolder, rgb, verbose))
 
@@ -534,7 +548,7 @@ def convert(files,
                 all_processes_busy = False
 
             elif return_type == ResponseType.HALTED.value:
-                zmq_manager.processes_killed += 1
+                zmq_manager.number_processes_killed += 1
                 all_processes_busy = False
 
             elif return_type == ResponseType.READ.value:
