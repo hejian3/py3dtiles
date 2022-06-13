@@ -1,17 +1,16 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-import psycopg2
-import getpass
-import math
-import json
-import os
 import errno
+import getpass
+import json
+import math
+import os
+
 import numpy as np
+import psycopg2
+
 from py3dtiles import TriangleSoup, GlTF, B3dm, BatchTable
 
 
-class BoundingBox():
+class BoundingBox:
     def __init__(self, minimum, maximum):
         self.min = [float(i) for i in minimum]
         self.max = [float(i) for i in maximum]
@@ -34,13 +33,13 @@ class Feature():
         self.box = box
 
 
-class Node():
+class Node:
     counter = 0
 
-    def __init__(self, features=[]):
+    def __init__(self, features=None):
         self.id = Node.counter
         Node.counter += 1
-        self.features = features
+        self.features = features if features else []
         self.box = None
         self.children = []
 
@@ -70,10 +69,10 @@ class Node():
     def to_tileset_r(self, error):
         (c1, c2) = (self.box.min, self.box.max)
         center = [(c1[i] + c2[i]) / 2 for i in range(0, 3)]
-        xAxis = [(c2[0] - c1[0]) / 2, 0, 0]
-        yAxis = [0, (c2[1] - c1[1]) / 2, 0]
-        zAxis = [0, 0, (c2[2] - c1[2]) / 2]
-        box = [round(x, 3) for x in center + xAxis + yAxis + zAxis]
+        x_axis = [(c2[0] - c1[0]) / 2, 0, 0]
+        y_axis = [0, (c2[1] - c1[1]) / 2, 0]
+        z_axis = [0, 0, (c2[2] - c1[2]) / 2]
+        box = [round(x, 3) for x in center + x_axis + y_axis + z_axis]
         tile = {
             "boundingVolume": {
                 "box": box
@@ -97,54 +96,54 @@ class Node():
 
 
 def tile_extent(extent, size, i, j):
-    minExtent = [
+    min_extent = [
         extent.min[0] + i * size,
         extent.min[1] + j * size]
-    maxExtent = [
+    max_extent = [
         extent.min[0] + (i + 1) * size,
         extent.min[1] + (j + 1) * size]
-    return BoundingBox(minExtent, maxExtent)
+    return BoundingBox(min_extent, max_extent)
 
 
 # TODO: transform
 def arrays2tileset(positions, normals, bboxes, transform, ids=None):
     print("Creating tileset...")
-    maxTileSize = 2000
-    featuresPerTile = 20
+    max_tile_size = 2000
+    features_per_tile = 20
     indices = [i for i in range(len(positions))]
 
     # glTF is Y-up, so to get the bounding boxes in the 3D tiles
     # coordinate system, we have to apply a Y-to-Z transform to the
     # glTF bounding boxes
-    zUpBboxes = []
+    z_up_bboxes = []
     for bbox in bboxes:
         tmp = m = bbox[0]
         M = bbox[1]
         m = [m[0], -m[2], m[1]]
         M = [M[0], -tmp[2], M[1]]
-        zUpBboxes.append([m, M])
+        z_up_bboxes.append([m, M])
 
     # Compute extent
-    xMin = yMin = float('inf')
-    xMax = yMax = - float('inf')
+    x_min = y_min = float('inf')
+    x_max = y_max = - float('inf')
 
-    for bbox in zUpBboxes:
-        xMin = min(xMin, bbox[0][0])
-        yMin = min(yMin, bbox[0][1])
-        xMax = max(xMax, bbox[1][0])
-        yMax = max(yMax, bbox[1][1])
-    extent = BoundingBox([xMin, yMin], [xMax, yMax])
-    extentX = xMax - xMin
-    extentY = yMax - yMin
+    for bbox in z_up_bboxes:
+        x_min = min(x_min, bbox[0][0])
+        y_min = min(y_min, bbox[0][1])
+        x_max = max(x_max, bbox[1][0])
+        y_max = max(y_max, bbox[1][1])
+    extent = BoundingBox([x_min, y_min], [x_max, y_max])
+    extent_x = x_max - x_min
+    extent_y = y_max - y_min
 
     # Create quadtree
     tree = Node()
-    for i in range(0, int(math.ceil(extentX / maxTileSize))):
-        for j in range(0, int(math.ceil(extentY / maxTileSize))):
-            tile = tile_extent(extent, maxTileSize, i, j)
+    for i in range(0, int(math.ceil(extent_x / max_tile_size))):
+        for j in range(0, int(math.ceil(extent_y / max_tile_size))):
+            tile = tile_extent(extent, max_tile_size, i, j)
 
             geoms = []
-            for idx, box in zip(indices, zUpBboxes):
+            for idx, box in zip(indices, z_up_bboxes):
                 bbox = BoundingBox(box[0], box[1])
 
                 if tile.inside(bbox.center()):
@@ -153,11 +152,11 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
             if len(geoms) == 0:
                 continue
 
-            if len(geoms) > featuresPerTile:
-                node = Node(geoms[0:featuresPerTile])
+            if len(geoms) > features_per_tile:
+                node = Node(geoms[0:features_per_tile])
                 tree.add(node)
-                divide(tile, geoms[featuresPerTile:len(geoms)], i * 2,
-                       j * 2, maxTileSize / 2., featuresPerTile, node)
+                divide(tile, geoms[features_per_tile:len(geoms)], i * 2,
+                       j * 2, max_tile_size / 2., features_per_tile, node)
             else:
                 node = Node(geoms)
                 tree.add(node)
@@ -176,18 +175,18 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
             raise
     for node in nodes:
         if len(node.features) != 0:
-            binarrays = []
+            bin_arrays = []
             gids = []
             for feature in node.features:
                 pos = feature.index
-                binarrays.append({
+                bin_arrays.append({
                     'position': positions[pos],
                     'normal': normals[pos],
                     'bbox': [[float(i) for i in j] for j in bboxes[pos]],
                 })
                 if ids is not None:
                     gids.append(ids[pos])
-            gltf = GlTF.from_binary_arrays(binarrays, identity)
+            gltf = GlTF.from_binary_arrays(bin_arrays, identity)
             bt = None
             if ids is not None:
                 bt = BatchTable()
@@ -197,11 +196,11 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
             f.write(b3dm)
 
 
-def divide(extent, geometries, xOffset, yOffset, tileSize,
-           featuresPerTile, parent):
+def divide(extent, geometries, x_offset, y_offset, tile_size,
+           features_per_tile, parent):
     for i in range(0, 2):
         for j in range(0, 2):
-            tile = tile_extent(extent, tileSize, i, j)
+            tile = tile_extent(extent, tile_size, i, j)
 
             geoms = []
             for g in geometries:
@@ -210,48 +209,47 @@ def divide(extent, geometries, xOffset, yOffset, tileSize,
             if len(geoms) == 0:
                 continue
 
-            if len(geoms) > featuresPerTile:
-                node = Node(geoms[0:featuresPerTile])
+            if len(geoms) > features_per_tile:
+                node = Node(geoms[0:features_per_tile])
                 parent.add(node)
-                divide(tile, geoms[featuresPerTile:len(geoms)],
-                       (xOffset + i) * 2, (yOffset + j) * 2,
-                       tileSize / 2., featuresPerTile, node)
+                divide(tile, geoms[features_per_tile:len(geoms)],
+                       (x_offset + i) * 2, (y_offset + j) * 2,
+                       tile_size / 2., features_per_tile, node)
             else:
                 node = Node(geoms)
                 parent.add(node)
 
 
-def wkbs2tileset(wkbs, ids, transform):
+def wkbs_to_tileset(wkbs, ids, transform):
     geoms = [TriangleSoup.from_wkb_multipolygon(wkb) for wkb in wkbs]
-    positions = [ts.getPositionArray() for ts in geoms]
-    normals = [ts.getNormalArray() for ts in geoms]
-    bboxes = [ts.getBbox() for ts in geoms]
+    positions = [ts.get_position_array() for ts in geoms]
+    normals = [ts.get_normal_array() for ts in geoms]
+    bboxes = [ts.get_bbox() for ts in geoms]
     arrays2tileset(positions, normals, bboxes, transform, ids)
 
 
-def build_secure_conn(db_conninfo):
+def build_secure_conn(db_conn_info):
     """Get a psycopg2 connexion securely, e.g. without writing the password explicitely
     in the terminal
 
     Parameters
     ----------
-    db_conninfo : str
+    db_conn_info : str
 
     Returns
     -------
     psycopg2.extensions.connection
     """
     try:
-        connection = psycopg2.connect(db_conninfo)
+        connection = psycopg2.connect(db_conn_info)
     except psycopg2.OperationalError:
         pw = getpass.getpass("Postgres password: ")
-        connection = psycopg2.connect(db_conninfo + " password={pw}".format(pw=pw))
+        connection = psycopg2.connect(db_conn_info + " password={pw}".format(pw=pw))
     return connection
 
 
-def from_db(db_conninfo, table_name, column_name, id_column_name):
-
-    connection = build_secure_conn(db_conninfo)
+def from_db(db_conn_info, table_name, column_name, id_column_name):
+    connection = build_secure_conn(db_conn_info)
     cur = connection.cursor()
 
     print("Loading data from database...")
@@ -281,7 +279,7 @@ def from_db(db_conninfo, table_name, column_name, id_column_name):
         [0, 0, 0, 1]], dtype=float)
     transform = transform.flatten('F')
 
-    wkbs2tileset(wkbs, ids, transform)
+    wkbs_to_tileset(wkbs, ids, transform)
 
 
 def from_directory(directory, offset):
@@ -303,10 +301,10 @@ def from_directory(directory, offset):
         [0, 0, 1, offset[2]],
         [0, 0, 0, 1]], dtype=float)
     transform = transform.flatten('F')
-    wkbs2tileset(wkbs, None, transform)
+    wkbs_to_tileset(wkbs, None, transform)
 
 
-def init_parser(subparser, str2bool):
+def init_parser(subparser):
     descr = "Generate a tileset from a set of geometries"
     parser = subparser.add_parser('export', help=descr)
 

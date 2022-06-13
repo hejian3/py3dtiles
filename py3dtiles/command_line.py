@@ -1,9 +1,10 @@
 import argparse
+import traceback
+
 import py3dtiles.convert as convert
+import py3dtiles.export as export
 import py3dtiles.info as info
 import py3dtiles.merger as merger
-import py3dtiles.export as export
-import traceback
 
 
 # https://stackoverflow.com/a/43357954
@@ -30,7 +31,7 @@ def main():
     convert.init_parser(sub_parsers, str2bool)
     info.init_parser(sub_parsers, str2bool)
     merger.init_parser(sub_parsers, str2bool)
-    export.init_parser(sub_parsers, str2bool)
+    export.init_parser(sub_parsers)
 
     args = parser.parse_args()
 

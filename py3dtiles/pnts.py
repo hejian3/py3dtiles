@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 import struct
+
 import numpy as np
 
-from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
 from .feature_table import FeatureTable
+from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
 
 
 class Pnts(TileContent):
 
     @staticmethod
-    def from_features(pdtype, cdtype, features):
+    def from_features(pd_type, cd_type, features):
         """
         Parameters
         ----------
@@ -23,7 +23,7 @@ class Pnts(TileContent):
         tile : TileContent
         """
 
-        ft = FeatureTable.from_features(pdtype, cdtype, features)
+        ft = FeatureTable.from_features(pd_type, cd_type, features)
 
         tb = PntsBody()
         tb.feature_table = ft
@@ -49,7 +49,7 @@ class Pnts(TileContent):
         """
 
         # build tile header
-        h_arr = array[0:PntsHeader.BYTELENGTH]
+        h_arr = array[0:PntsHeader.BYTE_LENGTH]
         h = PntsHeader.from_array(h_arr)
 
         if h.tile_byte_length != len(array):
@@ -57,7 +57,7 @@ class Pnts(TileContent):
 
         # build tile body
         b_len = h.ft_json_byte_length + h.ft_bin_byte_length
-        b_arr = array[PntsHeader.BYTELENGTH:PntsHeader.BYTELENGTH + b_len]
+        b_arr = array[PntsHeader.BYTE_LENGTH:PntsHeader.BYTE_LENGTH + b_len]
         b = PntsBody.from_array(h, b_arr)
 
         # build TileContent with header and body
@@ -69,10 +69,10 @@ class Pnts(TileContent):
 
 
 class PntsHeader(TileContentHeader):
-    BYTELENGTH = 28
+    BYTE_LENGTH = 28
 
     def __init__(self):
-        self.type = TileContentType.POINTCLOUD
+        self.type = TileContentType.POINT_CLOUD
         self.magic_value = b"pnts"
         self.version = 1
         self.tile_byte_length = 0
@@ -104,7 +104,7 @@ class PntsHeader(TileContentHeader):
 
         # sync the tile header with feature table contents
         self.tile_byte_length = (len(fth_arr) + len(ftb_arr)
-                                 + PntsHeader.BYTELENGTH)
+                                 + PntsHeader.BYTE_LENGTH)
         self.ft_json_byte_length = len(fth_arr)
         self.ft_bin_byte_length = len(ftb_arr)
 
@@ -122,7 +122,7 @@ class PntsHeader(TileContentHeader):
 
         h = PntsHeader()
 
-        if len(array) != PntsHeader.BYTELENGTH:
+        if len(array) != PntsHeader.BYTE_LENGTH:
             raise RuntimeError("Invalid header length")
 
         h.magic_value = "pnts"
@@ -133,7 +133,7 @@ class PntsHeader(TileContentHeader):
         h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
         h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
 
-        h.type = TileContentType.POINTCLOUD
+        h.type = TileContentType.POINT_CLOUD
 
         return h
 
@@ -173,6 +173,5 @@ class PntsBody(TileContentBody):
         # build tile body with feature table
         b = PntsBody()
         b.feature_table = ft
-        # b.batch_table = bt
 
         return b

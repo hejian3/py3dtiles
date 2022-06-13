@@ -17,7 +17,7 @@ def node_to_tileset(args):
     return Node.to_tileset(None, args[0], args[1], args[2], args[3], args[4])
 
 
-class Node(object):
+class Node:
     """docstring for Node"""
     __slots__ = (
         'name', 'aabb', 'aabb_size', 'inv_aabb_size', 'aabb_center',

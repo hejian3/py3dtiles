@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from pytest import approx, raises, fixture
 import shutil

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from .utils import TileContentReader, convert_to_ecef
 from .tile_content import TileContent
 from .feature_table import Feature

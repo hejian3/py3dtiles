@@ -1,12 +1,14 @@
-import sys
-import os
-import numpy as np
 import json
+import os
+import sys
+
+import numpy as np
+
 from py3dtiles import TileContentReader
-from py3dtiles.points.utils import split_aabb
-from py3dtiles.points.transformations import inverse_matrix
-from py3dtiles.points.task.pnts_writer import points_to_pnts
 from py3dtiles.feature_table import SemanticPoint
+from py3dtiles.points.task.pnts_writer import points_to_pnts
+from py3dtiles.points.transformations import inverse_matrix
+from py3dtiles.points.utils import split_aabb
 
 
 def _get_root_tile(tileset, filename):
@@ -38,7 +40,6 @@ def _get_tile_points(tile, tile_transform, out_transform):
     xyz = tile.body.feature_table.body.positions_arr.view(
         np.float32).reshape((fth.points_length, 3))
     if fth.colors == SemanticPoint.RGB:
-        # rgb = np.array([255, 0, 0] * fth.points_length).reshape((fth.points_length, 3))
         rgb = tile.body.feature_table.body.colors_arr.reshape(
             (fth.points_length, 3)).astype(np.uint8)
     else:
@@ -179,14 +180,20 @@ def build_tileset_quadtree(out_folder, aabb, tilesets, base_transform, inv_base_
             }
         }
     else:
-        tilesets = [t for t in tilesets if t['id'] not in insides]
         result = {
             'children': []
         }
 
         sub = 0
         for quarter in quadtree_split(aabb):
-            r = build_tileset_quadtree(out_folder, quarter, insides, base_transform, inv_base_transform, name + str(sub))
+            r = build_tileset_quadtree(
+                out_folder,
+                quarter,
+                insides,
+                base_transform,
+                inv_base_transform,
+                name + str(sub)
+            )
             sub += 1
             if r is not None:
                 result['children'] += [r]
@@ -255,11 +262,8 @@ def remove_tileset(tileset_filename):
         ext = os.path.splitext(content)[1][1:]
         if ext == 'pnts':
             os.remove('{}/{}'.format(folder, content))
-        elif ext == 'json':
-            # remove_tileset('{}/{}'.format(folder, content))
-            pass
-        else:
-            raise Exception('unknown extension {}'.format(ext))
+        elif ext != 'json':
+            raise ValueError(f'unknown extension {ext}')
     os.remove(tileset_filename)
 
 
@@ -318,7 +322,3 @@ def main(args):
 
     with open('{}/tileset.json'.format(args.folder), 'w') as f:
         json.dump(tileset, f)
-
-
-if __name__ == '__main__':
-    main()

@@ -33,7 +33,7 @@ def _insert(cells_xyz, cells_rgb, aabmin, inv_aabb_size, cell_count, xyz, rgb, s
         return xyz[notinserted], rgb[notinserted], needs_balance
 
 
-class Grid(object):
+class Grid:
     """docstring for Grid"""
 
     __slots__ = ('cell_count', 'cells_xyz', 'cells_rgb', 'spacing')

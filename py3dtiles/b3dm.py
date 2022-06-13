@@ -1,4 +1,3 @@
-# coding: utf-8
 import struct
 import numpy as np
 
@@ -74,7 +73,7 @@ class B3dmHeader(TileContentHeader):
     BYTELENGTH = 28
 
     def __init__(self):
-        self.type = TileContentType.BATCHED3DMODEL
+        self.type = TileContentType.BATCHED_3D_MODEL
         self.magic_value = b"b3dm"
         self.version = 1
         self.tile_byte_length = 0
@@ -113,13 +112,9 @@ class B3dmHeader(TileContentHeader):
 
         if body.batch_table is not None:
             bth_arr = body.batch_table.to_array()
-            # btb_arr = body.batch_table.body.to_array()
 
             self.tile_byte_length += len(bth_arr)
             self.bt_json_byte_length = len(bth_arr)
-
-        # fth_arr = body.feature_table.header.to_array()
-        # ftb_arr = body.feature_table.body.to_array()
 
     @staticmethod
     def from_array(array):
@@ -146,7 +141,7 @@ class B3dmHeader(TileContentHeader):
         h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
         h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
 
-        h.type = TileContentType.BATCHED3DMODEL
+        h.type = TileContentType.BATCHED_3D_MODEL
 
         return h
 
@@ -154,7 +149,6 @@ class B3dmHeader(TileContentHeader):
 class B3dmBody(TileContentBody):
     def __init__(self):
         self.batch_table = BatchTable()
-        # self.feature_table = FeatureTable()
         self.glTF = GlTF()
 
     def to_array(self):
@@ -200,13 +194,9 @@ class B3dmBody(TileContentBody):
 
         # build feature table
         ft_len = th.ft_json_byte_length + th.ft_bin_byte_length
-        # ft_arr = array[0:ft_len]
-        # ft = FeatureTable.from_array(th, ft_arr)
 
         # build batch table
         bt_len = th.bt_json_byte_length + th.bt_bin_byte_length
-        # bt_arr = array[ft_len:ft_len + bt_len]
-        # bt = BatchTable.from_array(th, bt_arr)
 
         # build glTF
         glTF_len = (th.tile_byte_length - ft_len - bt_len
@@ -216,8 +206,6 @@ class B3dmBody(TileContentBody):
 
         # build tile body with feature table
         b = B3dmBody()
-        # b.feature_table = ft
-        # b.batch_table = bt
         b.glTF = glTF
 
         return b

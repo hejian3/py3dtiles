@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import unittest
 import numpy as np
 import json
@@ -31,8 +29,8 @@ class TestTileContentBuilder(unittest.TestCase):
         with open('tests/building.wkb', 'rb') as f:
             wkb = f.read()
         ts = TriangleSoup.from_wkb_multipolygon(wkb)
-        positions = ts.getPositionArray()
-        normals = ts.getNormalArray()
+        positions = ts.get_position_array()
+        normals = ts.get_normal_array()
         box = [[-8.74748499994166, -7.35523200035095, -2.05385796777344],
                [8.8036420000717, 7.29930999968201, 2.05386103222656]]
         arrays = [{
@@ -71,9 +69,9 @@ class TestTexturedTileBuilder(unittest.TestCase):
         with open('tests/squareUV.wkb', 'rb') as f:
             wkbuv = f.read()
         ts = TriangleSoup.from_wkb_multipolygon(wkb, [wkbuv])
-        positions = ts.getPositionArray()
-        normals = ts.getNormalArray()
-        uvs = ts.getDataArray(0)
+        positions = ts.get_position_array()
+        normals = ts.get_normal_array()
+        uvs = ts.get_data_array(0)
         box = [[0, 0, 0],
                [10, 10, 0]]
         arrays = [{
@@ -89,7 +87,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
             [0, 0, 1, 0],
             [0, 0, 0, 1]], dtype=float)
         transform = transform.flatten('F')
-        glTF = GlTF.from_binary_arrays(arrays, transform, textureUri='squaretexture.jpg')
+        glTF = GlTF.from_binary_arrays(arrays, transform, texture_uri='squaretexture.jpg')
         t = B3dm.from_glTF(glTF)
 
         # get an array
