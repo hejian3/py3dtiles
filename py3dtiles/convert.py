@@ -497,7 +497,10 @@ class _Convert:
 
         while not self.zmq_manager.are_all_processes_killed():
             now = time.time() - self.startup
-            at_least_one_job_ended = self.wait_and_process_message()
+
+            at_least_one_job_ended = False
+            if not self.zmq_manager.can_queue_more_jobs() or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
+                at_least_one_job_ended = self.process_message()
 
             self.send_pnts_to_write()
             self.send_points_to_process(now)
@@ -547,87 +550,90 @@ class _Convert:
 
         self.zmq_manager.context.destroy()
 
-    def wait_and_process_message(self):
-        at_least_one_job_ended = False
+    def process_message(self):
+        one_job_ended = False
 
-        all_processes_busy = not self.zmq_manager.can_queue_more_jobs()
-        while all_processes_busy or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
-            # Blocking read but it's fine because either all our child processes are busy
-            # or we know that there's something to read (zmq.POLLIN)
-            start = time.time()
-            message = self.zmq_manager.socket.recv_multipart()
+        # Blocking read but it's fine because either all our child processes are busy
+        # or we know that there's something to read (zmq.POLLIN)
+        start = time.time()
+        message = self.zmq_manager.socket.recv_multipart()
 
-            client_id = message[0]
-            result = message[1:]
-            return_type = result[0]
+        client_id = message[0]
+        result = message[1:]
+        return_type = result[0]
 
-            if return_type == ResponseType.IDLE.value:
-                self.zmq_manager.add_idle_client(client_id)
+        if return_type == ResponseType.IDLE.value:
+            self.zmq_manager.add_idle_client(client_id)
 
-                if all_processes_busy:
-                    self.zmq_manager.time_waiting_an_idle_process += time.time() - start
-                all_processes_busy = False
+            if not self.zmq_manager.can_queue_more_jobs():
+                self.zmq_manager.time_waiting_an_idle_process += time.time() - start
 
-            elif return_type == ResponseType.HALTED.value:
-                self.zmq_manager.number_processes_killed += 1
-                all_processes_busy = False
+        elif return_type == ResponseType.HALTED.value:
+            self.zmq_manager.number_processes_killed += 1
 
-            elif return_type == ResponseType.READ.value:
-                self.state.number_of_reading_jobs -= 1
-                at_least_one_job_ended = True
+        elif return_type == ResponseType.READ.value:
+            self.state.number_of_reading_jobs -= 1
+            one_job_ended = True
 
-            elif return_type == ResponseType.PROCESSED.value:
-                content = pickle.loads(result[-1])
-                self.state.processed_points += content['total']
-                self.state.points_in_progress -= content['total']
+        elif return_type == ResponseType.PROCESSED.value:
+            content = pickle.loads(result[-1])
+            self.state.processed_points += content['total']
+            self.state.points_in_progress -= content['total']
 
-                del self.state.processing_nodes[content['name']]
+            del self.state.processing_nodes[content['name']]
 
-                if content['name']:
-                    self.node_store.put(content['name'], content['save'])
-                    self.state.waiting_writing_nodes.append(content['name'])
+            self.dispatch_processed_nodes(content)
 
-                    if self.state.is_reading_finish():
-                        # if all nodes aren't processed yet,
-                        # we should check if linked ancestors are processed
-                        if self.state.processing_nodes or self.state.node_to_process:
-                            finished_node = content['name']
-                            if can_pnts_be_written(
-                                finished_node, finished_node,
-                                self.state.node_to_process, self.state.processing_nodes
-                            ):
-                                self.state.waiting_writing_nodes.pop(-1)
-                                self.state.pnts_to_writing.append(finished_node)
+            one_job_ended = True
 
-                                for i in range(len(self.state.waiting_writing_nodes) - 1, -1, -1):
-                                    candidate = self.state.waiting_writing_nodes[i]
+        elif return_type == ResponseType.PNTS_WRITTEN.value:
+            self.state.points_in_pnts += struct.unpack('>I', result[1])[0]
+            self.state.number_of_writing_jobs -= 1
 
-                                    if can_pnts_be_written(
-                                        candidate, finished_node,
-                                        self.state.node_to_process, self.state.processing_nodes
-                                    ):
-                                        self.state.waiting_writing_nodes.pop(i)
-                                        self.state.pnts_to_writing.append(candidate)
+        elif return_type == ResponseType.NEW_TASK.value:
+            count = struct.unpack('>I', result[3])[0]
+            self.state.add_tasks_to_process(result[1], result[2], count)
 
-                        else:
-                            for c in self.state.waiting_writing_nodes:
-                                self.state.pnts_to_writing.append(c)
-                            self.state.waiting_writing_nodes.clear()
+        else:
+            raise NotImplementedError(f"The command {return_type} is not implemented")
 
-                at_least_one_job_ended = True
+        return one_job_ended
 
-            elif return_type == ResponseType.PNTS_WRITTEN.value:
-                self.state.points_in_pnts += struct.unpack('>I', result[1])[0]
-                self.state.number_of_writing_jobs -= 1
+    def dispatch_processed_nodes(self, content):
+        if not content['name']:
+            return
 
-            elif return_type == ResponseType.NEW_TASK.value:
-                count = struct.unpack('>I', result[3])[0]
-                self.state.add_tasks_to_process(result[1], result[2], count)
+        self.node_store.put(content['name'], content['save'])
+        self.state.waiting_writing_nodes.append(content['name'])
 
-            else:
-                raise NotImplementedError(f"The command {return_type} is not implemented")
+        if not self.state.is_reading_finish():
+            return
 
-            return at_least_one_job_ended
+        # if all nodes aren't processed yet,
+        # we should check if linked ancestors are processed
+        if self.state.processing_nodes or self.state.node_to_process:
+            finished_node = content['name']
+            if can_pnts_be_written(
+                finished_node, finished_node,
+                self.state.node_to_process, self.state.processing_nodes
+            ):
+                self.state.waiting_writing_nodes.pop(-1)
+                self.state.pnts_to_writing.append(finished_node)
+
+                for i in range(len(self.state.waiting_writing_nodes) - 1, -1, -1):
+                    candidate = self.state.waiting_writing_nodes[i]
+
+                    if can_pnts_be_written(
+                        candidate, finished_node,
+                        self.state.node_to_process, self.state.processing_nodes
+                    ):
+                        self.state.waiting_writing_nodes.pop(i)
+                        self.state.pnts_to_writing.append(candidate)
+
+        else:
+            for c in self.state.waiting_writing_nodes:
+                self.state.pnts_to_writing.append(c)
+            self.state.waiting_writing_nodes.clear()
 
     def send_pnts_to_write(self):
         while self.state.pnts_to_writing and self.zmq_manager.can_queue_more_jobs():
