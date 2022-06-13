@@ -247,6 +247,7 @@ class State:
 
         # pointcloud_file_portions is a list of tuple (filename, (start offset, end offset))
         self.point_cloud_file_parts = pointcloud_file_portions
+        self.initial_portion_count = len(pointcloud_file_portions)
         self.max_reading_jobs = max_reading_jobs
         self.number_of_reading_jobs = 0
         self.number_of_writing_jobs = 0
@@ -359,18 +360,48 @@ class Convert:
         :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
 
         """
-        self.verbose = verbose
         self.jobs = jobs
         self.cache_size = cache_size
-        self.out_folder = outfolder
         self.rgb = rgb
-        self.out_folder = outfolder
-        self.graph = graph
-        self.benchmark = benchmark
 
         # allow str directly if only one input
         self.files = [files] if isinstance(files, str) else files
 
+        self.verbose = verbose
+        self.graph = graph
+        self.benchmark = benchmark
+        self.startup = None
+        if self.verbose >= 1:
+            self.print_summary()
+        if self.graph:
+            self.progression_log = open('progression.csv', 'w')
+
+        self.infos = self.get_infos(color_scale, srs_in, srs_out)
+
+        crs_in, crs_out, transformer = self.get_crs(srs_in, srs_out)
+        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_in, transformer)
+        self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(self.original_aabb)
+        octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
+
+        # create folder
+        self.out_folder = outfolder
+        out_folder_path = Path(self.out_folder)
+        if out_folder_path.is_dir():
+            if overwrite:
+                shutil.rmtree(out_folder_path, ignore_errors=True)
+            else:
+                print(f"Error, folder '{self.out_folder}' already exists")
+                sys.exit(1)
+
+        out_folder_path.mkdir()
+        self.working_dir = out_folder_path / "tmp"
+        self.working_dir.mkdir(parents=True)
+
+        self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.verbose))
+        self.node_store = SharedNodeStore(str(self.working_dir))
+        self.state = State(self.infos['portions'], max(1, self.jobs // 2))
+
+    def get_infos(self, color_scale, srs_in, srs_out):
         # read all input files headers and determine the aabb/spacing
         extensions = set()
         for file in self.files:
@@ -380,13 +411,9 @@ class Convert:
         extension = extensions.pop()
 
         init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
-        self.infos = init_reader_fn(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
+        return init_reader_fn(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
-        avg_min = self.infos['avg_min']
-        aabb = self.infos['aabb']
-        self.rotation_matrix = None
-        # srs stuff
-        transformer = None
+    def get_crs(self, srs_in, srs_out):
         if srs_out:
             crs_out = CRS('epsg:{}'.format(srs_out))
             if srs_in:
@@ -397,7 +424,19 @@ class Convert:
                 crs_in = CRS(self.infos['srs_in'])
 
             transformer = Transformer.from_crs(crs_in, crs_out)
+        else:
+            crs_in = None
+            crs_out = None
+            transformer = None
 
+        return crs_in, crs_out, transformer
+
+    def get_rotation_matrix(self, srs_out, transformer):
+        avg_min = self.infos['avg_min']
+        aabb = self.infos['aabb']
+
+        rotation_matrix = None
+        if srs_out:
 
             bl = np.array(list(transformer.transform(
                 aabb[0][0], aabb[0][1], aabb[0][2])))
@@ -418,74 +457,43 @@ class Convert:
                 # Transform geocentric normal => (0, 0, 1)
                 # and 4978-bbox x axis => (1, 0, 0),
                 # to have a bbox in local coordinates that's nicely aligned with the data
-                self.rotation_matrix = make_rotation_matrix(avg_min, np.array([0, 0, 1]))
-                self.rotation_matrix = np.dot(
+                rotation_matrix = make_rotation_matrix(avg_min, np.array([0, 0, 1]))
+                rotation_matrix = np.dot(
                     make_rotation_matrix(x_axis, np.array([1, 0, 0])),
-                    self.rotation_matrix)
+                    rotation_matrix)
 
-                bl = np.dot(bl, self.rotation_matrix[:3, :3].T)
-                tr = np.dot(tr, self.rotation_matrix[:3, :3].T)
+                bl = np.dot(bl, rotation_matrix[:3, :3].T)
+                tr = np.dot(tr, rotation_matrix[:3, :3].T)
 
             root_aabb = np.array([
                 np.minimum(bl, tr),
                 np.maximum(bl, tr)
             ])
-            self.avg_min = avg_min
         else:
             # offset
             root_aabb = aabb - avg_min
-            self.avg_min = avg_min
 
-        self.original_aabb = root_aabb
+        return rotation_matrix, root_aabb, avg_min
 
-        base_spacing = compute_spacing(root_aabb)
+    def get_root_aabb(self, original_aabb):
+        base_spacing = compute_spacing(original_aabb)
         if base_spacing > 10:
-            self.root_scale = np.array([0.01, 0.01, 0.01])
+            root_scale = np.array([0.01, 0.01, 0.01])
         elif base_spacing > 1:
-            self.root_scale = np.array([0.1, 0.1, 0.1])
+            root_scale = np.array([0.1, 0.1, 0.1])
         else:
-            self.root_scale = np.array([1, 1, 1])
+            root_scale = np.array([1, 1, 1])
 
-        self.root_aabb = root_aabb * self.root_scale
-        self.root_spacing = compute_spacing(root_aabb)
-
-        self.octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
-
-        # create folder
-        out_folder_path = Path(outfolder)
-        if out_folder_path.is_dir():
-            if overwrite:
-                shutil.rmtree(out_folder_path, ignore_errors=True)
-            else:
-                print(f"Error, folder '{outfolder}' already exists")
-                sys.exit(1)
-
-        out_folder_path.mkdir()
-        self.working_dir = out_folder_path / "tmp"
-        self.working_dir.mkdir(parents=True)
-
-        self.node_store = SharedNodeStore(str(self.working_dir))
-
-        if verbose >= 1:
-            self.print_summary()
-
-        self.startup = time.time()
-
-        self.initial_portion_count = len(self.infos['portions'])
-
-        if self.graph:
-            self.progression_log = open('progression.csv', 'w')
-
-        self.state = State(self.infos['portions'], max(1, self.jobs // 2))
-
-        # zmq setup
-        self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, self.octree_metadata, self.out_folder, self.rgb, verbose))
+        root_aabb = original_aabb * root_scale
+        root_spacing = compute_spacing(original_aabb)
+        return root_aabb, root_scale, root_spacing
 
     def convert(self):
         """convert
 
         Convert pointclouds (xyz, las or laz) to 3dtiles tileset containing pnts node
         """
+        self.startup = time.time()
 
         while not self.zmq_manager.are_all_processes_killed():
             now = time.time() - self.startup
@@ -786,7 +794,7 @@ class Convert:
             print('Pending:')
             print('  - root: {} / {}'.format(
                 len(self.state.point_cloud_file_parts),
-                self.initial_portion_count))
+                self.state.initial_portion_count))
             print('  - other: {} files for {} nodes'.format(
                 sum([len(f[0]) for f in self.state.node_to_process.values()]),
                 len(self.state.node_to_process)))
