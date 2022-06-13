@@ -32,61 +32,6 @@ IPC_URI = "ipc:///tmp/py3dtiles1"
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
 
 
-def write_tileset(out_folder, octree_metadata, offset, scale, rotation_matrix, include_rgb):
-    # compute tile transform matrix
-    if rotation_matrix is None:
-        transform = np.identity(4)
-    else:
-        transform = inverse_matrix(rotation_matrix)
-    transform = np.dot(transform, scale_matrix(1.0 / scale[0]))
-    transform = np.dot(translation_matrix(offset), transform)
-
-    # build fake points
-    root_node = Node('', octree_metadata.aabb, octree_metadata.spacing * 2)
-    root_node.children = []
-    inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, octree_metadata.aabb[1] - octree_metadata.aabb[0])).astype(np.float32)
-    for child in range(8):
-        ondisk_tile = name_to_filename(out_folder, str(child).encode('ascii'), '.pnts')
-        if os.path.exists(ondisk_tile):
-            tile_content = TileContentReader.read_file(ondisk_tile)
-            fth = tile_content.body.feature_table.header
-            xyz = tile_content.body.feature_table.body.positions_arr.view(np.float32).reshape((fth.points_length, 3))
-            if include_rgb:
-                rgb = tile_content.body.feature_table.body.colors_arr.reshape((fth.points_length, 3))
-            else:
-                rgb = np.zeros(xyz.shape, dtype=np.uint8)
-
-            root_node.grid.insert(
-                octree_metadata.aabb[0].astype(np.float32),
-                inv_aabb_size,
-                xyz.copy(),
-                rgb)
-
-    pnts_writer.node_to_pnts(''.encode('ascii'), root_node, out_folder, include_rgb)
-
-    executor = concurrent.futures.ProcessPoolExecutor()
-    root_tileset = Node.to_tileset(executor, ''.encode('ascii'), octree_metadata.aabb, octree_metadata.spacing, out_folder, scale)
-    executor.shutdown()
-
-    root_tileset['transform'] = transform.T.reshape(16).tolist()
-    root_tileset['refine'] = 'REPLACE'
-    for child in root_tileset['children']:
-        child['refine'] = 'ADD'
-
-    tileset = {
-        'asset': {
-            'version': '1.0',
-        },
-        'geometricError': np.linalg.norm(
-            octree_metadata.aabb[1] - octree_metadata.aabb[0]) / scale[0],
-        'root': root_tileset,
-    }
-
-    tileset_path = Path(out_folder) / "tileset.json"
-    with tileset_path.open('w') as f:
-        f.write(json.dumps(tileset))
-
-
 def make_rotation_matrix(z1, z2):
     v0 = z1 / np.linalg.norm(z1)
     v1 = z2 / np.linalg.norm(z2)
@@ -698,11 +643,11 @@ class Convert:
         if self.state.points_in_pnts != self.infos['point_count']:
             raise ValueError("!!! Invalid point count in the written .pnts"
                              + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
-        
+
         if self.verbose >= 1:
             print('Writing 3dtiles {}'.format(self.infos['avg_min']))
 
-        write_tileset(self.out_folder, self.octree_metadata, self.avg_min, self.root_scale, self.rotation_matrix, self.rgb)
+        self.write_tileset()
         shutil.rmtree(self.working_dir)
 
         if self.verbose >= 1:
@@ -726,6 +671,63 @@ class Convert:
             self.draw_graph()
 
         self.zmq_manager.context.destroy()
+
+    def write_tileset(self):
+        # compute tile transform matrix
+        if self.rotation_matrix is None:
+            transform = np.identity(4)
+        else:
+            transform = inverse_matrix(self.rotation_matrix)
+        transform = np.dot(transform, scale_matrix(1.0 / self.root_scale[0]))
+        transform = np.dot(translation_matrix(self.avg_min), transform)
+
+        # build fake points
+        root_node = Node('', self.root_aabb, self.root_spacing * 2)
+        root_node.children = []
+        inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, self.root_aabb[1] - self.root_aabb[0])).astype(
+            np.float32)
+        for child in range(8):
+            ondisk_tile = name_to_filename(self.out_folder, str(child).encode('ascii'), '.pnts')
+            if os.path.exists(ondisk_tile):
+                tile_content = TileContentReader.read_file(ondisk_tile)
+                fth = tile_content.body.feature_table.header
+                xyz = tile_content.body.feature_table.body.positions_arr.view(np.float32).reshape(
+                    (fth.points_length, 3))
+                if self.rgb:
+                    rgb = tile_content.body.feature_table.body.colors_arr.reshape((fth.points_length, 3))
+                else:
+                    rgb = np.zeros(xyz.shape, dtype=np.uint8)
+
+                root_node.grid.insert(
+                    self.root_aabb[0].astype(np.float32),
+                    inv_aabb_size,
+                    xyz.copy(),
+                    rgb)
+
+        pnts_writer.node_to_pnts(''.encode('ascii'), root_node, self.out_folder, self.rgb)
+
+        executor = concurrent.futures.ProcessPoolExecutor()
+        root_tileset = Node.to_tileset(executor, ''.encode('ascii'), self.root_aabb, self.root_spacing,
+                                       self.out_folder, self.root_scale)
+        executor.shutdown()
+
+        root_tileset['transform'] = transform.T.reshape(16).tolist()
+        root_tileset['refine'] = 'REPLACE'
+        for child in root_tileset['children']:
+            child['refine'] = 'ADD'
+
+        tileset = {
+            'asset': {
+                'version': '1.0',
+            },
+            'geometricError': np.linalg.norm(
+                self.root_aabb[1] - self.root_aabb[0]) / self.root_scale[0],
+            'root': root_tileset,
+        }
+
+        tileset_path = Path(self.out_folder) / "tileset.json"
+        with tileset_path.open('w') as f:
+            f.write(json.dumps(tileset))
 
     def print_summary(self):
         print('Summary:')
