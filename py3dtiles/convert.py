@@ -365,412 +365,435 @@ class State:
             ''))
 
 
-def convert(files,
-            outfolder='./3dtiles',
-            overwrite=False,
-            jobs=multiprocessing.cpu_count(),
-            cache_size=int(TOTAL_MEMORY_MB / 10),
-            srs_out=None,
-            srs_in=None,
-            fraction=100,
-            benchmark=None,
-            rgb=True,
-            graph=False,
-            color_scale=None,
-            verbose=False):
-    """convert
+def convert(*args, **kwargs):
+    converter = Convert(*args, **kwargs)
+    return converter.convert()
 
-    Convert pointclouds (xyz, las or laz) to 3dtiles tileset containing pnts node
 
-    :param files: Filenames to process. The file must use the .las, .laz or .xyz format.
-    :type files: list of str, or str
-    :param outfolder: The folder where the resulting tileset will be written.
-    :type outfolder: path-like object
-    :param overwrite: Overwrite the ouput folder if it already exists.
-    :type overwrite: bool
-    :param jobs: The number of parallel jobs to start. Default to the number of cpu.
-    :type jobs: int
-    :param cache_size: Cache size in MB. Default to available memory / 10.
-    :type cache_size: int
-    :param srs_out: SRS to convert the output with (numeric part of the EPSG code)
-    :type srs_out: int or str
-    :param srs_in: Override input SRS (numeric part of the EPSG code)
-    :type srs_in: int or str
-    :param fraction: Percentage of the pointcloud to process, between 0 and 100.
-    :type fraction: int
-    :param benchmark: Print summary at the end of the process
-    :type benchmark: str
-    :param rgb: Export rgb attributes.
-    :type rgb: bool
-    :param graph: Produce debug graphes (requires pygal).
-    :type graph: bool
-    :param color_scale: Force color scale
-    :type color_scale: float
+class Convert:
+    def __init__(self,
+                 files,
+                 outfolder='./3dtiles',
+                 overwrite=False,
+                 jobs=multiprocessing.cpu_count(),
+                 cache_size=int(TOTAL_MEMORY_MB / 10),
+                 srs_out=None,
+                 srs_in=None,
+                 fraction=100,
+                 benchmark=None,
+                 rgb=True,
+                 graph=False,
+                 color_scale=None,
+                 verbose=False):
+        """
+        :param files: Filenames to process. The file must use the .las, .laz or .xyz format.
+        :type files: list of str, or str
+        :param outfolder: The folder where the resulting tileset will be written.
+        :type outfolder: path-like object
+        :param overwrite: Overwrite the ouput folder if it already exists.
+        :type overwrite: bool
+        :param jobs: The number of parallel jobs to start. Default to the number of cpu.
+        :type jobs: int
+        :param cache_size: Cache size in MB. Default to available memory / 10.
+        :type cache_size: int
+        :param srs_out: SRS to convert the output with (numeric part of the EPSG code)
+        :type srs_out: int or str
+        :param srs_in: Override input SRS (numeric part of the EPSG code)
+        :type srs_in: int or str
+        :param fraction: Percentage of the pointcloud to process, between 0 and 100.
+        :type fraction: int
+        :param benchmark: Print summary at the end of the process
+        :type benchmark: str
+        :param rgb: Export rgb attributes.
+        :type rgb: bool
+        :param graph: Produce debug graphes (requires pygal).
+        :type graph: bool
+        :param color_scale: Force color scale
+        :type color_scale: float
 
-    :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
-    """
+        :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
 
-    # allow str directly if only one input
-    files = [files] if isinstance(files, str) else files
+        """
+        self.verbose = verbose
+        self.jobs = jobs
+        self.cache_size = cache_size
+        self.out_folder = outfolder
+        self.rgb = rgb
+        self.out_folder = outfolder
+        self.graph = graph
+        self.benchmark = benchmark
 
-    # read all input files headers and determine the aabb/spacing
-    extensions = set()
-    for file in files:
-        extensions.add(PurePath(file).suffix)
-    if len(extensions) != 1:
-        raise ValueError("All files should have the same extension, currently there are", extensions)
-    extension = extensions.pop()
+        # allow str directly if only one input
+        self.files = [files] if isinstance(files, str) else files
 
-    init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
-    infos = init_reader_fn(files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
+        # read all input files headers and determine the aabb/spacing
+        extensions = set()
+        for file in self.files:
+            extensions.add(PurePath(file).suffix)
+        if len(extensions) != 1:
+            raise ValueError("All files should have the same extension, currently there are", extensions)
+        extension = extensions.pop()
 
-    avg_min = infos['avg_min']
-    rotation_matrix = None
-    # srs stuff
-    transformer = None
-    if srs_out:
-        crs_out = CRS('epsg:{}'.format(srs_out))
-        if srs_in:
-            crs_in = CRS('epsg:{}'.format(srs_in))
-        elif not infos['srs_in']:
-            raise SrsInMissingException('No SRS information in the provided files')
-        else:
-            crs_in = CRS(infos['srs_in'])
+        init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
+        self.infos = init_reader_fn(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
-        transformer = Transformer.from_crs(crs_in, crs_out)
-
-        bl = np.array(list(transformer.transform(
-            infos['aabb'][0][0], infos['aabb'][0][1], infos['aabb'][0][2])))
-        tr = np.array(list(transformer.transform(
-            infos['aabb'][1][0], infos['aabb'][1][1], infos['aabb'][1][2])))
-        br = np.array(list(transformer.transform(
-            infos['aabb'][1][0], infos['aabb'][0][1], infos['aabb'][0][2])))
-
-        avg_min = np.array(list(transformer.transform(
-            avg_min[0], avg_min[1], avg_min[2])))
-
-        x_axis = br - bl
-
-        bl = bl - avg_min
-        tr = tr - avg_min
-
-        if srs_out == '4978':
-            # Transform geocentric normal => (0, 0, 1)
-            # and 4978-bbox x axis => (1, 0, 0),
-            # to have a bbox in local coordinates that's nicely aligned with the data
-            rotation_matrix = make_rotation_matrix(avg_min, np.array([0, 0, 1]))
-            rotation_matrix = np.dot(
-                make_rotation_matrix(x_axis, np.array([1, 0, 0])),
-                rotation_matrix)
-
-            bl = np.dot(bl, rotation_matrix[:3, :3].T)
-            tr = np.dot(tr, rotation_matrix[:3, :3].T)
-
-        root_aabb = np.array([
-            np.minimum(bl, tr),
-            np.maximum(bl, tr)
-        ])
-    else:
-        # offset
-        root_aabb = infos['aabb'] - avg_min
-
-    original_aabb = root_aabb
-
-    base_spacing = compute_spacing(root_aabb)
-    if base_spacing > 10:
-        root_scale = np.array([0.01, 0.01, 0.01])
-    elif base_spacing > 1:
-        root_scale = np.array([0.1, 0.1, 0.1])
-    else:
-        root_scale = np.array([1, 1, 1])
-
-    root_aabb = root_aabb * root_scale
-    root_spacing = compute_spacing(root_aabb)
-
-    octree_metadata = OctreeMetadata(aabb=root_aabb, spacing=root_spacing, scale=root_scale[0])
-
-    # create folder
-    out_folder_path = Path(outfolder)
-    if out_folder_path.is_dir():
-        if overwrite:
-            shutil.rmtree(out_folder_path, ignore_errors=True)
-        else:
-            print(f"Error, folder '{outfolder}' already exists")
-            sys.exit(1)
-
-    out_folder_path.mkdir()
-    working_dir = out_folder_path / "tmp"
-    working_dir.mkdir(parents=True)
-
-    node_store = SharedNodeStore(str(working_dir))
-
-    if verbose >= 1:
-        print('Summary:')
-        print('  - points to process: {}'.format(infos['point_count']))
-        print('  - offset to use: {}'.format(avg_min))
-        print('  - root spacing: {}'.format(root_spacing / root_scale[0]))
-        print('  - root aabb: {}'.format(root_aabb))
-        print('  - original aabb: {}'.format(original_aabb))
-        print('  - scale: {}'.format(root_scale))
-
-    startup = time.time()
-
-    initial_portion_count = len(infos['portions'])
-
-    if graph:
-        progression_log = open('progression.csv', 'w')
-
-    state = State(infos['portions'], max(1, jobs // 2))
-
-    # zmq setup
-    zmq_manager = ZmqManager(jobs, (graph, transformer, octree_metadata, outfolder, rgb, verbose))
-
-    while not zmq_manager.are_all_processes_killed():
-        now = time.time() - startup
-        at_least_one_job_ended = False
-
-        all_processes_busy = not zmq_manager.can_queue_more_jobs()
-        while all_processes_busy or zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
-            # Blocking read but it's fine because either all our child processes are busy
-            # or we know that there's something to read (zmq.POLLIN)
-            start = time.time()
-            message = zmq_manager.socket.recv_multipart()
-
-            client_id = message[0]
-            result = message[1:]
-            return_type = result[0]
-
-            if return_type == ResponseType.IDLE.value:
-                zmq_manager.add_idle_client(client_id)
-
-                if all_processes_busy:
-                    zmq_manager.time_waiting_an_idle_process += time.time() - start
-                all_processes_busy = False
-
-            elif return_type == ResponseType.HALTED.value:
-                zmq_manager.number_processes_killed += 1
-                all_processes_busy = False
-
-            elif return_type == ResponseType.READ.value:
-                state.number_of_reading_jobs -= 1
-                at_least_one_job_ended = True
-
-            elif return_type == ResponseType.PROCESSED.value:
-                content = pickle.loads(result[-1])
-                state.processed_points += content['total']
-                state.points_in_progress -= content['total']
-
-                del state.processing_nodes[content['name']]
-
-                if content['name']:
-                    node_store.put(content['name'], content['save'])
-                    state.waiting_writing_nodes.append(content['name'])
-
-                    if state.is_reading_finish():
-                        # if all nodes aren't processed yet,
-                        # we should check if linked ancestors are processed
-                        if state.processing_nodes or state.node_to_process:
-                            finished_node = content['name']
-                            if can_pnts_be_written(
-                                finished_node, finished_node,
-                                state.node_to_process, state.processing_nodes
-                            ):
-                                state.waiting_writing_nodes.pop(-1)
-                                state.pnts_to_writing.append(finished_node)
-
-                                for i in range(len(state.waiting_writing_nodes) - 1, -1, -1):
-                                    candidate = state.waiting_writing_nodes[i]
-
-                                    if can_pnts_be_written(
-                                        candidate, finished_node,
-                                        state.node_to_process, state.processing_nodes
-                                    ):
-                                        state.waiting_writing_nodes.pop(i)
-                                        state.pnts_to_writing.append(candidate)
-
-                        else:
-                            for c in state.waiting_writing_nodes:
-                                state.pnts_to_writing.append(c)
-                            state.waiting_writing_nodes.clear()
-
-                at_least_one_job_ended = True
-
-            elif return_type == ResponseType.PNTS_WRITTEN.value:
-                state.points_in_pnts += struct.unpack('>I', result[1])[0]
-                state.number_of_writing_jobs -= 1
-
-            elif return_type == ResponseType.NEW_TASK.value:
-                count = struct.unpack('>I', result[3])[0]
-                state.add_tasks_to_process(result[1], result[2], count)
-
+        avg_min = self.infos['avg_min']
+        aabb = self.infos['aabb']
+        self.rotation_matrix = None
+        # srs stuff
+        transformer = None
+        if srs_out:
+            crs_out = CRS('epsg:{}'.format(srs_out))
+            if srs_in:
+                crs_in = CRS('epsg:{}'.format(srs_in))
+            elif not self.infos['srs_in']:
+                raise SrsInMissingException('No SRS information in the provided files')
             else:
-                raise NotImplementedError(f"The command {return_type} is not implemented")
+                crs_in = CRS(self.infos['srs_in'])
 
-        while state.pnts_to_writing and zmq_manager.can_queue_more_jobs():
-            node_name = state.pnts_to_writing.pop()
-            data = node_store.get(node_name)
-            if not data:
-                raise ValueError(f'{node_name} has no data')
+            transformer = Transformer.from_crs(crs_in, crs_out)
 
-            zmq_manager.send_to_process([CommandType.WRITE_PNTS.value, node_name, data])
-            node_store.remove(node_name)
-            state.number_of_writing_jobs += 1
 
-        if zmq_manager.can_queue_more_jobs():
-            potentials = sorted(
-                # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
-                [(k, v) for k, v in state.node_to_process.items() if k not in state.processing_nodes],
-                key=lambda f: -len(f[0]))
+            bl = np.array(list(transformer.transform(
+                aabb[0][0], aabb[0][1], aabb[0][2])))
+            tr = np.array(list(transformer.transform(
+                aabb[1][0], aabb[1][1], aabb[1][2])))
+            br = np.array(list(transformer.transform(
+                aabb[1][0], aabb[0][1], aabb[0][2])))
 
-            while zmq_manager.can_queue_more_jobs() and potentials:
-                target_count = 100_000
-                job_list = []
-                count = 0
-                idx = len(potentials) - 1
-                while count < target_count and idx >= 0:
-                    name, (tasks, point_count) = potentials[idx]
-                    count += point_count
-                    job_list += [
-                        name,
-                        node_store.get(name),
-                        struct.pack('>I', len(tasks)),
-                    ] + tasks
-                    del potentials[idx]
+            avg_min = np.array(list(transformer.transform(
+                avg_min[0], avg_min[1], avg_min[2])))
 
-                    del state.node_to_process[name]
-                    state.processing_nodes[name] = (len(tasks), point_count, now)
+            x_axis = br - bl
 
-                    if name in state.waiting_writing_nodes:
-                        state.waiting_writing_nodes.pop(state.waiting_writing_nodes.index(name))
-                    idx -= 1
+            bl = bl - avg_min
+            tr = tr - avg_min
 
-                if job_list:
-                    zmq_manager.send_to_process([CommandType.PROCESS_JOBS.value] + job_list)
+            if srs_out == '4978':
+                # Transform geocentric normal => (0, 0, 1)
+                # and 4978-bbox x axis => (1, 0, 0),
+                # to have a bbox in local coordinates that's nicely aligned with the data
+                self.rotation_matrix = make_rotation_matrix(avg_min, np.array([0, 0, 1]))
+                self.rotation_matrix = np.dot(
+                    make_rotation_matrix(x_axis, np.array([1, 0, 0])),
+                    self.rotation_matrix)
 
-        while state.can_add_reading_jobs() and zmq_manager.can_queue_more_jobs():
-            if verbose >= 1:
-                print(f'Submit next portion {state.point_cloud_file_parts[-1]}')
-            file, portion = state.point_cloud_file_parts.pop()
-            state.points_in_progress += portion[1] - portion[0]
+                bl = np.dot(bl, self.rotation_matrix[:3, :3].T)
+                tr = np.dot(tr, self.rotation_matrix[:3, :3].T)
 
-            zmq_manager.send_to_process([CommandType.READ_FILE.value, pickle.dumps({
-                'filename': file,
-                'offset_scale': (
-                    -avg_min,
-                    root_scale,
-                    rotation_matrix[:3, :3].T if rotation_matrix is not None else None,
-                    infos['color_scale'].get(file) if infos['color_scale'] is not None else None,
-                ),
-                'portion': portion,
-            })])
+            root_aabb = np.array([
+                np.minimum(bl, tr),
+                np.maximum(bl, tr)
+            ])
+            self.avg_min = avg_min
+        else:
+            # offset
+            root_aabb = aabb - avg_min
+            self.avg_min = avg_min
 
-            state.number_of_reading_jobs += 1
+        original_aabb = root_aabb
 
-        # if at this point we have no work in progress => we're done
-        if zmq_manager.are_all_processes_idle() and not zmq_manager.killing_processes:
-            zmq_manager.kill_all_processes()
+        base_spacing = compute_spacing(root_aabb)
+        if base_spacing > 10:
+            self.root_scale = np.array([0.01, 0.01, 0.01])
+        elif base_spacing > 1:
+            self.root_scale = np.array([0.1, 0.1, 0.1])
+        else:
+            self.root_scale = np.array([1, 1, 1])
 
-        if at_least_one_job_ended:
-            if verbose >= 3:
-                print('{:^16}|{:^8}|{:^8}'.format('Name', 'Points', 'Seconds'))
-                for name, v in state.processing_nodes.items():
-                    print('{:^16}|{:^8}|{:^8}'.format(
-                        '{} ({})'.format(name.decode('ascii'), v[0]),
-                        v[1],
-                        round(now - v[2], 1)))
-                print('')
-                print('Pending:')
-                print('  - root: {} / {}'.format(
-                    len(state.point_cloud_file_parts),
-                    initial_portion_count))
-                print('  - other: {} files for {} nodes'.format(
-                    sum([len(f[0]) for f in state.node_to_process.values()]),
-                    len(state.node_to_process)))
-                print('')
-            elif verbose >= 2:
-                state.print_debug()
-            if verbose >= 1:
-                print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
-                    round(100 * state.processed_points / infos['point_count'], 2),
-                    round(now, 1),
-                    jobs - len(zmq_manager.idle_clients),
-                    len(state.processing_nodes),
-                    state.points_in_progress))
-            elif verbose >= 0:
-                percent = round(100 * state.processed_points / infos['point_count'], 2)
-                time_left = (100 - percent) * now / (percent + 0.001)
-                print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='', flush=True)
+        root_aabb = root_aabb * self.root_scale
+        root_spacing = compute_spacing(root_aabb)
 
-            if graph:
-                percent = round(100 * state.processed_points / infos['point_count'], 3)
-                print('{}, {}'.format(time.time() - startup, percent), file=progression_log)
+        self.octree_metadata = OctreeMetadata(aabb=root_aabb, spacing=root_spacing, scale=self.root_scale[0])
 
-        node_store.control_memory_usage(cache_size, verbose)
+        # create folder
+        out_folder_path = Path(outfolder)
+        if out_folder_path.is_dir():
+            if overwrite:
+                shutil.rmtree(out_folder_path, ignore_errors=True)
+            else:
+                print(f"Error, folder '{outfolder}' already exists")
+                sys.exit(1)
 
-    if state.points_in_pnts != infos['point_count']:
-        raise ValueError("!!! Invalid point count in the written .pnts"
-                         + f"(expected: {infos['point_count']}, was: {state.points_in_pnts})")
-    if verbose >= 1:
-        print('Writing 3dtiles {}'.format(infos['avg_min']))
+        out_folder_path.mkdir()
+        self.working_dir = out_folder_path / "tmp"
+        self.working_dir.mkdir(parents=True)
 
-    write_tileset(outfolder, octree_metadata, avg_min, root_scale, rotation_matrix, rgb)
-    shutil.rmtree(working_dir)
+        self.node_store = SharedNodeStore(str(self.working_dir))
 
-    if verbose >= 1:
-        print('Done')
+        if verbose >= 1:
+            print('Summary:')
+            print('  - points to process: {}'.format(self.infos['point_count']))
+            print('  - offset to use: {}'.format(avg_min))
+            print('  - root spacing: {}'.format(root_spacing / self.root_scale[0]))
+            print('  - root aabb: {}'.format(root_aabb))
+            print('  - original aabb: {}'.format(original_aabb))
+            print('  - scale: {}'.format(self.root_scale))
 
-    if benchmark:
-        print('{},{},{},{}'.format(
-            benchmark,
-            ','.join([os.path.basename(f) for f in files]),
-            state.points_in_pnts,
-            round(time.time() - startup, 1)))
+        self.startup = time.time()
 
-    zmq_manager.terminate_all_processes()
+        self.initial_portion_count = len(self.infos['portions'])
 
-    if verbose >= 1:
-        print('destroy', round(zmq_manager.time_waiting_an_idle_process, 2))
+        if self.graph:
+            self.progression_log = open('progression.csv', 'w')
 
-    if graph:
-        progression_log.close()
+        self.state = State(self.infos['portions'], max(1, self.jobs // 2))
 
-    # pygal chart
-    if graph:
-        import pygal
+        # zmq setup
+        self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, self.octree_metadata, self.out_folder, self.rgb, verbose))
 
-        dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
-        for pid in zmq_manager.activities:
-            activity = []
-            filename = 'activity.{}.csv'.format(pid)
-            i = len(zmq_manager.activities) - zmq_manager.activities.index(pid) - 1
-            # activities.index(pid) =
-            with open(filename, 'r') as f:
-                content = f.read().split('\n')
-                for line in content[1:]:
-                    line = line.split(',')
-                    if line[0]:
-                        ts = float(line[0])
-                        value = int(line[1]) / 3.0
-                        activity.append((ts, i + value * 0.9))
+    def convert(self):
+        """convert
 
-            os.remove(filename)
-            if activity:
-                activity.append((activity[-1][0], activity[0][1]))
-                activity.append(activity[0])
-                dateline.add(str(pid), activity, show_dots=False, fill=True)
+        Convert pointclouds (xyz, las or laz) to 3dtiles tileset containing pnts node
+        """
 
-        with open('progression.csv', 'r') as f:
-            values = []
-            for line in f.read().split('\n'):
-                if line:
-                    line = line.split(',')
-                    values += [(float(line[0]), float(line[1]))]
-        os.remove('progression.csv')
-        dateline.add('progression', values, show_dots=False, secondary=True, stroke_style={'width': 2, 'color': 'black'})
+        while not self.zmq_manager.are_all_processes_killed():
+            now = time.time() - self.startup
+            at_least_one_job_ended = False
 
-        dateline.render_to_file('activity.svg')
+            all_processes_busy = not self.zmq_manager.can_queue_more_jobs()
+            while all_processes_busy or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
+                # Blocking read but it's fine because either all our child processes are busy
+                # or we know that there's something to read (zmq.POLLIN)
+                start = time.time()
+                message = self.zmq_manager.socket.recv_multipart()
 
-    zmq_manager.context.destroy()
+                client_id = message[0]
+                result = message[1:]
+                return_type = result[0]
+
+                if return_type == ResponseType.IDLE.value:
+                    self.zmq_manager.add_idle_client(client_id)
+
+                    if all_processes_busy:
+                        self.zmq_manager.time_waiting_an_idle_process += time.time() - start
+                    all_processes_busy = False
+
+                elif return_type == ResponseType.HALTED.value:
+                    self.zmq_manager.number_processes_killed += 1
+                    all_processes_busy = False
+
+                elif return_type == ResponseType.READ.value:
+                    self.state.number_of_reading_jobs -= 1
+                    at_least_one_job_ended = True
+
+                elif return_type == ResponseType.PROCESSED.value:
+                    content = pickle.loads(result[-1])
+                    self.state.processed_points += content['total']
+                    self.state.points_in_progress -= content['total']
+
+                    del self.state.processing_nodes[content['name']]
+
+                    if content['name']:
+                        self.node_store.put(content['name'], content['save'])
+                        self.state.waiting_writing_nodes.append(content['name'])
+
+                        if self.state.is_reading_finish():
+                            # if all nodes aren't processed yet,
+                            # we should check if linked ancestors are processed
+                            if self.state.processing_nodes or self.state.node_to_process:
+                                finished_node = content['name']
+                                if can_pnts_be_written(
+                                    finished_node, finished_node,
+                                    self.state.node_to_process, self.state.processing_nodes
+                                ):
+                                    self.state.waiting_writing_nodes.pop(-1)
+                                    self.state.pnts_to_writing.append(finished_node)
+
+                                    for i in range(len(self.state.waiting_writing_nodes) - 1, -1, -1):
+                                        candidate = self.state.waiting_writing_nodes[i]
+
+                                        if can_pnts_be_written(
+                                            candidate, finished_node,
+                                            self.state.node_to_process, self.state.processing_nodes
+                                        ):
+                                            self.state.waiting_writing_nodes.pop(i)
+                                            self.state.pnts_to_writing.append(candidate)
+
+                            else:
+                                for c in self.state.waiting_writing_nodes:
+                                    self.state.pnts_to_writing.append(c)
+                                self.state.waiting_writing_nodes.clear()
+
+                    at_least_one_job_ended = True
+
+                elif return_type == ResponseType.PNTS_WRITTEN.value:
+                    self.state.points_in_pnts += struct.unpack('>I', result[1])[0]
+                    self.state.number_of_writing_jobs -= 1
+
+                elif return_type == ResponseType.NEW_TASK.value:
+                    count = struct.unpack('>I', result[3])[0]
+                    self.state.add_tasks_to_process(result[1], result[2], count)
+
+                else:
+                    raise NotImplementedError(f"The command {return_type} is not implemented")
+
+            while self.state.pnts_to_writing and self.zmq_manager.can_queue_more_jobs():
+                node_name = self.state.pnts_to_writing.pop()
+                data = self.node_store.get(node_name)
+                if not data:
+                    raise ValueError(f'{node_name} has no data')
+
+                self.zmq_manager.send_to_process([CommandType.WRITE_PNTS.value, node_name, data])
+                self.node_store.remove(node_name)
+                self.state.number_of_writing_jobs += 1
+
+            if self.zmq_manager.can_queue_more_jobs():
+                potentials = sorted(
+                    # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
+                    [(k, v) for k, v in self.state.node_to_process.items() if k not in self.state.processing_nodes],
+                    key=lambda f: -len(f[0]))
+
+                while self.zmq_manager.can_queue_more_jobs() and potentials:
+                    target_count = 100_000
+                    job_list = []
+                    count = 0
+                    idx = len(potentials) - 1
+                    while count < target_count and idx >= 0:
+                        name, (tasks, point_count) = potentials[idx]
+                        count += point_count
+                        job_list += [
+                            name,
+                            self.node_store.get(name),
+                            struct.pack('>I', len(tasks)),
+                        ] + tasks
+                        del potentials[idx]
+
+                        del self.state.node_to_process[name]
+                        self.state.processing_nodes[name] = (len(tasks), point_count, now)
+
+                        if name in self.state.waiting_writing_nodes:
+                            self.state.waiting_writing_nodes.pop(self.state.waiting_writing_nodes.index(name))
+                        idx -= 1
+
+                    if job_list:
+                        self.zmq_manager.send_to_process([CommandType.PROCESS_JOBS.value] + job_list)
+
+            while self.state.can_add_reading_jobs() and self.zmq_manager.can_queue_more_jobs():
+                if self.verbose >= 1:
+                    print(f'Submit next portion {self.state.point_cloud_file_parts[-1]}')
+                file, portion = self.state.point_cloud_file_parts.pop()
+                self.state.points_in_progress += portion[1] - portion[0]
+
+                self.zmq_manager.send_to_process([CommandType.READ_FILE.value, pickle.dumps({
+                    'filename': file,
+                    'offset_scale': (
+                        -self.avg_min,
+                        self.root_scale,
+                        self.rotation_matrix[:3, :3].T if self.rotation_matrix is not None else None,
+                        self.infos['color_scale'].get(file) if self.infos['color_scale'] is not None else None,
+                    ),
+                    'portion': portion,
+                })])
+
+                self.state.number_of_reading_jobs += 1
+
+            # if at this point we have no work in progress => we're done
+            if self.zmq_manager.are_all_processes_idle() and not self.zmq_manager.killing_processes:
+                self.zmq_manager.kill_all_processes()
+
+            if at_least_one_job_ended:
+                if self.verbose >= 3:
+                    print('{:^16}|{:^8}|{:^8}'.format('Name', 'Points', 'Seconds'))
+                    for name, v in self.state.processing_nodes.items():
+                        print('{:^16}|{:^8}|{:^8}'.format(
+                            '{} ({})'.format(name.decode('ascii'), v[0]),
+                            v[1],
+                            round(now - v[2], 1)))
+                    print('')
+                    print('Pending:')
+                    print('  - root: {} / {}'.format(
+                        len(self.state.point_cloud_file_parts),
+                        self.initial_portion_count))
+                    print('  - other: {} files for {} nodes'.format(
+                        sum([len(f[0]) for f in self.state.node_to_process.values()]),
+                        len(self.state.node_to_process)))
+                    print('')
+                elif self.verbose >= 2:
+                    self.state.print_debug()
+                if self.verbose >= 1:
+                    print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
+                        round(100 * self.state.processed_points / self.infos['point_count'], 2),
+                        round(now, 1),
+                        self.jobs - len(self.zmq_manager.idle_clients),
+                        len(self.state.processing_nodes),
+                        self.state.points_in_progress))
+                elif self.verbose >= 0:
+                    percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
+                    time_left = (100 - percent) * now / (percent + 0.001)
+                    print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='', flush=True)
+
+                if self.graph:
+                    percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
+                    print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
+
+            self.node_store.control_memory_usage(self.cache_size, self.verbose)
+
+        if self.state.points_in_pnts != self.infos['point_count']:
+            raise ValueError("!!! Invalid point count in the written .pnts"
+                             + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
+        if self.verbose >= 1:
+            print('Writing 3dtiles {}'.format(self.infos['avg_min']))
+
+        write_tileset(self.out_folder, self.octree_metadata, self.avg_min, self.root_scale, self.rotation_matrix, self.rgb)
+        shutil.rmtree(self.working_dir)
+
+        if self.verbose >= 1:
+            print('Done')
+
+        if self.benchmark:
+            print('{},{},{},{}'.format(
+                self.benchmark,
+                ','.join([os.path.basename(f) for f in self.files]),
+                self.state.points_in_pnts,
+                round(time.time() - self.startup, 1)))
+
+        self.zmq_manager.terminate_all_processes()
+
+        if self.verbose >= 1:
+            print('destroy', round(self.zmq_manager.time_waiting_an_idle_process, 2))
+
+        if self.graph:
+            self.progression_log.close()
+
+        # pygal chart
+        if self.graph:
+            import pygal
+
+            dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
+            for pid in self.zmq_manager.activities:
+                activity = []
+                filename = 'activity.{}.csv'.format(pid)
+                i = len(self.zmq_manager.activities) - self.zmq_manager.activities.index(pid) - 1
+                # activities.index(pid) =
+                with open(filename, 'r') as f:
+                    content = f.read().split('\n')
+                    for line in content[1:]:
+                        line = line.split(',')
+                        if line[0]:
+                            ts = float(line[0])
+                            value = int(line[1]) / 3.0
+                            activity.append((ts, i + value * 0.9))
+
+                os.remove(filename)
+                if activity:
+                    activity.append((activity[-1][0], activity[0][1]))
+                    activity.append(activity[0])
+                    dateline.add(str(pid), activity, show_dots=False, fill=True)
+
+            with open('progression.csv', 'r') as f:
+                values = []
+                for line in f.read().split('\n'):
+                    if line:
+                        line = line.split(',')
+                        values += [(float(line[0]), float(line[1]))]
+            os.remove('progression.csv')
+            dateline.add('progression', values, show_dots=False, secondary=True, stroke_style={'width': 2, 'color': 'black'})
+
+            dateline.render_to_file('activity.svg')
+
+        self.zmq_manager.context.destroy()
 
 
 def init_parser(subparser, str2bool):
