@@ -656,10 +656,10 @@ class _Convert:
                     name, (tasks, point_count) = potentials[idx]
                     count += point_count
                     job_list += [
-                                    name,
-                                    self.node_store.get(name),
-                                    struct.pack('>I', len(tasks)),
-                                ] + tasks
+                        name,
+                        self.node_store.get(name),
+                        struct.pack('>I', len(tasks)),
+                    ] + tasks
                     del potentials[idx]
 
                     del self.state.node_to_process[name]
