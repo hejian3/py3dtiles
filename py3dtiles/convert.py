@@ -491,7 +491,7 @@ class Convert:
             root_aabb = aabb - avg_min
             self.avg_min = avg_min
 
-        original_aabb = root_aabb
+        self.original_aabb = root_aabb
 
         base_spacing = compute_spacing(root_aabb)
         if base_spacing > 10:
@@ -501,10 +501,10 @@ class Convert:
         else:
             self.root_scale = np.array([1, 1, 1])
 
-        root_aabb = root_aabb * self.root_scale
-        root_spacing = compute_spacing(root_aabb)
+        self.root_aabb = root_aabb * self.root_scale
+        self.root_spacing = compute_spacing(root_aabb)
 
-        self.octree_metadata = OctreeMetadata(aabb=root_aabb, spacing=root_spacing, scale=self.root_scale[0])
+        self.octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
 
         # create folder
         out_folder_path = Path(outfolder)
@@ -522,13 +522,7 @@ class Convert:
         self.node_store = SharedNodeStore(str(self.working_dir))
 
         if verbose >= 1:
-            print('Summary:')
-            print('  - points to process: {}'.format(self.infos['point_count']))
-            print('  - offset to use: {}'.format(avg_min))
-            print('  - root spacing: {}'.format(root_spacing / self.root_scale[0]))
-            print('  - root aabb: {}'.format(root_aabb))
-            print('  - original aabb: {}'.format(original_aabb))
-            print('  - scale: {}'.format(self.root_scale))
+            self.print_summary()
 
         self.startup = time.time()
 
@@ -694,36 +688,7 @@ class Convert:
                 self.zmq_manager.kill_all_processes()
 
             if at_least_one_job_ended:
-                if self.verbose >= 3:
-                    print('{:^16}|{:^8}|{:^8}'.format('Name', 'Points', 'Seconds'))
-                    for name, v in self.state.processing_nodes.items():
-                        print('{:^16}|{:^8}|{:^8}'.format(
-                            '{} ({})'.format(name.decode('ascii'), v[0]),
-                            v[1],
-                            round(now - v[2], 1)))
-                    print('')
-                    print('Pending:')
-                    print('  - root: {} / {}'.format(
-                        len(self.state.point_cloud_file_parts),
-                        self.initial_portion_count))
-                    print('  - other: {} files for {} nodes'.format(
-                        sum([len(f[0]) for f in self.state.node_to_process.values()]),
-                        len(self.state.node_to_process)))
-                    print('')
-                elif self.verbose >= 2:
-                    self.state.print_debug()
-                if self.verbose >= 1:
-                    print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
-                        round(100 * self.state.processed_points / self.infos['point_count'], 2),
-                        round(now, 1),
-                        self.jobs - len(self.zmq_manager.idle_clients),
-                        len(self.state.processing_nodes),
-                        self.state.points_in_progress))
-                elif self.verbose >= 0:
-                    percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
-                    time_left = (100 - percent) * now / (percent + 0.001)
-                    print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='', flush=True)
-
+                self.print_debug(now)
                 if self.graph:
                     percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
                     print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
@@ -733,6 +698,7 @@ class Convert:
         if self.state.points_in_pnts != self.infos['point_count']:
             raise ValueError("!!! Invalid point count in the written .pnts"
                              + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
+        
         if self.verbose >= 1:
             print('Writing 3dtiles {}'.format(self.infos['avg_min']))
 
@@ -754,46 +720,92 @@ class Convert:
         if self.verbose >= 1:
             print('destroy', round(self.zmq_manager.time_waiting_an_idle_process, 2))
 
-        if self.graph:
-            self.progression_log.close()
-
         # pygal chart
         if self.graph:
-            import pygal
-
-            dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
-            for pid in self.zmq_manager.activities:
-                activity = []
-                filename = 'activity.{}.csv'.format(pid)
-                i = len(self.zmq_manager.activities) - self.zmq_manager.activities.index(pid) - 1
-                # activities.index(pid) =
-                with open(filename, 'r') as f:
-                    content = f.read().split('\n')
-                    for line in content[1:]:
-                        line = line.split(',')
-                        if line[0]:
-                            ts = float(line[0])
-                            value = int(line[1]) / 3.0
-                            activity.append((ts, i + value * 0.9))
-
-                os.remove(filename)
-                if activity:
-                    activity.append((activity[-1][0], activity[0][1]))
-                    activity.append(activity[0])
-                    dateline.add(str(pid), activity, show_dots=False, fill=True)
-
-            with open('progression.csv', 'r') as f:
-                values = []
-                for line in f.read().split('\n'):
-                    if line:
-                        line = line.split(',')
-                        values += [(float(line[0]), float(line[1]))]
-            os.remove('progression.csv')
-            dateline.add('progression', values, show_dots=False, secondary=True, stroke_style={'width': 2, 'color': 'black'})
-
-            dateline.render_to_file('activity.svg')
+            self.progression_log.close()
+            self.draw_graph()
 
         self.zmq_manager.context.destroy()
+
+    def print_summary(self):
+        print('Summary:')
+        print('  - points to process: {}'.format(self.infos['point_count']))
+        print('  - offset to use: {}'.format(self.avg_min))
+        print('  - root spacing: {}'.format(self.root_spacing / self.root_scale[0]))
+        print('  - root aabb: {}'.format(self.root_aabb))
+        print('  - original aabb: {}'.format(self.original_aabb))
+        print('  - scale: {}'.format(self.root_scale))
+
+    def draw_graph(self):
+        import pygal
+
+        dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
+        for pid in self.zmq_manager.activities:
+            activity = []
+            filename = 'activity.{}.csv'.format(pid)
+            i = len(self.zmq_manager.activities) - self.zmq_manager.activities.index(pid) - 1
+            # activities.index(pid) =
+            with open(filename, 'r') as f:
+                content = f.read().split('\n')
+                for line in content[1:]:
+                    line = line.split(',')
+                    if line[0]:
+                        ts = float(line[0])
+                        value = int(line[1]) / 3.0
+                        activity.append((ts, i + value * 0.9))
+
+            os.remove(filename)
+            if activity:
+                activity.append((activity[-1][0], activity[0][1]))
+                activity.append(activity[0])
+                dateline.add(str(pid), activity, show_dots=False, fill=True)
+
+        with open('progression.csv', 'r') as f:
+            values = []
+            for line in f.read().split('\n'):
+                if line:
+                    line = line.split(',')
+                    values += [(float(line[0]), float(line[1]))]
+        os.remove('progression.csv')
+        dateline.add('progression', values, show_dots=False, secondary=True,
+                     stroke_style={'width': 2, 'color': 'black'})
+
+        dateline.render_to_file('activity.svg')
+
+    def print_debug(self, now):
+        if self.verbose >= 3:
+            print('{:^16}|{:^8}|{:^8}'.format('Name', 'Points', 'Seconds'))
+            for name, v in self.state.processing_nodes.items():
+                print('{:^16}|{:^8}|{:^8}'.format(
+                    '{} ({})'.format(name.decode('ascii'), v[0]),
+                    v[1],
+                    round(now - v[2], 1)))
+            print('')
+            print('Pending:')
+            print('  - root: {} / {}'.format(
+                len(self.state.point_cloud_file_parts),
+                self.initial_portion_count))
+            print('  - other: {} files for {} nodes'.format(
+                sum([len(f[0]) for f in self.state.node_to_process.values()]),
+                len(self.state.node_to_process)))
+            print('')
+
+        elif self.verbose >= 2:
+            self.state.print_debug()
+
+        if self.verbose >= 1:
+            print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
+                round(100 * self.state.processed_points / self.infos['point_count'], 2),
+                round(now, 1),
+                self.jobs - len(self.zmq_manager.idle_clients),
+                len(self.state.processing_nodes),
+                self.state.points_in_progress))
+
+        elif self.verbose >= 0:
+            percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
+            time_left = (100 - percent) * now / (percent + 0.001)
+            print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='',
+                  flush=True)
 
 
 def init_parser(subparser, str2bool):
