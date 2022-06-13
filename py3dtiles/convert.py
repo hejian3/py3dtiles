@@ -312,11 +312,11 @@ class State:
 
 
 def convert(*args, **kwargs):
-    converter = Convert(*args, **kwargs)
+    converter = _Convert(*args, **kwargs)
     return converter.convert()
 
 
-class Convert:
+class _Convert:
     def __init__(self,
                  files,
                  outfolder='./3dtiles',
