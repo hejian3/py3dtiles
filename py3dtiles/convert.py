@@ -485,7 +485,7 @@ class _Convert:
             root_scale = np.array([1, 1, 1])
 
         root_aabb = original_aabb * root_scale
-        root_spacing = compute_spacing(original_aabb)
+        root_spacing = compute_spacing(root_aabb)
         return root_aabb, root_scale, root_spacing
 
     def convert(self):
