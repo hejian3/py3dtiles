@@ -27,7 +27,12 @@ from py3dtiles.points.utils import CommandType, ResponseType, compute_spacing, n
 from py3dtiles.utils import SrsInMissingException
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
-IPC_URI = "ipc:///tmp/py3dtiles1"
+
+# IPC protocol is not supported on Windows
+if os.name == 'nt':
+    URI = 'tcp://127.0.0.1:0'
+else:
+    URI = "ipc:///tmp/py3dtiles1"
 
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
 
@@ -51,20 +56,21 @@ class Worker:
     """
     This class waits from jobs commands from the Zmq socket.
     """
-    def __init__(self, activity_graph, transformer, octree_metadata, folder, write_rgb, verbosity):
+    def __init__(self, activity_graph, transformer, octree_metadata, folder, write_rgb, verbosity, uri):
         self.activity_graph = activity_graph
         self.transformer = transformer
         self.octree_metadata = octree_metadata
         self.folder = folder
         self.write_rgb = write_rgb
         self.verbosity = verbosity
+        self.uri = uri
 
         # Socket to receive messages on
         self.context = zmq.Context()
         self.skt = self.context.socket(zmq.DEALER)
 
     def run(self):
-        self.skt.connect(IPC_URI)
+        self.skt.connect(self.uri)
 
         startup_time = time.time()
         idle_time = 0
@@ -166,10 +172,12 @@ class ZmqManager:
         self.number_of_jobs = number_of_jobs
 
         self.socket = self.context.socket(zmq.ROUTER)
-        self.socket.bind(IPC_URI)
+        self.socket.bind(URI)
+        # Useful only when TCP is used to get the URI with the opened port
+        self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            multiprocessing.Process(target=zmq_process, args=process_args)
+            multiprocessing.Process(target=zmq_process, args=process_args + (self.uri,))
             for _ in range(number_of_jobs)
         ]
         [p.start() for p in self.processes]
