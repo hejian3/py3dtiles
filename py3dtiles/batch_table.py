@@ -19,7 +19,7 @@ class BatchTable:
     def to_array(self):
         # convert dict to json string
         bt_json = json.dumps(self.header, separators=(',', ':'))
-        # header must be 4-byte aligned (refer to batch table documentation)
-        bt_json += ' ' * (4 - len(bt_json) % 4)
+        # header must be 8-byte aligned (refer to batch table documentation)
+        bt_json += ' ' * (8 - len(bt_json) % 8)
         # returns an array of binaries representing the batch table
-        return np.fromstring(bt_json, dtype=np.uint8)
+        return np.frombuffer(bt_json.encode(), dtype=np.uint8)
