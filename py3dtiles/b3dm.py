@@ -1,5 +1,6 @@
 import struct
 import numpy as np
+import json
 
 from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
 from .gltf import GlTF
@@ -57,8 +58,7 @@ class B3dm(TileContent):
             raise RuntimeError("Invalid byte length in header")
 
         # build tile body
-        b_arr = (array[B3dmHeader.BYTELENGTH:h.tile_byte_length
-                 - B3dmHeader.BYTELENGTH])
+        b_arr = array[B3dmHeader.BYTELENGTH:h.tile_byte_length]
         b = B3dmBody.from_array(h, b_arr)
 
         # build TileContent with header and body
@@ -133,7 +133,7 @@ class B3dmHeader(TileContentHeader):
         if len(array) != B3dmHeader.BYTELENGTH:
             raise RuntimeError("Invalid header length")
 
-        h.magic_value = "b3dm"
+        h.magic_value = b"b3dm"
         h.version = struct.unpack("i", array[4:8])[0]
         h.tile_byte_length = struct.unpack("i", array[8:12])[0]
         h.ft_json_byte_length = struct.unpack("i", array[12:16])[0]
@@ -204,8 +204,10 @@ class B3dmBody(TileContentBody):
         glTF_arr = array[ft_len + bt_len:ft_len + bt_len + glTF_len]
         glTF = GlTF.from_array(glTF_arr)
 
-        # build tile body with feature table
+        # build tile body with batch table
         b = B3dmBody()
         b.glTF = glTF
+        if th.bt_json_byte_length > 0:
+            b.batch_table.header = json.loads(array[0:th.bt_json_byte_length].tobytes().decode('utf-8'))
 
         return b
