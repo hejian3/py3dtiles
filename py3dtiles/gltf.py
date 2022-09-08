@@ -5,6 +5,9 @@ import numpy as np
 
 
 class GlTF:
+    HEADER_LENGTH = 12
+    CHUNK_HEADER_LENGTH = 8
+
     def __init__(self):
         self.header = {}
         self.body = None
@@ -18,7 +21,8 @@ class GlTF:
         padding = np.array([0 for i in range(0, (4 - len(self.body) % 4) % 4)],
                            dtype=np.uint8)
 
-        length = 28 + len(self.body) + len(scene) + len(padding)
+        length = GlTF.HEADER_LENGTH + (2 * GlTF.CHUNK_HEADER_LENGTH)
+        length += len(self.body) + len(scene) + len(padding)
         binary_header = np.array([0x46546C67,  # "glTF" magic
                                   2,  # version
                                   length], dtype=np.uint32)
@@ -53,19 +57,24 @@ class GlTF:
         if struct.unpack("4s", array[0:4])[0] != b"glTF":
             raise RuntimeError("Array does not contain a binary glTF")
 
-        if struct.unpack("i", array[4:8])[0] != 1:
+        version = struct.unpack("i", array[4:8])[0]
+        if version != 1 and version != 2:
             raise RuntimeError("Unsupported glTF version")
 
         length = struct.unpack("i", array[8:12])[0]
-        content_length = struct.unpack("i", array[12:16])[0]
+        json_chunk_length = struct.unpack("i", array[12:16])[0]
 
-        if struct.unpack("i", array[16:20])[0] != 0:
+        chunk_type = struct.unpack("i", array[16:20])[0]
+        if chunk_type != 0 and chunk_type != 1313821514:  # 1313821514 => 'JSON'
             raise RuntimeError("Unsupported binary glTF content type")
 
-        header = struct.unpack(str(content_length) + "s",
-                               array[20:20 + content_length])[0]
+        index = GlTF.HEADER_LENGTH + GlTF.CHUNK_HEADER_LENGTH  # Skip the header and the JSON chunk header
+        header = struct.unpack(str(json_chunk_length) + "s",
+                               array[index:index + json_chunk_length])[0]
         glTF.header = json.loads(header.decode("ascii"))
-        glTF.body = array[20 + content_length:length]
+
+        index += json_chunk_length + GlTF.CHUNK_HEADER_LENGTH  # Skip the JSON chunk data and the binary chunk header
+        glTF.body = array[index:length]
 
         return glTF
 
