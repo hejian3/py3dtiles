@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 import json
+from filecmp import cmp
+from pathlib import Path
 # np.set_printoptions(formatter={'int':hex})
 
 from py3dtiles import TileContentReader, B3dm, GlTF, TriangleSoup
@@ -21,6 +23,24 @@ class TestTileContentReader(unittest.TestCase):
         with open('tests/dragon_low_gltf_header.json', 'r') as f:
             gltf_header = json.loads(f.read())
         self.assertDictEqual(gltf_header, tile.body.glTF.header)
+
+    def test_read_and_write(self):
+        tile_content = TileContentReader().read_file('tests/data/buildings.b3dm')
+
+        self.assertEqual(tile_content.header.tile_byte_length, 6176)
+        self.assertEqual(tile_content.header.ft_json_byte_length, 0)
+        self.assertEqual(tile_content.header.ft_bin_byte_length, 0)
+        self.assertEqual(tile_content.header.bt_json_byte_length, 64)
+        self.assertEqual(tile_content.header.bt_bin_byte_length, 0)
+        self.assertEqual(tile_content.body.batch_table.header, {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]})
+        self.assertEqual(len(tile_content.body.glTF.to_array()), 6084)
+        self.assertEqual(tile_content.body.glTF.header['asset']['version'], '2.0')
+
+        path_name = Path('tests/output_tests/buildings.b3dm')
+        path_name.parent.mkdir(parents=True, exist_ok=True)
+
+        tile_content.save_as(path_name)
+        self.assertTrue(cmp('tests/data/buildings.b3dm', path_name))
 
 
 class TestTileContentBuilder(unittest.TestCase):
