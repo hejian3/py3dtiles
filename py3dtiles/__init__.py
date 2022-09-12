@@ -6,7 +6,12 @@ from .pnts import Pnts
 from .b3dm import B3dm
 from .batch_table import BatchTable
 from .wkb_utils import TriangleSoup
+from .extendable import Extendable
+from .bounding_volume_box import BoundingVolumeBox
+from .extension import Extension
+from .tile import Tile
+from .tileset import TileSet
 
 __version__ = '2.0.0'
 __all__ = ['TileContentReader', 'convert_to_ecef', 'TileContent', 'Feature', 'GlTF', 'Pnts',
-           'B3dm', 'BatchTable', 'TriangleSoup']
+           'B3dm', 'BatchTable', 'TriangleSoup', 'Extendable', 'BoundingVolumeBox', 'Extension', 'Tile', 'TileSet']
