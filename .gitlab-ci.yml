@@ -84,6 +84,8 @@ sonarcloud-check:
 pages:
   stage: 🚀 deploy
   image: python:3.10-slim
+  before_script:
+    - apt update && apt install -y git
   script:
     - pip install .
     - pip install .[doc]
