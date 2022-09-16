@@ -46,6 +46,13 @@ py3dtiles.earcut module
     :members:
     :show-inheritance:
 
+py3dtiles.exceptions module
+---------------------------
+
+.. automodule:: py3dtiles.exceptions
+    :members:
+    :show-inheritance:
+
 py3dtiles.export module
 -----------------------
 
