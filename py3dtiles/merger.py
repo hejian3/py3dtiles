@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 
 import numpy as np
 
@@ -285,8 +284,7 @@ def main(args):
         if args.overwrite:
             remove_tileset(dest)
         else:
-            print('Destination tileset {} already exists. Aborting'.format(dest))
-            sys.exit(1)
+            raise FileExistsError(f'Destination tileset {dest} already exists.')
 
     tilesets = []
     for root, dirs, files in os.walk(args.folder):

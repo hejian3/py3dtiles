@@ -407,8 +407,7 @@ class _Convert:
             if overwrite:
                 shutil.rmtree(out_folder_path, ignore_errors=True)
             else:
-                print(f"Error, folder '{self.out_folder}' already exists")
-                sys.exit(1)
+                raise FileExistsError(f"Folder '{self.out_folder}' already exists")
 
         out_folder_path.mkdir()
         self.working_dir = out_folder_path / "tmp"
