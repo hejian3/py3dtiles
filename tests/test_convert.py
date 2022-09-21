@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 from pytest import approx, raises, fixture
 from unittest.mock import patch
 import shutil
@@ -88,3 +90,21 @@ def test_convert_las_exception_in_run(tmp_dir):
                     outfolder=tmp_dir,
                     srs_in='3857',
                     srs_out='4978')
+
+
+def test_convert_export_folder_already_exists(tmp_dir):
+    Path(tmp_dir).mkdir()
+    assert not os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
+
+    with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
+        convert(os.path.join(fixtures_dir, 'with_srs.las'),
+                outfolder=tmp_dir,
+                srs_out='4978',
+                jobs=1)
+
+    convert(os.path.join(fixtures_dir, 'with_srs.las'),
+            outfolder=tmp_dir,
+            overwrite=True,
+            srs_out='4978',
+            jobs=1)
+    assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
