@@ -275,6 +275,14 @@ class FeatureTableBody:
         arr = self.positions_arr
         if len(self.colors_arr):
             arr = np.concatenate((self.positions_arr, self.colors_arr))
+
+        padding_str = " " * (8 - len(arr) % 8)
+
+        arr = np.concatenate((
+            arr,
+            np.frombuffer(padding_str.encode('utf-8'), dtype=np.uint8)
+        ))
+
         return arr
 
     @staticmethod
