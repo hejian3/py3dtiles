@@ -57,6 +57,31 @@ test:
     matrix:
       - PYTHON_VERSION: ['3.7', '3.8', '3.9', '3.10']
 
+3d-tiles-validator:
+  stage: 🤞 test
+  image:
+    name: node:18
+  before_script:
+    - apt update
+    - apt install -y python3-pip pdal llvm
+    - pip install .
+    - git clone --depth 1 https://github.com/CesiumGS/3d-tiles-validator
+    - cd 3d-tiles-validator
+    - npm install
+  script:
+    - py3dtiles convert ../tests/fixtures/with_srs.las
+    - npx ts-node src/main.ts --tilesetFile 3dtiles/tileset.json | tee validator-output.txt
+    - grep \"numErrors\"\:\ 0 validator-output.txt
+    - grep \"numWarnings\"\:\ 0 validator-output.txt
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+    changes:
+      - "**/*.py"
+
 sonarcloud-check:
   stage: 🤞 test
   needs: [test]
