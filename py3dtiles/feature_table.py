@@ -114,7 +114,8 @@ class FeatureTableHeader:
         jsond = self.to_json()
         json_str = json.dumps(jsond).replace(" ", "")
         n = len(json_str) + 28
-        json_str += ' ' * (8 - n % 8)
+        if n % 8 != 0:
+            json_str += ' ' * (8 - n % 8)
         return np.frombuffer(json_str.encode('utf-8'), dtype=np.uint8)
 
     def to_json(self):
@@ -276,12 +277,12 @@ class FeatureTableBody:
         if len(self.colors_arr):
             arr = np.concatenate((self.positions_arr, self.colors_arr))
 
-        padding_str = " " * (8 - len(arr) % 8)
-
-        arr = np.concatenate((
-            arr,
-            np.frombuffer(padding_str.encode('utf-8'), dtype=np.uint8)
-        ))
+        if len(arr) % 8 != 0:
+            padding_str = ' ' * (8 - len(arr) % 8)
+            arr = np.concatenate((
+                arr,
+                np.frombuffer(padding_str.encode('utf-8'), dtype=np.uint8)
+            ))
 
         return arr
 
