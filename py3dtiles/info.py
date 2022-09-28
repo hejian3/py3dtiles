@@ -70,12 +70,12 @@ def main(args):
 
     magic = tile.header.magic_value
 
-    if magic == "pnts":
+    if magic == b"pnts":
         print_pnts_info(tile)
-    elif magic == "b3dm":
+    elif magic == b"b3dm":
         print_b3dm_info(tile)
     else:
-        raise RuntimeError("Unsupported format " + magic)
+        raise RuntimeError("Unsupported format " + str(magic))
 
 
 def init_parser(subparser):
