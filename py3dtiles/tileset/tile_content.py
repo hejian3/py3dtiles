@@ -40,6 +40,14 @@ class TileContentType(Enum):
 
 
 class TileContentHeader(ABC):
+    def __init__(self):
+        self.tile_byte_length = 0
+        self.ft_json_byte_length = 0
+        self.ft_bin_byte_length = 0
+        self.bt_json_byte_length = 0
+        self.bt_bin_byte_length = 0
+        self.bt_length = 0  # number of models in the batch
+
     @staticmethod
     @abstractmethod
     def from_array(array: npt.ArrayLike):
