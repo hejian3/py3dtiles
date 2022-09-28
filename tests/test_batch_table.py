@@ -1,13 +1,16 @@
 import json
 import unittest
 
+import numpy as np
+
 from py3dtiles.tileset.batch_table import BatchTable
+from py3dtiles.tileset.content import PntsHeader
 
 
 class Test_Batch(unittest.TestCase):
 
-    @classmethod
-    def build_bt_sample(cls):
+    @staticmethod
+    def build_bt_sample():
         """
         Programmatically define the reference sample encountered in the
         Bath Table specification cf
@@ -24,11 +27,20 @@ class Test_Batch(unittest.TestCase):
         return bt
 
     def test_json_encoding(self):
-        json_bt = json.loads(self.build_bt_sample().to_array().tobytes().decode('utf-8'))
-        json_reference = json.loads('{"id":["unique id","another unique id"],\
-                                    "displayName":["Building name","Another building name"],\
-                                    "yearBuilt":[1999,2015],\
-                                    "address":[{"street":"Main Street","houseNumber":"1"},\
-                                    {"street":"Main Street","houseNumber":"2"}]}')
-        if not json_bt.items() == json_reference.items():
-            self.fail()
+        bt_dict = json.loads(Test_Batch.build_bt_sample().to_array().tobytes().decode('utf-8'))
+        bt_dict_reference = {
+            "id": ["unique id", "another unique id"],
+            "displayName": ["Building name", "Another building name"],
+            "yearBuilt": [1999, 2015],
+            "address": [{"street": "Main Street", "houseNumber": "1"}, {"street": "Main Street", "houseNumber": "2"}]
+        }
+
+        self.assertDictEqual(bt_dict, bt_dict_reference)
+
+    def test_export_import_empty_batch_table(self):
+        header = PntsHeader()
+        batch_table = BatchTable.from_array(header, np.array(()))
+        self.assertDictEqual(batch_table.header, {})
+
+        batch_table_array = batch_table.to_array()
+        self.assertEqual(batch_table_array.size, 0)
