@@ -1,7 +1,11 @@
 from enum import Enum
 import json
+from typing import List
 
 import numpy as np
+import numpy.typing as npt
+
+from py3dtiles.tileset.tile_content import TileContentHeader
 
 
 class Feature:
@@ -287,11 +291,13 @@ class FeatureTableBody:
         return arr
 
     @staticmethod
-    def from_features(fth, features):
+    def from_features(fth: FeatureTableHeader, features: List[Feature]) -> "FeatureTableBody":
 
         b = FeatureTableBody()
 
         # extract positions
+        if fth.positions_dtype is None:
+            raise ValueError("The FeatureTableHeader `fth` should have an initialized positions_dtype attribute.")
         b.positions_itemsize = fth.positions_dtype.itemsize
         b.positions_arr = np.array([], dtype=np.uint8)
 
@@ -366,19 +372,7 @@ class FeatureTable:
         return np.concatenate((fth_arr, ftb_arr))
 
     @staticmethod
-    def from_array(th, array):
-        """
-        Parameters
-        ----------
-        th : TileContentHeader
-
-        array : numpy.array
-
-        Returns
-        -------
-        ft : FeatureTable
-        """
-
+    def from_array(th: TileContentHeader, array: np.ndarray) -> "FeatureTable":
         # build feature table header
         fth_len = th.ft_json_byte_length
         fth_arr = array[0:fth_len]
@@ -397,22 +391,13 @@ class FeatureTable:
         return ft
 
     @staticmethod
-    def from_features(pdtype, cdtype, features):
+    def from_features(pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: List[Feature]) -> "FeatureTable":
         """
-        pdtype : numpy.dtype
-            Numpy description for positions.
-
-        cdtype : numpy.dtype
-            Numpy description for colors.
-
-        features : Feature[]
-
-        Returns
-        -------
-        ft : FeatureTable
+        pdtype : Numpy description for positions.
+        cdtype : Numpy description for colors.
         """
 
-        fth = FeatureTableHeader.from_dtype(pdtype, cdtype, len(features))
+        fth = FeatureTableHeader.from_dtype(pd_type, cd_type, len(features))
         ftb = FeatureTableBody.from_features(fth, features)
 
         ft = FeatureTable()

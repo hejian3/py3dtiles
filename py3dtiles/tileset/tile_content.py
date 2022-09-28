@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 
 
 class TileContent:
@@ -39,8 +40,9 @@ class TileContentType(Enum):
 
 
 class TileContentHeader(ABC):
+    @staticmethod
     @abstractmethod
-    def from_array(self, array):
+    def from_array(array: npt.ArrayLike):
         pass
 
     @abstractmethod
