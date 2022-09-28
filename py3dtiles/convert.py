@@ -149,8 +149,7 @@ class Worker(Process):
             parameters['offset_scale'],
             parameters['portion'],
             self.skt,
-            self.transformer,
-            self.verbosity
+            self.transformer
         )
 
     def execute_write_pnts(self, content):
@@ -295,15 +294,15 @@ class State:
     def is_reading_finish(self):
         return not self.point_cloud_file_parts and self.number_of_reading_jobs == 0
 
-    def add_tasks_to_process(self, node_name, task, point_count):
+    def add_tasks_to_process(self, node_name, data, point_count):
         if point_count <= 0:
             raise ValueError("point_count should be strictly positive, currently", point_count)
 
         if node_name not in self.node_to_process:
-            self.node_to_process[node_name] = ([task], point_count)
+            self.node_to_process[node_name] = ([data], point_count)
         else:
             tasks, count = self.node_to_process[node_name]
-            tasks.append(task)
+            tasks.append(data)
             self.node_to_process[node_name] = (tasks, count + point_count)
 
     def can_add_reading_jobs(self):
@@ -620,8 +619,9 @@ class _Convert:
             self.state.number_of_writing_jobs -= 1
 
         elif return_type == ResponseType.NEW_TASK.value:
-            count = struct.unpack('>I', result[3])[0]
-            self.state.add_tasks_to_process(result[1], result[2], count)
+            self.state.add_tasks_to_process(
+                node_name=result[1], data=result[2], point_count=struct.unpack('>I', result[3])[0]
+            )
 
         elif return_type == ResponseType.ERROR.value:
             raise WorkerException(f'An exception occurred in a worker: {result[1].decode()}')
@@ -680,8 +680,11 @@ class _Convert:
     def send_points_to_process(self, now):
         potentials = sorted(
             # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
-            [(k, v) for k, v in self.state.node_to_process.items() if k not in self.state.processing_nodes],
-            key=lambda f: -len(f[0]))
+            [
+                (node, task) for node, task in self.state.node_to_process.items()  # task: [data...], point_count
+                if node not in self.state.processing_nodes
+            ],
+            key=lambda task: -len(task[0]))  # sort by node name size, the root nodes first
 
         while self.zmq_manager.can_queue_more_jobs() and potentials:
             target_count = 100_000

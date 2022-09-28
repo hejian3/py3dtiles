@@ -69,13 +69,13 @@ def _balance(node_catalog, node, max_depth=1, depth=0):
                 depth + 1)
 
 
-def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
+def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
     node_catalog = NodeCatalog(nodes, name, octree_metadata)
 
     log_enabled = log_file is not None
 
     if log_enabled:
-        print('[>] process_node: "{}", {}'.format(name, len(raw_datas)),
+        print('[>] process_node: "{}", {}'.format(name, len(tasks)),
               file=log_file,
               flush=True)
 
@@ -94,18 +94,18 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
     total = 0
     index = 0
 
-    for raw_data in raw_datas:
+    for task in tasks:
         if log_enabled:
             print('  -> read source [{}]'.format(time.time() - begin), file=log_file, flush=True)
 
-        data = pickle.loads(raw_data)
+        data = pickle.loads(task)
 
         point_count = len(data['xyz'])
 
         if log_enabled:
             print('  -> insert {} [{} points]/ {} files [{}]'.format(
                 index + 1, point_count,
-                len(raw_datas), time.time() - begin), file=log_file, flush=True)
+                len(tasks), time.time() - begin), file=log_file, flush=True)
 
         # insert points in node (no children handling here)
         node.insert(node_catalog, octree_metadata.scale, data['xyz'], data['rgb'], halt_at_depth == 0)
@@ -116,7 +116,7 @@ def _process(nodes, octree_metadata, name, raw_datas, queue, begin, log_file):
             print('  -> _flush [{}]'.format(time.time() - begin), file=log_file, flush=True)
         # _flush push pending points (= call insert) from level N to level N + 1
         # (_flush is recursive)
-        written = _flush(node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(raw_datas) - 1, log_file)
+        written = _flush(node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(tasks) - 1, log_file)
         total -= written
 
         index += 1
@@ -155,9 +155,9 @@ def run(work, octree_metadata, queue, verbose):
             name = work[i]
             node = work[i + 1]
             count = struct.unpack('>I', work[i + 2])[0]
-            filenames = work[i + 3:i + 3 + count]
+            tasks = work[i + 3:i + 3 + count]
             i += 3 + count
-            result, data = _process(node, octree_metadata, name, filenames, queue, begin, log_file)
+            result, data = _process(node, octree_metadata, name, tasks, queue, begin, log_file)
             total += result
 
             queue.send_multipart([ResponseType.PROCESSED.value, pickle.dumps({

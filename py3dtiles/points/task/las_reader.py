@@ -70,7 +70,7 @@ def init(paths: List[Path], color_scale=None, srs_in=None, srs_out=None, fractio
     }
 
 
-def run(filename: str, offset_scale, portion, queue, transformer, verbose):
+def run(filename: str, offset_scale, portion, queue, transformer):
     """
     Reads points from a las file
     """
