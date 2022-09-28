@@ -189,12 +189,9 @@ class Node:
         if data.children is None:
             points = data.points
             xyz = np.concatenate(tuple([xyz for xyz, rgb in points])).view(np.uint8).ravel()
-            rgb = np.concatenate(tuple([rgb for xyz, rgb in points])).ravel()
-            count = sum([xyz.shape[0] for xyz, rgb in points])
-
             if include_rgb:
+                rgb = np.concatenate(tuple([rgb for xyz, rgb in points])).ravel()
                 result = np.concatenate((xyz, rgb))
-                assert len(result) == count * (3 * 4 + 3)
                 return result
             else:
                 return xyz

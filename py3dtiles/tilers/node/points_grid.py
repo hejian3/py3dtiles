@@ -124,7 +124,6 @@ class Grid:
 
         if include_rgb:
             res = np.concatenate((np.concatenate(xyz), np.concatenate(rgb)))
-            assert len(res) == pt * (3 * 4 + 3)
             return res
         else:
             return np.concatenate(xyz)
