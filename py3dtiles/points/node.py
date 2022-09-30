@@ -38,7 +38,7 @@ class Node:
     """docstring for Node"""
     __slots__ = (
         'name', 'aabb', 'aabb_size', 'inv_aabb_size', 'aabb_center',
-        'spacing', 'pending_xyz', 'pending_rgb', 'children', 'grid', 'serialized_at',
+        'spacing', 'pending_xyz', 'pending_rgb', 'children', 'grid',
         'points', 'dirty')
 
     def __init__(self, name: bytes, aabb: np.ndarray, spacing: float) -> None:
@@ -53,7 +53,6 @@ class Node:
         self.pending_rgb = []
         self.children = None
         self.grid = Grid(self)
-        self.serialized_at = None
         self.points = []
         self.dirty = False
 
