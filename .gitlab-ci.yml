@@ -21,6 +21,22 @@ flake8:
     changes:
       - "**/*.py"
 
+pytype:
+  stage: 🐍 lint
+  image:
+    name: python:3.10-slim
+  before_script:
+    - pip install .
+    - pip install .[dev]
+  script:
+    - pytype setup.py py3dtiles/ docs/ tests/
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+
 # -- TEST JOBS --------------------------------------------------------------------------
 test:
   stage: 🤞 test
