@@ -9,16 +9,6 @@ import py3dtiles
 from py3dtiles.points.utils import name_to_filename, ResponseType
 
 
-class _DummyNode:
-    def __init__(self, _bytes):
-        if 'children' in _bytes:
-            self.children = _bytes['children']
-            self.grid = _bytes['grid']
-        else:
-            self.children = None
-            self.points = _bytes['points']
-
-
 def points_to_pnts(name, points, out_folder, include_rgb):
     count = int(len(points) / (3 * 4 + (3 if include_rgb else 0)))
 
@@ -62,7 +52,7 @@ def run(sender, data, node_name, folder, write_rgb):
         # print('write ', node_name.decode('ascii'))
         total = 0
         for name in root:
-            node = _DummyNode(pickle.loads(root[name]))
+            node = py3dtiles.points.node.DummyNode(pickle.loads(root[name]))
             total += node_to_pnts(name, node, folder, write_rgb)[0]
 
         sender.send_multipart([ResponseType.PNTS_WRITTEN.value, struct.pack('>I', total), node_name])

@@ -308,6 +308,9 @@ def main(args):
     # build hierarchical structure
     result = build_tileset_quadtree(args.folder, aabb, infos['tilesets'], base_transform, inv_base_transform, '')
 
+    if result is None:
+        raise ValueError("result is None")  # todo better message
+
     result['transform'] = base_transform.T.reshape(16).tolist()
     tileset = {
         'asset': {

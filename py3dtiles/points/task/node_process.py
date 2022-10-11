@@ -178,5 +178,3 @@ def run(work, octree_metadata, queue, verbose):
     except Exception as e:
         print('Exception while processing node:', e)
         raise e
-
-    return 0

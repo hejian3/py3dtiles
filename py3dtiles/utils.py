@@ -1,8 +1,15 @@
+from __future__ import annotations
+
+from typing import Union, TYPE_CHECKING
+
 import numpy as np
 from pyproj import CRS, Transformer
 
 from .b3dm import B3dm
 from .pnts import Pnts
+
+if TYPE_CHECKING:
+    from . import TileContent
 
 
 class SrsInMissingException(Exception):
@@ -19,14 +26,19 @@ def convert_to_ecef(x, y, z, epsg_input):
 class TileContentReader:
 
     @staticmethod
-    def read_file(filename):
+    def read_file(filename: str) -> TileContent:
         with open(filename, 'rb') as f:
             data = f.read()
             arr = np.frombuffer(data, dtype=np.uint8)
-            return TileContentReader.read_array(arr)
+
+            tile_content = TileContentReader.read_array(arr)
+            if tile_content is None or tile_content.header is None:
+                raise ValueError(f"The file {filename} doesn't contain a valid TileContent data.")
+
+            return tile_content
 
     @staticmethod
-    def read_array(array):
+    def read_array(array: np.ndarray) -> Union[TileContent, None]:
         magic = ''.join([c.decode('UTF-8') for c in array[0:4].view('c')])
         if magic == 'pnts':
             return Pnts.from_array(array)

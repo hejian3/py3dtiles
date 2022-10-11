@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 from typing import List, Tuple, TYPE_CHECKING, Union
 
-import numpy
 import numpy as np
 
 from .bounding_volume import BoundingVolume
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
 
 # In order to prevent the appearance of ghost newline characters ("\n")
 # when printing a numpy.array (mainly self._box in this file):
-numpy.set_printoptions(linewidth=500)
+np.set_printoptions(linewidth=500)
 
 
 class BoundingVolumeBox(BoundingVolume):
@@ -43,13 +42,13 @@ class BoundingVolumeBox(BoundingVolume):
         super().__init__()
         self._box = None
 
-    def get_center(self) -> np.array:
+    def get_center(self) -> np.ndarray:
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
         return self._box[0: 3]
 
-    def translate(self, offset: Union[list, np.array]) -> None:
+    def translate(self, offset: Union[list, np.ndarray]) -> None:
         """
         Translate the box center with the given offset "vector"
         :param offset: the 3D vector by which the box should be translated
@@ -60,7 +59,7 @@ class BoundingVolumeBox(BoundingVolume):
         for i in range(0, 3):
             self._box[i] += offset[i]
 
-    def transform(self, transform: np.array) -> None:
+    def transform(self, transform: Union[List[float], np.ndarray]) -> None:
         """
         Apply the provided transformation matrix (4x4) to the box
         :param transform: transformation matrix (4x4) to be applied
@@ -68,9 +67,9 @@ class BoundingVolumeBox(BoundingVolume):
         # FIXME: the following code only uses the first three coordinates
         # of the transformation matrix (and basically ignores the fourth
         # column of transform). This looks like some kind of mistake...
-        rotation = numpy.array([transform[0:3],
-                                transform[4:7],
-                                transform[8:11]])
+        rotation = np.array([transform[0:3],
+                             transform[4:7],
+                             transform[8:11]])
 
         center = self._box[0: 3]
         x_half_axis = self._box[3: 6]
@@ -82,26 +81,26 @@ class BoundingVolumeBox(BoundingVolume):
         new_x_half_axis = rotation.dot(x_half_axis)
         new_y_half_axis = rotation.dot(y_half_axis)
         new_z_half_axis = rotation.dot(z_half_axis)
-        self._box = numpy.concatenate((new_center,
-                                       new_x_half_axis,
-                                       new_y_half_axis,
-                                       new_z_half_axis))
-        offset = numpy.array(transform[12:15])
+        self._box = np.concatenate((new_center,
+                                    new_x_half_axis,
+                                    new_y_half_axis,
+                                    new_z_half_axis))
+        offset = np.array(transform[12:15])
         self.translate(offset)
 
     def is_box(self) -> bool:
         return True
 
     def set_from_list(self, box_list: list) -> None:
-        box = numpy.array(box_list, dtype=numpy.float)
+        box = np.array(box_list, dtype=float)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
         if not valid:
             raise ValueError(reason)
         self._box = box
 
-    def set_from_array(self, box_array: np.array) -> None:
-        box = box_array.astype(numpy.float)
+    def set_from_array(self, box_array: np.ndarray) -> None:
+        box = box_array.astype(float)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
         if not valid:
@@ -116,7 +115,7 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_mins_maxs(self, mins_maxs: Union[list, np.array]) -> None:
+    def set_from_mins_maxs(self, mins_maxs: Union[list, np.ndarray]) -> None:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each
@@ -141,22 +140,22 @@ class BoundingVolumeBox(BoundingVolume):
         z_axis = z_half_axis * 2
 
         # The eight cornering points of the box
-        tmp = numpy.subtract(center, x_half_axis)
-        tmp = numpy.subtract(tmp, y_half_axis)
+        tmp = np.subtract(center, x_half_axis)
+        tmp = np.subtract(tmp, y_half_axis)
 
-        o = numpy.subtract(tmp, z_half_axis)
-        ox = numpy.add(o, x_axis)
-        oy = numpy.add(o, y_axis)
-        oxy = numpy.add(o, numpy.add(x_axis, y_axis))
+        o = np.subtract(tmp, z_half_axis)
+        ox = np.add(o, x_axis)
+        oy = np.add(o, y_axis)
+        oxy = np.add(o, np.add(x_axis, y_axis))
 
-        oz = numpy.add(o, z_axis)
-        oxz = numpy.add(oz, x_axis)
-        oyz = numpy.add(oz, y_axis)
-        oxyz = numpy.add(oz, numpy.add(x_axis, y_axis))
+        oz = np.add(o, z_axis)
+        oxz = np.add(oz, x_axis)
+        oyz = np.add(oz, y_axis)
+        oxyz = np.add(oz, np.add(x_axis, y_axis))
 
         return [o, ox, oy, oxy, oz, oxz, oyz, oxyz]
 
-    def get_canonical_as_array(self) -> np.array:
+    def get_canonical_as_array(self) -> np.ndarray:
         """
         :return: the smallest enclosing box (as an array) that is parallel
                  to the coordinate axis
@@ -198,7 +197,7 @@ class BoundingVolumeBox(BoundingVolume):
         return {'boundingVolume': list(self._box)}
 
     @staticmethod
-    def get_box_array_from_mins_maxs(mins_maxs: Union[list, np.array]) -> np.array:
+    def get_box_array_from_mins_maxs(mins_maxs: Union[list, np.ndarray]) -> np.ndarray:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each
@@ -213,20 +212,20 @@ class BoundingVolumeBox(BoundingVolume):
         y_max = mins_maxs[4]
         z_min = mins_maxs[2]
         z_max = mins_maxs[5]
-        new_center = numpy.array([(x_min + x_max) / 2,
-                                  (y_min + y_max) / 2,
-                                  (z_min + z_max) / 2])
-        new_x_half_axis = numpy.array([(x_max - x_min) / 2, 0, 0])
-        new_y_half_axis = numpy.array([0, (y_max - y_min) / 2, 0])
-        new_z_half_axis = numpy.array([0, 0, (z_max - z_min) / 2])
+        new_center = np.array([(x_min + x_max) / 2,
+                               (y_min + y_max) / 2,
+                               (z_min + z_max) / 2])
+        new_x_half_axis = np.array([(x_max - x_min) / 2, 0, 0])
+        new_y_half_axis = np.array([0, (y_max - y_min) / 2, 0])
+        new_z_half_axis = np.array([0, 0, (z_max - z_min) / 2])
 
-        return numpy.concatenate((new_center,
-                                  new_x_half_axis,
-                                  new_y_half_axis,
-                                  new_z_half_axis))
+        return np.concatenate((new_center,
+                               new_x_half_axis,
+                               new_y_half_axis,
+                               new_z_half_axis))
 
     @staticmethod
-    def get_box_array_from_point(points: List[List[float, float, float]]) -> np.array:
+    def get_box_array_from_point(points: List[List[float]]) -> np.ndarray:
         """
         :param points: a list of 3D points
         :return: the smallest box (as an array, as opposed to a

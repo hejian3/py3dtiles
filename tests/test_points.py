@@ -18,7 +18,7 @@ sample_points = np.array([[x / 30, x / 30, x / 30] for x in range(30)], dtype=np
 @pytest.fixture
 def node():
     bbox = np.array([[0, 0, 0], [2, 2, 2]])
-    return Node('noeud', bbox, compute_spacing(bbox))
+    return Node('noeud'.encode('utf-8'), bbox, compute_spacing(bbox))
 
 
 @pytest.fixture

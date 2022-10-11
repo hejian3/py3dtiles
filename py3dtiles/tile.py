@@ -46,12 +46,13 @@ class Tile(Extendable):
     def set_content_uri(self, uri: str) -> None:
         if self._content is None:
             raise AttributeError('Tile with unset content.')
-        self._content.set_uri(uri)
+        # self._content.set_uri(uri) # TODO add set_uri in TileContent
 
     def get_content_uri(self) -> str:
         if self._content is None:
             raise AttributeError('Tile with unset content.')
-        return self._content.get_uri()
+        # return self._content.get_uri() # TODO add get_uri in TileContent
+        return ""
 
     def set_refine_mode(self, mode: str) -> None:
         if mode != 'ADD' and mode != 'REPLACE':

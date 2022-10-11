@@ -391,10 +391,6 @@ class _Convert:
         self.graph = graph
         self.benchmark = benchmark
         self.startup = None
-        if self.verbose >= 1:
-            self.print_summary()
-        if self.graph:
-            self.progression_log = open('progression.csv', 'w')
 
         self.infos = self.get_infos(color_scale, srs_in, srs_out)
 
@@ -402,6 +398,11 @@ class _Convert:
         self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_in, transformer)
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(self.original_aabb)
         octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
+
+        if self.verbose >= 1:
+            self.print_summary()
+        if self.graph:
+            self.progression_log = open('progression.csv', 'w')
 
         # create folder
         self.out_folder = outfolder
@@ -733,7 +734,7 @@ class _Convert:
         transform = np.dot(translation_matrix(self.avg_min), transform)
 
         # build fake points
-        root_node = Node('', self.root_aabb, self.root_spacing * 2)
+        root_node = Node(''.encode('utf-8'), self.root_aabb, self.root_spacing * 2)
         root_node.children = []
         inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, self.root_aabb[1] - self.root_aabb[0])).astype(
             np.float32)
@@ -741,6 +742,7 @@ class _Convert:
             ondisk_tile = name_to_filename(self.out_folder, str(child).encode('ascii'), '.pnts')
             if os.path.exists(ondisk_tile):
                 tile_content = TileContentReader.read_file(ondisk_tile)
+
                 fth = tile_content.body.feature_table.header
                 xyz = tile_content.body.feature_table.body.positions_arr.view(np.float32).reshape(
                     (fth.points_length, 3))
@@ -766,7 +768,7 @@ class _Convert:
         root_tileset['refine'] = 'REPLACE'
         if "children" in root_tileset:
             for child in root_tileset['children']:
-                child['refine'] = 'ADD'
+                child['refine'] = 'ADD'  # type: ignore
 
         tileset = {
             'asset': {
@@ -791,7 +793,7 @@ class _Convert:
         print('  - scale: {}'.format(self.root_scale))
 
     def draw_graph(self):
-        import pygal
+        import pygal  # type: ignore
 
         dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
         for pid in self.zmq_manager.activities:

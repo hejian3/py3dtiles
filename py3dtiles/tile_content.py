@@ -51,7 +51,7 @@ class TileContentHeader(ABC):
         pass
 
 
-class TileContentBody:
+class TileContentBody(ABC):
     @abstractmethod
     def to_array(self):
         pass

@@ -172,7 +172,7 @@ def compute_header(bin_vertices, n_vertices, bb, transform,
         'byteLength': byte_length
     }]
     if uri is not None:
-        buffers["binary_glTF"]["uri"] = uri
+        buffers.append({"binary_glTF": {"uri": uri}})
 
     # Buffer view
     buffer_views = [{

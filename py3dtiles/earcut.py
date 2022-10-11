@@ -2,6 +2,33 @@ import math
 
 __all__ = ['earcut', 'deviation', 'flatten']
 
+from typing import Union
+
+
+class Node:
+    def __init__(self, i, x, y):
+        # vertex index in coordinates array
+        self.i = i
+
+        # vertex coordinates
+
+        self.x = x
+        self.y = y
+
+        # previous and next vertice nodes in a polygon ring
+        self.prev = None
+        self.next = None
+
+        # z-order curve value
+        self.z = None
+
+        # previous and next nodes in z-order
+        self.prevZ = None
+        self.nextZ = None
+
+        # indicates whether this is a steiner point
+        self.steiner = False
+
 
 def earcut(data, hole_indices=None, dim=None):
     dim = dim or 2
@@ -47,7 +74,7 @@ def earcut(data, hole_indices=None, dim=None):
 
 
 # create a circular doubly linked _list from polygon points in the specified winding order
-def linked_list(data, start, end, dim, clockwise):
+def linked_list(data, start, end, dim, clockwise) -> Union[Node, None]:
     last = None
 
     if clockwise == (signed_area(data, start, end, dim) > 0):
@@ -272,7 +299,7 @@ def eliminate_holes(data, hole_indices, outer_node, dim):
         end = hole_indices[i + 1] * dim if i < _len - 1 else len(data)
         _list = linked_list(data, start, end, dim, False)
 
-        if _list == _list.next:
+        if _list is not None and _list == _list.next:
             _list.steiner = True
 
         queue.append(get_leftmost(_list))
@@ -575,7 +602,7 @@ def split_polygon(a, b):
 
 
 # create a node and optionally link it with previous one (in a circular doubly linked _list)
-def insert_node(i, x, y, last):
+def insert_node(i, x, y, last) -> Node:
     p = Node(i, x, y)
 
     if not last:
@@ -600,31 +627,6 @@ def remove_node(p):
 
     if p.nextZ:
         p.nextZ.prevZ = p.prevZ
-
-
-class Node:
-    def __init__(self, i, x, y):
-        # vertex index in coordinates array
-        self.i = i
-
-        # vertex coordinates
-
-        self.x = x
-        self.y = y
-
-        # previous and next vertice nodes in a polygon ring
-        self.prev = None
-        self.next = None
-
-        # z-order curve value
-        self.z = None
-
-        # previous and next nodes in z-order
-        self.prevZ = None
-        self.nextZ = None
-
-        # indicates whether this is a steiner point
-        self.steiner = False
 
 
 # return a percentage difference between the polygon area and its triangulation area;

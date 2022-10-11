@@ -114,12 +114,12 @@ class Grid:
             self.insert(aabmin, inv_aabb_size, cellxyz, cellrgb, True)
 
     def get_points(self, include_rgb: bool) -> np.ndarray:
-        xyz = ()
-        rgb = ()
+        xyz = []
+        rgb = []
         pt = 0
         for i in range(len(self.cells_xyz)):
-            xyz += ((self.cells_xyz[i]).view(np.uint8).ravel(),)
-            rgb += (self.cells_rgb[i].ravel(),)
+            xyz.append(self.cells_xyz[i].view(np.uint8).ravel())
+            rgb.append(self.cells_rgb[i].ravel())
             pt += self.cells_xyz[i].shape[0]
 
         if include_rgb:
@@ -128,3 +128,9 @@ class Grid:
             return res
         else:
             return np.concatenate(xyz)
+
+    def get_point_count(self) -> int:
+        pt = 0
+        for i in range(len(self.cells_xyz)):
+            pt += self.cells_xyz[i].shape[0]
+        return pt

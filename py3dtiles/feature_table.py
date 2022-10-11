@@ -180,7 +180,7 @@ class FeatureTableHeader:
                                                 ('Z', np.uint16)])
 
         # search colors
-        if colors_dtype is not None:
+        if colors_dtype is not None and fth.positions_dtype:
             names = colors_dtype.names
             if ('Red' in names) and ('Green' in names) and ('Blue' in names):
                 if 'Alpha' in names:
