@@ -1,6 +1,7 @@
 from enum import Enum
 from io import StringIO
 from pathlib import Path, PurePath
+from typing import Callable
 
 import numpy as np
 
@@ -22,7 +23,7 @@ class ResponseType(Enum):
     ERROR = b'error'
 
 
-def profile(func):
+def profile(func: Callable) -> Callable:
     from line_profiler import LineProfiler
 
     def wrapper(*args, **kwargs):
@@ -62,18 +63,18 @@ def name_to_filename(working_dir: str, nameb: bytes, suffix: str = '', split_len
     return str(full_path)
 
 
-def compute_spacing(aabb):
+def compute_spacing(aabb: np.ndarray) -> float:
     return float(np.linalg.norm(aabb[1] - aabb[0]) / 125)
 
 
-def aabb_size_to_subdivision_type(size):
+def aabb_size_to_subdivision_type(size: np.ndarray) -> SubdivisionType:
     if size[2] / min(size[0], size[1]) < 0.5:
         return SubdivisionType.QUADTREE
     else:
         return SubdivisionType.OCTREE
 
 
-def split_aabb(aabb, index, force_quadtree=False):
+def split_aabb(aabb: np.ndarray, index: int, force_quadtree: bool = False) -> np.ndarray:
     half = (aabb[1] - aabb[0]) * 0.5
     t = aabb_size_to_subdivision_type(half)
 

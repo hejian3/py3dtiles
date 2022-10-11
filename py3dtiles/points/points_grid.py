@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Tuple
+
 from numba import njit
 from numba.typed import List
 import numpy as np
 
 from py3dtiles.points.distance import is_point_far_enough, xyz_to_key
 from py3dtiles.points.utils import aabb_size_to_subdivision_type, SubdivisionType
+
+if TYPE_CHECKING:
+    from py3dtiles.points.node import Node
 
 
 @njit(fastmath=True, cache=True)
@@ -38,8 +45,7 @@ class Grid:
 
     __slots__ = ('cell_count', 'cells_xyz', 'cells_rgb', 'spacing')
 
-    def __init__(self, node, initial_count=3):
-        super(Grid, self).__init__()
+    def __init__(self, node: Node, initial_count: int = 3) -> None:
         self.cell_count = np.array([initial_count, initial_count, initial_count], dtype=np.int32)
         self.spacing = node.spacing * node.spacing
 
@@ -49,7 +55,7 @@ class Grid:
             self.cells_xyz.append(np.zeros((0, 3), dtype=np.float32))
             self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         return {
             "cell_count": self.cell_count,
             "spacing": self.spacing,
@@ -57,17 +63,17 @@ class Grid:
             "cells_rgb": list(self.cells_rgb),
         }
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict):
         self.cell_count = state['cell_count']
         self.spacing = state['spacing']
         self.cells_xyz = List(state['cells_xyz'])
         self.cells_rgb = List(state['cells_rgb'])
 
     @property
-    def max_key_value(self):
+    def max_key_value(self) -> int:
         return 1 << (2 * int(self.cell_count[0]).bit_length() + int(self.cell_count[2]).bit_length())
 
-    def insert(self, aabmin, inv_aabb_size, xyz, rgb, force=False):
+    def insert(self, aabmin: np.ndarray, inv_aabb_size: np.ndarray, xyz: np.ndarray, rgb: np.ndarray, force: bool = False) -> Tuple[np.ndarray, np.ndarray, bool]:
         return _insert(
             self.cells_xyz,
             self.cells_rgb,
@@ -79,20 +85,22 @@ class Grid:
             self.spacing,
             int(self.cell_count[0] - 1).bit_length(), force)
 
-    def needs_balance(self):
+    def needs_balance(self) -> bool:
         if self.cell_count[0] < 8:
             for cell in self.cells_xyz:
                 if cell.shape[0] > 100000:
                     return True
         return False
 
-    def balance(self, aabb_size, aabmin, inv_aabb_size):
+    def balance(self, aabb_size: np.ndarray, aabmin: np.ndarray, inv_aabb_size: np.ndarray) -> None:
         t = aabb_size_to_subdivision_type(aabb_size)
         self.cell_count[0] += 1
         self.cell_count[1] += 1
         if t != SubdivisionType.QUADTREE:
             self.cell_count[2] += 1
-        assert self.cell_count[0] < 9
+        if self.cell_count[0] > 8:
+            raise ValueError(f'The first value of the attribute cell count should be lower or equal to 8,'
+                             f'actual it is {self.cell_count[0]}')
 
         old_cells_xyz = self.cells_xyz
         old_cells_rgb = self.cells_rgb
@@ -105,7 +113,7 @@ class Grid:
         for cellxyz, cellrgb in zip(old_cells_xyz, old_cells_rgb):
             self.insert(aabmin, inv_aabb_size, cellxyz, cellrgb, True)
 
-    def get_points(self, include_rgb):
+    def get_points(self, include_rgb: bool) -> np.ndarray:
         xyz = ()
         rgb = ()
         pt = 0

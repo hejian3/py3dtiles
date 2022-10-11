@@ -1,5 +1,7 @@
 import gc
 import os
+from typing import Tuple
+
 from sys import getsizeof
 import time
 
@@ -9,7 +11,7 @@ from py3dtiles.points.utils import name_to_filename
 
 
 class SharedNodeStore:
-    def __init__(self, folder):
+    def __init__(self, folder: str) -> None:
         self.metadata = {}
         self.data = []
         self.folder = folder
@@ -23,9 +25,9 @@ class SharedNodeStore:
             'container': getsizeof(self.data) + getsizeof(self.metadata),
         }
 
-    def control_memory_usage(self, max_size_MB, verbose):
+    def control_memory_usage(self, max_size_mb: int, verbose: int) -> None:
         bytes_to_mb = 1.0 / (1024 * 1024)
-        max_size_MB = max(max_size_MB, 200)
+        max_size_mb = max(max_size_mb, 200)
 
         if verbose >= 3:
             self.print_statistics()
@@ -34,18 +36,18 @@ class SharedNodeStore:
         cache_size = (self.memory_size['container'] + self.memory_size['content']) * bytes_to_mb
 
         before = cache_size
-        if before < max_size_MB:
+        if before < max_size_mb:
             return
 
         if verbose >= 2:
             print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CACHE CLEANING [{}]'.format(before))
-        self.remove_oldest_nodes(1 - max_size_MB / before)
+        self.remove_oldest_nodes(1 - max_size_mb / before)
         gc.collect()
 
         if verbose >= 2:
             print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CACHE CLEANING')
 
-    def get(self, name, stat_inc=1):
+    def get(self, name: bytes, stat_inc: int = 1) -> bytes:
         metadata = self.metadata.get(name, None)
         data = b''
         if metadata is not None:
@@ -63,7 +65,7 @@ class SharedNodeStore:
 
         return data
 
-    def remove(self, name):
+    def remove(self, name: bytes) -> None:
         meta = self.metadata.pop(name, None)
 
         filename = name_to_filename(self.folder, name)
@@ -78,7 +80,7 @@ class SharedNodeStore:
         if os.path.exists(filename):
             os.remove(filename)
 
-    def put(self, name, data):
+    def put(self, name: bytes, data: bytes) -> None:
         compressed_data = gzip.compress(data)
 
         metadata = self.metadata.get(name, None)
@@ -93,7 +95,7 @@ class SharedNodeStore:
         self.memory_size['content'] += len(compressed_data) + getsizeof((name, metadata))
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
-    def remove_oldest_nodes(self, percent):
+    def remove_oldest_nodes(self, percent) -> Tuple[int, int]:
         count = _remove_all(self)
 
         self.memory_size['content'] = 0
@@ -103,14 +105,14 @@ class SharedNodeStore:
         assert len(self.data) == 0
         return count
 
-    def print_statistics(self):
+    def print_statistics(self) -> None:
         print('Stats: Hits = {}, Miss = {}, New = {}'.format(
             self.stats['hit'],
             self.stats['miss'],
             self.stats['new']))
 
 
-def _remove_all(store):
+def _remove_all(store: SharedNodeStore) -> Tuple[int, int]:
     # delete the entries
     count = len(store.metadata)
     bytes_written = 0
@@ -123,4 +125,4 @@ def _remove_all(store):
     store.metadata = {}
     store.data = []
 
-    return (count, bytes_written)
+    return count, bytes_written

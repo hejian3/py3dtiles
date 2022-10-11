@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import math
 import pickle
+from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
 
 from py3dtiles.points.node import Node
 from py3dtiles.points.utils import split_aabb
+
+if TYPE_CHECKING:
+    from py3dtiles.convert import OctreeMetadata
 
 
 class NodeCatalog:
@@ -14,15 +20,14 @@ class NodeCatalog:
     in nodes, instead of storing a full recursive structure.
     """
 
-    def __init__(self, nodes, name, octree_metadata):
-        super(NodeCatalog, self).__init__()
+    def __init__(self, nodes: bytes, name: bytes, octree_metadata: OctreeMetadata) -> None:
         self.nodes = {}
         self.root_aabb = octree_metadata.aabb
         self.root_spacing = octree_metadata.spacing
         self.node_bytes = {}
         self._load_from_store(name, nodes)
 
-    def get_node(self, name):
+    def get_node(self, name: bytes) -> Node:
         """Returns the node mathing the given name"""
         if name not in self.nodes:
             spacing = self.root_spacing / math.pow(2, len(name))
@@ -35,7 +40,7 @@ class NodeCatalog:
             node = self.nodes[name]
         return node
 
-    def dump(self, name, max_depth):
+    def dump(self, name: bytes, max_depth: int) -> bytes:
         """Serialize the stored nodes to a bytes list"""
         node = self.nodes[name]
         if node.dirty:
@@ -47,7 +52,7 @@ class NodeCatalog:
 
         return pickle.dumps(self.node_bytes)
 
-    def _load_from_store(self, name, data):
+    def _load_from_store(self, name: bytes, data: bytes) -> Node:
         if len(data) > 0:
             out = pickle.loads(gzip.decompress(data))
             for n in out:
