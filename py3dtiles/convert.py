@@ -8,7 +8,6 @@ from pathlib import Path, PurePath
 import pickle
 import shutil
 import struct
-import sys
 import time
 import traceback
 from typing import Dict, List, Optional, Tuple, Union
@@ -962,22 +961,18 @@ def init_parser(subparser):
 
 
 def main(args):
-    try:
-        return convert(args.files,
-                       outfolder=args.out,
-                       overwrite=args.overwrite,
-                       jobs=args.jobs,
-                       cache_size=args.cache_size,
-                       crs_out=str_to_CRS(args.srs_out),
-                       crs_in=str_to_CRS(args.srs_in),
-                       force_crs_in=args.force_srs_in,
-                       fraction=args.fraction,
-                       benchmark=args.benchmark,
-                       rgb=not args.no_rgb,
-                       classification=args.classification,
-                       graph=args.graph,
-                       color_scale=args.color_scale,
-                       verbose=args.verbose)
-    except SrsInMissingException:
-        print('No SRS information in input files, you should specify it with --srs_in')
-        sys.exit(1)
+    return convert(args.files,
+                   outfolder=args.out,
+                   overwrite=args.overwrite,
+                   jobs=args.jobs,
+                   cache_size=args.cache_size,
+                   crs_out=str_to_CRS(args.srs_out),
+                   crs_in=str_to_CRS(args.srs_in),
+                   force_crs_in=args.force_srs_in,
+                   fraction=args.fraction,
+                   benchmark=args.benchmark,
+                   rgb=not args.no_rgb,
+                   classification=args.classification,
+                   graph=args.graph,
+                   color_scale=args.color_scale,
+                   verbose=args.verbose)
