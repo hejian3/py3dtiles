@@ -1,5 +1,4 @@
 import argparse
-import traceback
 
 import py3dtiles.convert as convert
 import py3dtiles.export as export
@@ -35,20 +34,15 @@ def main():
 
     args = parser.parse_args()
 
-    try:
-        if args.command == 'convert':
-            convert.main(args)
-        elif args.command == 'info':
-            info.main(args)
-        elif args.command == 'merge':
-            merger.main(args)
-        elif args.command == 'export':
-            export.main(args)
-        else:
-            parser.print_help()
-    except Exception:
-        traceback.print_exc()
-        print('')
+    if args.command == 'convert':
+        convert.main(args)
+    elif args.command == 'info':
+        info.main(args)
+    elif args.command == 'merge':
+        merger.main(args)
+    elif args.command == 'export':
+        export.main(args)
+    else:
         parser.print_help()
 
 
