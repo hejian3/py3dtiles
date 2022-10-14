@@ -374,6 +374,7 @@ class _Convert:
 
         :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
         :raises SrsInMixinException: if the input files have different CRS
+        :raises WorkerException: if a worker failed for some reasons.
 
         """
         self.jobs = jobs
