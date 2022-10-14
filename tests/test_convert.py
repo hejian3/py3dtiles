@@ -43,7 +43,7 @@ def test_convert(tmp_dir):
 
 
 def test_convert_without_srs(tmp_dir):
-    with raises(SrsInMissingException):
+    with raises(SrsInMissingException, match="No input file has a srs. The srs_in should be provided as argument."):
         convert(DATA_DIRECTORY / 'without_srs.las',
                 outfolder=tmp_dir,
                 crs_out=CRS.from_epsg(4978),
@@ -190,6 +190,11 @@ def test_convert_mix_input_crs(tmp_dir):
             force_crs_in=True,
             jobs=1)
     assert tmp_dir.exists()
+
+
+def test_convert_xyz_missing_srs_in(tmp_dir):
+    with raises(SrsInMissingException, match="No input file has a srs. The srs_in should be provided as argument."):
+        convert(DATA_DIRECTORY / 'simple.xyz', outfolder=tmp_dir, crs_out='4978')
 
 
 def test_convert_xyz_exception_in_run(tmp_dir):

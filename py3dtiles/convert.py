@@ -468,7 +468,7 @@ class _Convert:
     def get_transformer(self, crs_out: Optional[CRS]) -> Union[Transformer, None]:
         if crs_out:
             if self.file_info['crs_in'] is None:
-                raise SrsInMissingException("None file has a input srs specified. Should be provided.")
+                raise SrsInMissingException("No input file has a srs. The srs_in should be provided as argument.")
 
             transformer = Transformer.from_crs(self.file_info['crs_in'], crs_out)
         else:
