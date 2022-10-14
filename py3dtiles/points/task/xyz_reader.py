@@ -1,6 +1,5 @@
 import numpy as np
 import math
-import traceback
 import struct
 import pickle
 
@@ -13,64 +12,58 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     pointcloud_file_portions = []
 
     for filename in files:
-        try:
-            f = open(filename)
-        except Exception as e:
-            print(f"Error opening {filename}. Skipping.")
-            print(e)
-            continue
+        with open(filename) as f:
+            count = 0
+            seek_values = []
+            while True:
+                batch = 10_000
+                points = np.zeros((batch, 3))
 
-        count = 0
-        seek_values = []
-        while True:
-            batch = 10_000
-            points = np.zeros((batch, 3))
+                offset = f.tell()
+                for i in range(batch):
+                    line = f.readline()
+                    if not line:
+                        points = np.resize(points, (i, 3))
+                        break
+                    points[i] = [float(s) for s in line.split(" ")][:3]
 
-            offset = f.tell()
-            for i in range(batch):
-                line = f.readline()
-                if not line:
-                    points = np.resize(points, (i, 3))
+                if points.shape[0] == 0:
                     break
-                points[i] = [float(s) for s in line.split(" ")][:3]
 
-            if points.shape[0] == 0:
-                break
+                if not count % 1_000_000:
+                    seek_values += [offset]
 
-            if not count % 1_000_000:
-                seek_values += [offset]
+                count += points.shape[0]
+                batch_aabb = np.array([
+                    np.min(points, axis=0), np.max(points, axis=0)
+                ])
 
-            count += points.shape[0]
-            batch_aabb = np.array([
-                np.min(points, axis=0), np.max(points, axis=0)
-            ])
+                # Update aabb
+                if aabb is None:
+                    aabb = batch_aabb
+                else:
+                    aabb[0] = np.minimum(aabb[0], batch_aabb[0])
+                    aabb[1] = np.maximum(aabb[1], batch_aabb[1])
 
-            # Update aabb
-            if aabb is None:
-                aabb = batch_aabb
-            else:
-                aabb[0] = np.minimum(aabb[0], batch_aabb[0])
-                aabb[1] = np.maximum(aabb[1], batch_aabb[1])
+            # We need an exact point count
+            total_point_count += count * fraction / 100
 
-        # We need an exact point count
-        total_point_count += count * fraction / 100
+            _1M = min(count, 1_000_000)
+            steps = math.ceil(count / _1M)
+            if steps != len(seek_values):
+                raise ValueError("the size of seek_values should be equal to steps,"
+                                 f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
+            portions = [
+                (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
+            ]
+            for p in portions:
+                pointcloud_file_portions += [(filename, p)]
 
-        _1M = min(count, 1_000_000)
-        steps = math.ceil(count / _1M)
-        if steps != len(seek_values):
-            raise ValueError("the size of seek_values should be equal to steps,"
-                             f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
-        portions = [
-            (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
-        ]
-        for p in portions:
-            pointcloud_file_portions += [(filename, p)]
-
-        if srs_out and not srs_in:
-            raise Exception(
-                f"'{filename}' file doesn't contain srs information."
-                "Please use the --srs_in option to declare it."
-            )
+            if srs_out and not srs_in:
+                raise Exception(
+                    f"'{filename}' file doesn't contain srs information."
+                    "Please use the --srs_in option to declare it."
+                )
 
     return {
         "portions": pointcloud_file_portions,
@@ -96,68 +89,66 @@ def run(filename, offset_scale, portion, queue, transformer, verbose):
     (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
     """
     try:
-        f = open(filename, "r")
+        with open(filename, "r") as f:
 
-        point_count = portion[1] - portion[0]
+            point_count = portion[1] - portion[0]
 
-        step = min(point_count, max((point_count) // 10, 100000))
+            step = min(point_count, max((point_count) // 10, 100000))
 
-        f.seek(portion[2])
+            f.seek(portion[2])
 
-        feature_nb = 7
+            feature_nb = 7
 
-        for i in range(0, point_count, step):
-            points = np.zeros((step, feature_nb), dtype=np.float32)
+            for i in range(0, point_count, step):
+                points = np.zeros((step, feature_nb), dtype=np.float32)
 
-            for j in range(0, step):
-                line = f.readline()
-                if not line:
-                    points = np.resize(points, (j, feature_nb))
-                    break
-                line_features = [float(s) for s in line.split(" ")]
-                if len(line_features) == 3:
-                    line_features += [None] * 4  # Insert intensity and RGB
-                elif len(line_features) == 4:
-                    line_features += [None] * 3  # Insert RGB
-                elif len(line_features) == 6:
-                    line_features.insert(3, None)  # Insert intensity
-                points[j] = line_features
+                for j in range(0, step):
+                    line = f.readline()
+                    if not line:
+                        points = np.resize(points, (j, feature_nb))
+                        break
+                    line_features = [float(s) for s in line.split(" ")]
+                    if len(line_features) == 3:
+                        line_features += [None] * 4  # Insert intensity and RGB
+                    elif len(line_features) == 4:
+                        line_features += [None] * 3  # Insert RGB
+                    elif len(line_features) == 6:
+                        line_features.insert(3, None)  # Insert intensity
+                    points[j] = line_features
 
-            x, y, z = [points[:, c] for c in [0, 1, 2]]
+                x, y, z = [points[:, c] for c in [0, 1, 2]]
 
-            if transformer:
-                x, y, z = transformer.transform(x, y, z)
+                if transformer:
+                    x, y, z = transformer.transform(x, y, z)
 
-            x = (x + offset_scale[0][0]) * offset_scale[1][0]
-            y = (y + offset_scale[0][1]) * offset_scale[1][1]
-            z = (z + offset_scale[0][2]) * offset_scale[1][2]
+                x = (x + offset_scale[0][0]) * offset_scale[1][0]
+                y = (y + offset_scale[0][1]) * offset_scale[1][1]
+                z = (z + offset_scale[0][2]) * offset_scale[1][2]
 
-            coords = np.vstack((x, y, z)).transpose()
+                coords = np.vstack((x, y, z)).transpose()
 
-            if offset_scale[2] is not None:
-                # Apply transformation matrix (because the tile's transform will contain
-                # the inverse of this matrix)
-                coords = np.dot(coords, offset_scale[2])
+                if offset_scale[2] is not None:
+                    # Apply transformation matrix (because the tile's transform will contain
+                    # the inverse of this matrix)
+                    coords = np.dot(coords, offset_scale[2])
 
-            coords = np.ascontiguousarray(coords.astype(np.float32))
+                coords = np.ascontiguousarray(coords.astype(np.float32))
 
-            # Read colors: 3 last columns of the point cloud
-            colors = points[:, -3:].astype(np.uint8)
+                # Read colors: 3 last columns of the point cloud
+                colors = points[:, -3:].astype(np.uint8)
 
-            queue.send_multipart(
-                [
-                    ResponseType.NEW_TASK.value,
-                    "".encode("ascii"),
-                    pickle.dumps({"xyz": coords, "rgb": colors}),
-                    struct.pack(">I", len(coords)),
-                ],
-                copy=False,
-            )
+                queue.send_multipart(
+                    [
+                        ResponseType.NEW_TASK.value,
+                        "".encode("ascii"),
+                        pickle.dumps({"xyz": coords, "rgb": colors}),
+                        struct.pack(">I", len(coords)),
+                    ],
+                    copy=False,
+                )
 
-        queue.send_multipart([ResponseType.READ.value])
+            queue.send_multipart([ResponseType.READ.value])
 
-        f.close()
     except Exception as e:
-        print("Exception while reading points from xyz file")
-        print(e)
-        traceback.print_exc()
+        print(f"Exception while reading points from xyz file {filename}")
+        raise e
