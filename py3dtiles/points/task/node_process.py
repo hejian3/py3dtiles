@@ -2,7 +2,6 @@ import os
 import pickle
 import struct
 import time
-import traceback
 
 from py3dtiles.points.node_catalog import NodeCatalog
 from py3dtiles.points.utils import ResponseType
@@ -177,11 +176,7 @@ def run(work, octree_metadata, queue, verbose):
         return total
 
     except Exception as e:
-        if log_enabled or True:
-            print('OH NO. {}'.format(name))
-        if log_enabled or True:
-            print(e)
-        if log_enabled or True:
-            traceback.print_exc()
+        print('Exception while processing node:', e)
+        raise e
 
     return 0

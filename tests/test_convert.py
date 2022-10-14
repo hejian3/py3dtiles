@@ -1,5 +1,6 @@
 import os
 from pytest import approx, raises, fixture
+from unittest.mock import patch
 import shutil
 
 from py3dtiles import convert_to_ecef
@@ -67,3 +68,23 @@ def test_convert_simple_xyz(tmp_dir):
             jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
+
+
+def test_convert_xyz_exception_in_run(tmp_dir):
+    with patch('py3dtiles.points.task.xyz_reader.run') as mock_run:
+        with raises(Exception, match="An exception occurred in a worker: Exception in run"):
+            mock_run.side_effect = Exception('Exception in run')
+            convert(os.path.join(fixtures_dir, 'simple.xyz'),
+                    outfolder=tmp_dir,
+                    srs_in='3857',
+                    srs_out='4978')
+
+
+def test_convert_las_exception_in_run(tmp_dir):
+    with patch('py3dtiles.points.task.las_reader.run') as mock_run:
+        with raises(Exception, match="An exception occurred in a worker: Exception in run"):
+            mock_run.side_effect = Exception('Exception in run')
+            convert(os.path.join(fixtures_dir, 'with_srs.las'),
+                    outfolder=tmp_dir,
+                    srs_in='3857',
+                    srs_out='4978')

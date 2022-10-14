@@ -19,6 +19,7 @@ class ResponseType(Enum):
     PROCESSED = b'processed'
     PNTS_WRITTEN = b'pnts_written'
     NEW_TASK = b'new_task'
+    ERROR = b'error'
 
 
 def profile(func):

@@ -8,6 +8,7 @@ import shutil
 import struct
 import sys
 import time
+import traceback
 from collections import namedtuple
 from pathlib import Path, PurePath
 
@@ -18,6 +19,7 @@ from pyproj import CRS, Transformer
 
 from py3dtiles import TileContentReader
 from py3dtiles.constants import MIN_POINT_SIZE
+from py3dtiles.exceptions import WorkerException
 from py3dtiles.points.node import Node
 from py3dtiles.points.shared_node_store import SharedNodeStore
 from py3dtiles.points.task import las_reader, xyz_reader, node_process, pnts_writer
@@ -82,42 +84,49 @@ class Worker:
         self.skt.send_multipart([ResponseType.IDLE.value])
 
         while True:
-            before = time.time() - startup_time
-            self.skt.poll()
-            after = time.time() - startup_time
+            try:
+                before = time.time() - startup_time
+                self.skt.poll()
+                after = time.time() - startup_time
 
-            idle_time += after - before
+                idle_time += after - before
 
-            message = self.skt.recv_multipart()
-            content = message[1:]
-            command = content[0]
+                message = self.skt.recv_multipart()
+                content = message[1:]
+                command = content[0]
 
-            delta = time.time() - pickle.loads(message[0])
-            if delta > 0.01 and self.verbosity >= 1:
-                print('{} / {} : Delta time: {}'.format(os.getpid(), round(after, 2), round(delta, 3)))
+                delta = time.time() - pickle.loads(message[0])
+                if delta > 0.01 and self.verbosity >= 1:
+                    print('{} / {} : Delta time: {}'.format(os.getpid(), round(after, 2), round(delta, 3)))
 
-            if command == CommandType.READ_FILE.value:
-                self.execute_read_file(content)
-                command_type = 1
-            elif command == CommandType.PROCESS_JOBS.value:
-                self.execute_process_jobs(content)
-                command_type = 2
-            elif command == CommandType.WRITE_PNTS.value:
-                self.execute_write_pnts(content)
-                command_type = 3
-            elif command == CommandType.SHUTDOWN.value:
-                break  # ack
-            else:
-                raise NotImplementedError(f'Unknown command {command}')
+                if command == CommandType.READ_FILE.value:
+                    self.execute_read_file(content)
+                    command_type = 1
+                elif command == CommandType.PROCESS_JOBS.value:
+                    self.execute_process_jobs(content)
+                    command_type = 2
+                elif command == CommandType.WRITE_PNTS.value:
+                    self.execute_write_pnts(content)
+                    command_type = 3
+                elif command == CommandType.SHUTDOWN.value:
+                    break  # ack
+                else:
+                    raise NotImplementedError(f'Unknown command {command}')
 
-            # notify we're idle
-            self.skt.send_multipart([ResponseType.IDLE.value])
+                # notify we're idle
+                self.skt.send_multipart([ResponseType.IDLE.value])
 
-            if self.activity_graph:
-                print(f'{before}, {command_type}', file=activity)
-                print(f'{before}, 0', file=activity)
-                print(f'{after}, 0', file=activity)
-                print(f'{after}, {command_type}', file=activity)
+                if self.activity_graph:
+                    print(f'{before}, {command_type}', file=activity)
+                    print(f'{before}, 0', file=activity)
+                    print(f'{after}, 0', file=activity)
+                    print(f'{after}, {command_type}', file=activity)
+            except Exception as e:
+                traceback.print_exc()
+                # usually first arg is the explaining string.
+                # let's assume it is always in our context
+                self.skt.send_multipart([ResponseType.ERROR.value, e.args[0].encode()])
+                # we still print it for stacktraces
 
         if self.activity_graph:
             activity.close()
@@ -503,65 +512,66 @@ class _Convert:
         """
         self.startup = time.time()
 
-        while not self.zmq_manager.are_all_processes_killed():
-            now = time.time() - self.startup
+        try:
+            while not self.zmq_manager.are_all_processes_killed():
+                now = time.time() - self.startup
 
-            at_least_one_job_ended = False
-            if not self.zmq_manager.can_queue_more_jobs() or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
-                at_least_one_job_ended = self.process_message()
+                at_least_one_job_ended = False
+                if not self.zmq_manager.can_queue_more_jobs() or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN):
+                    at_least_one_job_ended = self.process_message()
 
-            while self.state.pnts_to_writing and self.zmq_manager.can_queue_more_jobs():
-                self.send_pnts_to_write()
+                while self.state.pnts_to_writing and self.zmq_manager.can_queue_more_jobs():
+                    self.send_pnts_to_write()
 
-            if self.zmq_manager.can_queue_more_jobs():
-                self.send_points_to_process(now)
+                if self.zmq_manager.can_queue_more_jobs():
+                    self.send_points_to_process(now)
 
-            while self.state.can_add_reading_jobs() and self.zmq_manager.can_queue_more_jobs():
-                self.send_file_to_read()
+                while self.state.can_add_reading_jobs() and self.zmq_manager.can_queue_more_jobs():
+                    self.send_file_to_read()
 
-            # if at this point we have no work in progress => we're done
-            if self.zmq_manager.are_all_processes_idle() and not self.zmq_manager.killing_processes:
-                self.zmq_manager.kill_all_processes()
+                # if at this point we have no work in progress => we're done
+                if self.zmq_manager.are_all_processes_idle() and not self.zmq_manager.killing_processes:
+                    self.zmq_manager.kill_all_processes()
 
-            if at_least_one_job_ended:
-                self.print_debug(now)
-                if self.graph:
-                    percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
-                    print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
+                if at_least_one_job_ended:
+                    self.print_debug(now)
+                    if self.graph:
+                        percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
+                        print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
 
-            self.node_store.control_memory_usage(self.cache_size, self.verbose)
+                self.node_store.control_memory_usage(self.cache_size, self.verbose)
 
-        if self.state.points_in_pnts != self.infos['point_count']:
-            raise ValueError("!!! Invalid point count in the written .pnts"
-                             + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
+            if self.state.points_in_pnts != self.infos['point_count']:
+                raise ValueError("!!! Invalid point count in the written .pnts"
+                                 + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
 
-        if self.verbose >= 1:
-            print('Writing 3dtiles {}'.format(self.infos['avg_min']))
+            if self.verbose >= 1:
+                print('Writing 3dtiles {}'.format(self.infos['avg_min']))
 
-        self.write_tileset()
-        shutil.rmtree(self.working_dir)
+            self.write_tileset()
+            shutil.rmtree(self.working_dir)
 
-        if self.verbose >= 1:
-            print('Done')
+            if self.verbose >= 1:
+                print('Done')
 
-        if self.benchmark:
-            print('{},{},{},{}'.format(
-                self.benchmark,
-                ','.join([os.path.basename(f) for f in self.files]),
-                self.state.points_in_pnts,
-                round(time.time() - self.startup, 1)))
+            if self.benchmark:
+                print('{},{},{},{}'.format(
+                    self.benchmark,
+                    ','.join([os.path.basename(f) for f in self.files]),
+                    self.state.points_in_pnts,
+                    round(time.time() - self.startup, 1)))
+        finally:
+            self.zmq_manager.terminate_all_processes()
 
-        self.zmq_manager.terminate_all_processes()
+            if self.verbose >= 1:
+                print('destroy', round(self.zmq_manager.time_waiting_an_idle_process, 2))
 
-        if self.verbose >= 1:
-            print('destroy', round(self.zmq_manager.time_waiting_an_idle_process, 2))
+            # pygal chart
+            if self.graph:
+                self.progression_log.close()
+                self.draw_graph()
 
-        # pygal chart
-        if self.graph:
-            self.progression_log.close()
-            self.draw_graph()
-
-        self.zmq_manager.context.destroy()
+            self.zmq_manager.context.destroy()
 
     def process_message(self):
         one_job_ended = False
@@ -606,6 +616,9 @@ class _Convert:
         elif return_type == ResponseType.NEW_TASK.value:
             count = struct.unpack('>I', result[3])[0]
             self.state.add_tasks_to_process(result[1], result[2], count)
+
+        elif return_type == ResponseType.ERROR.value:
+            raise WorkerException(f'An exception occurred in a worker: {result[1].decode()}')
 
         else:
             raise NotImplementedError(f"The command {return_type} is not implemented")
