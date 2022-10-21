@@ -224,7 +224,7 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             str(out_folder),
             rgb.shape[0] > 0)
         result['content'] = {'uri': str(Path(filename).relative_to(out_folder))}
-        result['geometricError'] = sum([t['root']['geometricError'] for t in insides])
+        result['geometricError'] = max([t['root']['geometricError'] for t in insides]) / ratio
         result['boundingVolume'] = _3dtiles_bounding_box_from_aabb(union_aabb, inv_base_transform)
 
         return result
