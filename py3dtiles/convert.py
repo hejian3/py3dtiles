@@ -2,7 +2,7 @@ import argparse
 from collections import namedtuple
 import concurrent.futures
 import json
-import multiprocessing
+from multiprocessing import cpu_count, Process
 import os
 from pathlib import Path, PurePath
 import pickle
@@ -31,7 +31,7 @@ from py3dtiles.utils import SrsInMissingException
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)
-CPU_COUNT = multiprocessing.cpu_count()
+CPU_COUNT = cpu_count()
 
 # IPC protocol is not supported on Windows
 if os.name == 'nt':
@@ -51,17 +51,12 @@ def make_rotation_matrix(z1, z2):
         vector_product(v0, v1))
 
 
-# Worker
-def zmq_process(*args):
-    process = Worker(*args)
-    process.run()
-
-
-class Worker:
+class Worker(Process):
     """
     This class waits from jobs commands from the Zmq socket.
     """
     def __init__(self, activity_graph, transformer, octree_metadata, folder, write_rgb, verbosity, uri):
+        super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
         self.octree_metadata = octree_metadata
@@ -72,9 +67,11 @@ class Worker:
 
         # Socket to receive messages on
         self.context = zmq.Context()
-        self.skt = self.context.socket(zmq.DEALER)
+        self.skt = None
 
     def run(self):
+        self.skt = self.context.socket(zmq.DEALER)
+
         self.skt.connect(self.uri)
 
         startup_time = time.time()
@@ -189,7 +186,7 @@ class ZmqManager:
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            multiprocessing.Process(target=zmq_process, args=process_args + (self.uri,))
+            Worker(*process_args, self.uri)
             for _ in range(number_of_jobs)
         ]
         [p.start() for p in self.processes]
@@ -887,7 +884,7 @@ def init_parser(subparser, str2bool):
     parser.add_argument(
         '--jobs',
         help='The number of parallel jobs to start. Default to the number of cpu.',
-        default=multiprocessing.cpu_count(),
+        default=cpu_count(),
         type=int)
     parser.add_argument(
         '--cache_size',
