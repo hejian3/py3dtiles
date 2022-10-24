@@ -4,7 +4,7 @@ from enum import Enum
 import numpy as np
 
 
-class TileContent(ABC):
+class TileContent:
     def __init__(self):
         self.header = None
         self.body = None
