@@ -287,7 +287,7 @@ def main(args):
             raise FileExistsError(f'Destination tileset {dest} already exists.')
 
     tilesets = []
-    for root, dirs, files in os.walk(args.folder):
+    for root, _, files in os.walk(args.folder):
         t = ['{}/{}'.format(root, f) for f in files if f == 'tileset.json']
         if t:
             tilesets += t

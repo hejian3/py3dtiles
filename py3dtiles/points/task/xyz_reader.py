@@ -100,7 +100,7 @@ def run(filename, offset_scale, portion, queue, transformer, verbose):
 
             feature_nb = 7
 
-            for i in range(0, point_count, step):
+            for _ in range(0, point_count, step):
                 points = np.zeros((step, feature_nb), dtype=np.float32)
 
                 for j in range(0, step):

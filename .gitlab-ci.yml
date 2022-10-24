@@ -9,7 +9,7 @@ flake8:
   image:
     name: python:3.10-slim
   before_script:
-    - python -m pip install -U flake8 flake8-import-order
+    - python -m pip install -U flake8 flake8-import-order flake8-bugbear
   script:
     - flake8
   only:

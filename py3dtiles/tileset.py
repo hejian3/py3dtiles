@@ -58,7 +58,7 @@ class TileSet(Extendable):
         self.write_as_json(target_dir)
 
         # Terminate with the writing of the tiles content:
-        for index, tile in enumerate(all_tiles):
+        for tile in all_tiles:
             tile.write_content(directory)
 
     def write_as_json(self, directory: Union[str, Path]) -> None:

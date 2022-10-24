@@ -1,6 +1,6 @@
 [flake8]
 ignore = E501,W503
-select = I
+select = I,B
 exclude =
     py3dtiles/points/transformations.py,
     build/,

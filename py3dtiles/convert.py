@@ -30,6 +30,8 @@ from py3dtiles.points.utils import CommandType, compute_spacing, name_to_filenam
 from py3dtiles.utils import SrsInMissingException
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
+DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)
+CPU_COUNT = multiprocessing.cpu_count()
 
 # IPC protocol is not supported on Windows
 if os.name == 'nt':
@@ -339,8 +341,8 @@ class _Convert:
                  files,
                  outfolder='./3dtiles',
                  overwrite=False,
-                 jobs=multiprocessing.cpu_count(),
-                 cache_size=int(TOTAL_MEMORY_MB / 10),
+                 jobs=CPU_COUNT,
+                 cache_size=DEFAULT_CACHE_SIZE,
                  srs_out=None,
                  srs_in=None,
                  fraction=100,
