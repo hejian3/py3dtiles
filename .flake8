@@ -1,3 +1,6 @@
 [flake8]
-exclude=py3dtiles/points/transformations.py
-ignore=E501,W503
+ignore = E501,W503
+exclude =
+    py3dtiles/points/transformations.py,
+    build/,
+    *venv/,
