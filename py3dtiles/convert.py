@@ -761,8 +761,9 @@ class _Convert:
 
         root_tileset['transform'] = transform.T.reshape(16).tolist()
         root_tileset['refine'] = 'REPLACE'
-        for child in root_tileset['children']:
-            child['refine'] = 'ADD'
+        if "children" in root_tileset:
+            for child in root_tileset['children']:
+                child['refine'] = 'ADD'
 
         tileset = {
             'asset': {
