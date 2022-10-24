@@ -1,6 +1,6 @@
 import unittest
 
-from py3dtiles import BoundingVolumeBox, Tile, TileSet, Extension
+from py3dtiles import BoundingVolumeBox, Extension, Tile, TileSet
 
 
 class Test_TileSet(unittest.TestCase):

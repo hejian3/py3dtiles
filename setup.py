@@ -1,6 +1,7 @@
 import os
 import re
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -19,6 +20,8 @@ requirements = (
 
 dev_requirements = (
     'flake8',
+    'flake8-import-order',
+    'flake8-bugbear',
     'py',
     'pytest',
     'pytest-cov',

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
+
+
 
 from .extendable import Extendable
 from .tile import Tile

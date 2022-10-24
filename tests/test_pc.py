@@ -1,8 +1,8 @@
 import unittest
-import numpy as np
-# np.set_printoptions(formatter={'int':hex})
 
-from py3dtiles import TileContentReader, Feature, Pnts
+import numpy as np
+
+from py3dtiles import Feature, Pnts, TileContentReader
 
 
 class TestTileContentReader(unittest.TestCase):

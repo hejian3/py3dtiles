@@ -10,7 +10,7 @@ from py3dtiles.feature_table import SemanticPoint
 from py3dtiles.points.distance import xyz_to_child_index
 from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.task.pnts_writer import points_to_pnts
-from py3dtiles.points.utils import name_to_filename, node_from_name, SubdivisionType, aabb_size_to_subdivision_type
+from py3dtiles.points.utils import aabb_size_to_subdivision_type, name_to_filename, node_from_name, SubdivisionType
 
 
 def node_to_tileset(args):

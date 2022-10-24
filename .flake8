@@ -1,6 +1,10 @@
 [flake8]
 ignore = E501,W503
+select = I
 exclude =
     py3dtiles/points/transformations.py,
     build/,
     *venv/,
+
+application-import-names = py3dtiles
+import-order-style = google

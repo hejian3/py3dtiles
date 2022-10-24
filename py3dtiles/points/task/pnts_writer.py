@@ -1,12 +1,12 @@
+from pathlib import Path
 import pickle
 import struct
-from pathlib import Path
 
 import lz4.frame as gzip
 import numpy as np
 
 import py3dtiles
-from py3dtiles.points.utils import ResponseType, name_to_filename
+from py3dtiles.points.utils import name_to_filename, ResponseType
 
 
 class _DummyNode:

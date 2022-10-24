@@ -1,7 +1,8 @@
-import numpy as np
 import math
-import struct
 import pickle
+import struct
+
+import numpy as np
 
 from py3dtiles.points.utils import ResponseType
 

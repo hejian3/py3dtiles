@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 import json
 import unittest
+
 from py3dtiles import BatchTable
 
 

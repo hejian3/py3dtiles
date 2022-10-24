@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-
-from pytest import approx, raises, fixture
-from unittest.mock import patch
 import shutil
+from unittest.mock import patch
+
+from pytest import approx, fixture, raises
 
 from py3dtiles import convert_to_ecef
 from py3dtiles.convert import convert, SrsInMissingException

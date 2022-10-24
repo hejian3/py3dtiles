@@ -1,5 +1,5 @@
-import json
 from enum import Enum
+import json
 
 import numpy as np
 

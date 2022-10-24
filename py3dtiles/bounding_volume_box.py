@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Union, Tuple, List
+from typing import List, Tuple, TYPE_CHECKING, Union
 
 import numpy
 import numpy as np

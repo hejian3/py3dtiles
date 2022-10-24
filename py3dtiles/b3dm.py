@@ -1,10 +1,11 @@
-import struct
-import numpy as np
 import json
+import struct
 
-from .tile_content import TileContent, TileContentHeader, TileContentBody, TileContentType
-from .gltf import GlTF
+import numpy as np
+
 from .batch_table import BatchTable
+from .gltf import GlTF
+from .tile_content import TileContent, TileContentBody, TileContentHeader, TileContentType
 
 
 class B3dm(TileContent):

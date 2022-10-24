@@ -1,9 +1,9 @@
-import numpy as np
 from numba import njit
 from numba.typed import List
+import numpy as np
 
-from py3dtiles.points.utils import SubdivisionType, aabb_size_to_subdivision_type
 from py3dtiles.points.distance import is_point_far_enough, xyz_to_key
+from py3dtiles.points.utils import aabb_size_to_subdivision_type, SubdivisionType
 
 
 @njit(fastmath=True, cache=True)

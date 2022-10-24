@@ -1,8 +1,10 @@
-import os
-import time
 import gc
-import lz4.frame as gzip
+import os
 from sys import getsizeof
+import time
+
+import lz4.frame as gzip
+
 from py3dtiles.points.utils import name_to_filename
 
 

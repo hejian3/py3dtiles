@@ -1,11 +1,11 @@
-import unittest
-import numpy as np
-import json
 from filecmp import cmp
+import json
 from pathlib import Path
-# np.set_printoptions(formatter={'int':hex})
+import unittest
 
-from py3dtiles import TileContentReader, B3dm, GlTF, TriangleSoup
+import numpy as np
+
+from py3dtiles import B3dm, GlTF, TileContentReader, TriangleSoup
 
 
 class TestTileContentReader(unittest.TestCase):

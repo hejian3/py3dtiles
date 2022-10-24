@@ -7,7 +7,7 @@ import os
 import numpy as np
 import psycopg2
 
-from py3dtiles import TriangleSoup, GlTF, B3dm, BatchTable
+from py3dtiles import B3dm, BatchTable, GlTF, TriangleSoup
 
 
 class BoundingBox:
