@@ -184,8 +184,10 @@ def is_ear_hashed(ear, min_x, min_y, size):
     p = ear.nextZ
 
     while p and p.z <= max_z:
-        if p != ear.prev and p != ear.next and point_in_triangle(a.x, a.y, b.x, b.y, c.x, c.y, p.x, p.y) \
-            and area(p.prev, p, p.next) >= 0:
+        if (
+            p != ear.prev and p != ear.next and point_in_triangle(a.x, a.y, b.x, b.y, c.x, c.y, p.x, p.y)
+            and area(p.prev, p, p.next) >= 0
+        ):
             return False
         p = p.nextZ
 
@@ -193,8 +195,10 @@ def is_ear_hashed(ear, min_x, min_y, size):
     p = ear.prevZ
 
     while p and p.z >= min_z:
-        if p != ear.prev and p != ear.next and point_in_triangle(a.x, a.y, b.x, b.y, c.x, c.y, p.x, p.y) \
-            and area(p.prev, p, p.next) >= 0:
+        if (
+            p != ear.prev and p != ear.next and point_in_triangle(a.x, a.y, b.x, b.y, c.x, c.y, p.x, p.y)
+            and area(p.prev, p, p.next) >= 0
+        ):
             return False
         p = p.prevZ
 
@@ -484,7 +488,7 @@ def point_in_triangle(ax, ay, bx, by, cx, cy, px, py):
 # check if a diagonal between two polygon nodes is valid (lies in polygon interior)
 def is_valid_diagonal(a, b):
     return a.next.i != b.i and a.prev.i != b.i and not intersects_polygon(a, b) and \
-           locally_inside(a, b) and locally_inside(b, a) and middle_inside(a, b)
+        locally_inside(a, b) and locally_inside(b, a) and middle_inside(a, b)
 
 
 # signed area of a triangle
@@ -503,7 +507,7 @@ def intersects(p1, q1, p2, q2):
         return True
 
     return area(p1, q1, p2) > 0 != area(p1, q1, q2) > 0 and \
-           area(p2, q2, p1) > 0 != area(p2, q2, q1) > 0
+        area(p2, q2, p1) > 0 != area(p2, q2, q1) > 0
 
 
 # check if a polygon diagonal intersects any polygon segments
@@ -645,8 +649,9 @@ def deviation(data, hole_indices, dim, triangles):
         b = triangles[i + 1] * dim
         c = triangles[i + 2] * dim
         triangles_area += abs(
-            (data[a] - data[c]) * (data[b + 1] - data[a + 1]) -
-            (data[a] - data[b]) * (data[c + 1] - data[a + 1]))
+            (data[a] - data[c]) * (data[b + 1] - data[a + 1])
+            - (data[a] - data[b]) * (data[c + 1] - data[a + 1])
+        )
 
     if polygon_area == 0 and triangles_area == 0:
         return 0
