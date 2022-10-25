@@ -32,6 +32,7 @@ test:
   script:
     - pip install .
     - pip install .[dev]
+    - which pytest
     - pytest
     # TODO move that in unit tests
     - py3dtiles info tests/pointCloudRGB.pnts
