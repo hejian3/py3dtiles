@@ -3,6 +3,7 @@ import math
 import pickle
 import struct
 import subprocess
+from typing import Dict, List, Tuple
 
 import laspy
 import numpy as np
@@ -11,60 +12,45 @@ from py3dtiles.points.utils import ResponseType
 from py3dtiles.utils import SrsInMissingException
 
 
-def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
-    aabb = None
-    total_point_count = 0
-    pointcloud_file_portions = []
-    avg_min = np.array([0., 0., 0.])
-    color_scale_by_file = {}
+def get_metadata(filename: str, color_scale, fraction: int = 100, max_batch_size: int = 1_000_000) -> Tuple[List, Dict]:
+    with laspy.open(filename) as f:
+        point_count = f.header.point_count * fraction // 100
 
-    for filename in files:
-        with laspy.open(filename) as f:
-            avg_min += (np.array(f.header.mins) / len(files))
+        batch_size = min(point_count, max_batch_size)
+        steps = math.ceil(point_count / batch_size)
+        portions = [
+            (
+                filename,
+                (i * batch_size, min(point_count, (i + 1) * batch_size))
+            )
+            for i in range(steps)
+        ]
 
-            if aabb is None:
-                aabb = np.array([f.header.mins, f.header.maxs])
+        metadata = {
+            'min': np.array(f.header.mins),
+            'aabb': np.array([f.header.mins, f.header.maxs]),
+            'point_count': point_count
+        }
+
+        if color_scale:
+            metadata['color_scale'] = color_scale
+        # read the first points red channel
+        elif 'red' in f.header.point_format.dimension_names:
+            points = next(f.chunk_iterator(10_000))['red']
+            if np.max(points) > 255:
+                metadata['color_scale'] = 1.0 / 255  # ??? there is a case where no color scale defined ???
             else:
-                bb = np.array([f.header.mins, f.header.maxs])
-                aabb[0] = np.minimum(aabb[0], bb[0])
-                aabb[1] = np.maximum(aabb[1], bb[1])
+                metadata['color_scale'] = None  # not sure about that...
+        else:
+            # the intensity is then used as color
+            metadata['color_scale'] = 1.0 / 255
 
-            count = f.header.point_count * fraction // 100
-            total_point_count += count
+        output = subprocess.check_output(['pdal', 'info', '--summary', filename])
+        summary = json.loads(output)['summary']
+        if 'srs' in summary and 'proj4' in summary['srs']:
+            metadata['source_srs'] = summary['srs']['proj4']
 
-            # read the first points red channel
-            if color_scale:
-                color_scale_by_file[filename] = color_scale
-            elif 'red' in f.header.point_format.dimension_names:
-                points = next(f.chunk_iterator(10_000))['red']
-                if np.max(points) > 255:
-                    color_scale_by_file[filename] = 1.0 / 255
-            else:
-                # the intensity is then used as color
-                color_scale_by_file[filename] = 1.0 / 255
-
-            _1M = min(count, 1_000_000)
-            steps = math.ceil(count / _1M)
-            portions = [(i * _1M, min(count, (i + 1) * _1M)) for i in range(steps)]
-            for p in portions:
-                pointcloud_file_portions += [(filename, p)]
-
-            if srs_out and not srs_in:
-                output = subprocess.check_output(['pdal', 'info', '--summary', filename])
-                summary = json.loads(output)['summary']
-                if 'srs' not in summary or not summary['srs'].get('proj4'):
-                    raise SrsInMissingException(f"'{filename}' file doesn't contain srs information."
-                                                "Please use the --srs_in option to declare it.")
-                srs_in = summary['srs']['proj4']
-
-    return {
-        'portions': pointcloud_file_portions,
-        'aabb': aabb,
-        'color_scale': color_scale_by_file,
-        'srs_in': srs_in,
-        'point_count': total_point_count,
-        'avg_min': avg_min
-    }
+        return portions, metadata
 
 
 def run(filename, offset_scale, portion, queue, transformer, verbose):

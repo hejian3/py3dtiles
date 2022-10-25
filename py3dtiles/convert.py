@@ -11,6 +11,7 @@ import struct
 import sys
 import time
 import traceback
+from typing import Dict, Tuple
 
 import numpy as np
 import psutil
@@ -40,6 +41,12 @@ else:
     URI = "ipc:///tmp/py3dtiles1"
 
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
+
+READER_MAP = {
+    '.xyz': xyz_reader,
+    '.las': las_reader,
+    '.laz': las_reader
+}
 
 
 def make_rotation_matrix(z1, z2):
@@ -146,13 +153,13 @@ class Worker:
         parameters = pickle.loads(content[1])
 
         ext = PurePath(parameters['filename']).suffix
-        init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
+        init_reader_fn = READER_MAP[ext].run
         init_reader_fn(
             parameters['filename'],
             parameters['offset_scale'],
             parameters['portion'],
             self.skt,
-            self.transformer,
+            self.transformer.get(parameters['filename']),
             self.verbosity
         )
 
@@ -343,8 +350,8 @@ class _Convert:
                  overwrite=False,
                  jobs=CPU_COUNT,
                  cache_size=DEFAULT_CACHE_SIZE,
-                 srs_out=None,
-                 srs_in=None,
+                 destination_srs=None,
+                 source_srs=None,
                  fraction=100,
                  benchmark=None,
                  rgb=True,
@@ -362,10 +369,10 @@ class _Convert:
         :type jobs: int
         :param cache_size: Cache size in MB. Default to available memory / 10.
         :type cache_size: int
-        :param srs_out: SRS to convert the output with (numeric part of the EPSG code)
-        :type srs_out: int or str
-        :param srs_in: Override input SRS (numeric part of the EPSG code)
-        :type srs_in: int or str
+        :param destination_srs: SRS to convert the output with (numeric part of the EPSG code)
+        :type destination_srs: int or str
+        :param source_srs: Override input SRS (numeric part of the EPSG code)
+        :type source_srs: int or str
         :param fraction: Percentage of the pointcloud to process, between 0 and 100.
         :type fraction: int
         :param benchmark: Print summary at the end of the process
@@ -396,10 +403,11 @@ class _Convert:
         if self.graph:
             self.progression_log = open('progression.csv', 'w')
 
-        self.infos = self.get_infos(color_scale, srs_in, srs_out)
-
-        crs_in, crs_out, transformer = self.get_crs(srs_in, srs_out)
-        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_in, transformer)
+        self.global_file_metadata, self.metadata_files = self.get_infos(color_scale, source_srs, destination_srs)
+        print(self.metadata_files)
+        transformer = self.get_transformers(destination_srs)
+        self.project_file_metadata(transformer)
+        self.rotation_matrix, self.original_aabb = self.get_rotation_matrix(source_srs)
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(self.original_aabb)
         octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
 
@@ -418,54 +426,105 @@ class _Convert:
 
         self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.verbose))
         self.node_store = SharedNodeStore(str(self.working_dir))
-        self.state = State(self.infos['portions'], max(1, self.jobs // 2))
+        self.state = State(self.global_file_metadata['portions'], max(1, self.jobs // 2))
 
-    def get_infos(self, color_scale, srs_in, srs_out):
-        # read all input files headers and determine the aabb/spacing
-        extensions = set()
+    def get_infos(self, color_scale, source_srs: str, destination_srs: str) -> Tuple[Dict, Dict[str, Dict]]:
+        portions = []
+        metadata = {
+            'aabb': None,  # this can't be updated now in case of crs mixin
+            'point_count': 0,
+            'avg_min': np.array([0., 0., 0.])
+        }
+        metadata_by_files = {}
+
         for file in self.files:
-            extensions.add(PurePath(file).suffix)
-        if len(extensions) != 1:
-            raise ValueError("All files should have the same extension, currently there are", extensions)
-        extension = extensions.pop()
+            pathfile = Path(file)
+            filename = str(pathfile)  # sometimes file can be simplified, this step simplifies it.
+            reader = READER_MAP[pathfile.suffix]
 
-        init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
-        return init_reader_fn(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
+            file_portions, file_metadata = reader.get_metadata(filename, color_scale)
 
-    def get_crs(self, srs_in, srs_out):
-        if srs_out:
-            crs_out = CRS('epsg:{}'.format(srs_out))
-            if srs_in:
-                crs_in = CRS('epsg:{}'.format(srs_in))
-            elif not self.infos['srs_in']:
-                raise SrsInMissingException('No SRS information in the provided files')
+            portions += file_portions
+
+            metadata['point_count'] += file_metadata['point_count']
+
+            metadata_by_files[filename] = {
+                'color_scale': file_metadata['color_scale'],
+                'aabb': file_metadata['aabb'],
+                'min': file_metadata['min'],
+            }
+
+            if destination_srs:
+                if 'source_srs' in file_metadata:
+                    # In python 3.7, file_metadata['source_srs'] is a epsg code
+                    # In other python versions, it is a proj definition
+                    if "proj" in file_metadata['source_srs']:
+                        metadata_by_files[filename]['source_crs'] = CRS(file_metadata['source_srs'])
+                    else:
+                        metadata_by_files[filename]['source_crs'] = CRS(f"epsg:{file_metadata['source_srs']}")
+                elif source_srs:
+                    metadata_by_files[filename]['source_crs'] = CRS(f"epsg:{source_srs}")
+                else:
+                    raise SrsInMissingException(f"'{filename}' file doesn't contain srs information."
+                                                 "Please use the --srs_in option to declare it.")
+
+            metadata['portions'] = portions
+
+        return metadata, metadata_by_files
+
+    def get_transformers(self, destination_srs: str) -> Dict[CRS, Transformer]:
+        transformers = {}
+
+        if not destination_srs:  # yes but all source_crs should be same...
+            return transformers
+
+        destination_crs = CRS(f'epsg:{destination_srs}')
+
+        for metadata_file in self.metadata_files.values():
+            source_crs = metadata_file['source_crs']
+            if source_crs not in transformers:
+                transformers[source_crs] = Transformer.from_crs(source_crs, destination_crs)
+
+        return transformers
+
+    def project_file_metadata(self, transformers: Dict[CRS, Transformer]) -> None:
+        # first get aabb and avg_min in the destination_crs
+        for file_metadata in self.metadata_files.values():
+            transformer = transformers.get(file_metadata.get('source_crs'))
+            if transformer is not None:
+                projected_min = np.array(
+                    transformer.transform(file_metadata['min'][0], file_metadata['min'][1], file_metadata['min'][2])
+                )
+                projected_aabb = np.array(
+                    transformer.transform(file_metadata['aabb'][:, 0],
+                                          file_metadata['aabb'][:, 1],
+                                          file_metadata['aabb'][:, 2])
+                ).T
             else:
-                crs_in = CRS(self.infos['srs_in'])
+                projected_aabb = file_metadata['aabb']
+                projected_min = file_metadata['min']
 
-            transformer = Transformer.from_crs(crs_in, crs_out)
-        else:
-            crs_in = None
-            crs_out = None
-            transformer = None
+            if self.global_file_metadata['aabb'] is None:
+                self.global_file_metadata['aabb'] = projected_aabb
+            else:
+                self.global_file_metadata['aabb'][0] = np.minimum(
+                    self.global_file_metadata['aabb'][0], projected_aabb[0]
+                )
+                self.global_file_metadata['aabb'][1] = np.maximum(
+                    self.global_file_metadata['aabb'][1], projected_aabb[1]
+                )
 
-        return crs_in, crs_out, transformer
+            self.global_file_metadata['avg_min'] += projected_min / len(file_metadata)
 
-    def get_rotation_matrix(self, srs_out, transformer):
-        avg_min = self.infos['avg_min']
-        aabb = self.infos['aabb']
+    def get_rotation_matrix(self, srs_out: str):
+        avg_min = self.global_file_metadata['avg_min']
+        aabb = self.global_file_metadata['aabb']
 
         rotation_matrix = None
         if srs_out:
-
-            bl = np.array(list(transformer.transform(
-                aabb[0][0], aabb[0][1], aabb[0][2])))
-            tr = np.array(list(transformer.transform(
-                aabb[1][0], aabb[1][1], aabb[1][2])))
-            br = np.array(list(transformer.transform(
-                aabb[1][0], aabb[0][1], aabb[0][2])))
-
-            avg_min = np.array(list(transformer.transform(
-                avg_min[0], avg_min[1], avg_min[2])))
+            bl = np.array([aabb[0][0], aabb[0][1], aabb[0][2]])
+            tr = np.array([aabb[1][0], aabb[1][1], aabb[1][2]])
+            br = np.array([aabb[1][0], aabb[0][1], aabb[0][2]])
 
             x_axis = br - bl
 
@@ -492,7 +551,7 @@ class _Convert:
             # offset
             root_aabb = aabb - avg_min
 
-        return rotation_matrix, root_aabb, avg_min
+        return rotation_matrix, root_aabb
 
     def get_root_aabb(self, original_aabb):
         base_spacing = compute_spacing(original_aabb)
@@ -538,17 +597,18 @@ class _Convert:
                 if at_least_one_job_ended:
                     self.print_debug(now)
                     if self.graph:
-                        percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
+                        percent = round(100 * self.state.processed_points / self.global_file_metadata['point_count'], 3)
                         print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
 
                 self.node_store.control_memory_usage(self.cache_size, self.verbose)
 
-            if self.state.points_in_pnts != self.infos['point_count']:
+            if self.state.points_in_pnts != self.global_file_metadata['point_count']:
                 raise ValueError("!!! Invalid point count in the written .pnts"
-                                 + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
+                                 + f"(expected: {self.global_file_metadata['point_count']},"
+                                   f"was: {self.state.points_in_pnts})")
 
             if self.verbose >= 1:
-                print('Writing 3dtiles {}'.format(self.infos['avg_min']))
+                print('Writing 3dtiles {}'.format(self.global_file_metadata['avg_min']))
 
             self.write_tileset()
             shutil.rmtree(self.working_dir)
@@ -713,10 +773,10 @@ class _Convert:
         self.zmq_manager.send_to_process([CommandType.READ_FILE.value, pickle.dumps({
             'filename': file,
             'offset_scale': (
-                -self.avg_min,
+                -self.global_file_metadata['avg_min'],
                 self.root_scale,
                 self.rotation_matrix[:3, :3].T if self.rotation_matrix is not None else None,
-                self.infos['color_scale'].get(file) if self.infos['color_scale'] is not None else None,
+                self.metadata_files[file]['color_scale'],
             ),
             'portion': portion,
         })])
@@ -730,7 +790,7 @@ class _Convert:
         else:
             transform = inverse_matrix(self.rotation_matrix)
         transform = np.dot(transform, scale_matrix(1.0 / self.root_scale[0]))
-        transform = np.dot(translation_matrix(self.avg_min), transform)
+        transform = np.dot(translation_matrix(self.global_file_metadata['avg_min']), transform)
 
         # build fake points
         root_node = Node('', self.root_aabb, self.root_spacing * 2)
@@ -783,8 +843,8 @@ class _Convert:
 
     def print_summary(self):
         print('Summary:')
-        print('  - points to process: {}'.format(self.infos['point_count']))
-        print('  - offset to use: {}'.format(self.avg_min))
+        print('  - points to process: {}'.format(self.global_file_metadata['point_count']))
+        print('  - offset to use: {}'.format(self.global_file_metadata['avg_min']))
         print('  - root spacing: {}'.format(self.root_spacing / self.root_scale[0]))
         print('  - root aabb: {}'.format(self.root_aabb))
         print('  - original aabb: {}'.format(self.original_aabb))
@@ -849,14 +909,14 @@ class _Convert:
 
         if self.verbose >= 1:
             print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
-                round(100 * self.state.processed_points / self.infos['point_count'], 2),
+                round(100 * self.state.processed_points / self.global_file_metadata['point_count'], 2),
                 round(now, 1),
                 self.jobs - len(self.zmq_manager.idle_clients),
                 len(self.state.processing_nodes),
                 self.state.points_in_progress))
 
         elif self.verbose >= 0:
-            percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
+            percent = round(100 * self.state.processed_points / self.global_file_metadata['point_count'], 2)
             time_left = (100 - percent) * now / (percent + 0.001)
             print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='',
                   flush=True)
@@ -893,9 +953,9 @@ def init_parser(subparser, str2bool):
         default=int(TOTAL_MEMORY_MB / 10),
         type=int)
     parser.add_argument(
-        '--srs_out', help='SRS to convert the output with (numeric part of the EPSG code)', type=str)
+        '--destination_srs', help='SRS to convert the output with (numeric part of the EPSG code)', type=str)
     parser.add_argument(
-        '--srs_in', help='Override input SRS (numeric part of the EPSG code)', type=str)
+        '--source_srs', help='Override input SRS (numeric part of the EPSG code)', type=str)
     parser.add_argument(
         '--fraction',
         help='Percentage of the pointcloud to process.',
@@ -921,8 +981,8 @@ def main(args):
                        overwrite=args.overwrite,
                        jobs=args.jobs,
                        cache_size=args.cache_size,
-                       srs_out=args.srs_out,
-                       srs_in=args.srs_in,
+                       destination_srs=args.destination_srs,
+                       source_srs=args.source_srs,
                        fraction=args.fraction,
                        benchmark=args.benchmark,
                        rgb=args.rgb,

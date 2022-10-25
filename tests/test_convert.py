@@ -8,7 +8,6 @@ from pytest import approx, fixture, raises
 from py3dtiles import convert_to_ecef
 from py3dtiles.convert import convert, SrsInMissingException
 
-
 fixtures_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
 
 
@@ -40,14 +39,14 @@ def test_convert_without_srs(tmp_dir):
     with raises(SrsInMissingException):
         convert(os.path.join(fixtures_dir, 'without_srs.las'),
                 outfolder=tmp_dir,
-                srs_out='4978',
+                destination_srs='4978',
                 jobs=1)
     assert not os.path.exists(os.path.join(tmp_dir))
 
     convert(os.path.join(fixtures_dir, 'without_srs.las'),
             outfolder=tmp_dir,
-            srs_in='3949',
-            srs_out='4978',
+            source_srs='3949',
+            destination_srs='4978',
             jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
@@ -56,7 +55,7 @@ def test_convert_without_srs(tmp_dir):
 def test_convert_with_srs(tmp_dir):
     convert(os.path.join(fixtures_dir, 'with_srs.las'),
             outfolder=tmp_dir,
-            srs_out='4978',
+            destination_srs='4978',
             jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
@@ -65,8 +64,8 @@ def test_convert_with_srs(tmp_dir):
 def test_convert_simple_xyz(tmp_dir):
     convert(os.path.join(fixtures_dir, 'simple.xyz'),
             outfolder=tmp_dir,
-            srs_in='3857',
-            srs_out='4978',
+            source_srs='3857',
+            destination_srs='4978',
             jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
     assert os.path.exists(os.path.join(tmp_dir, 'r.pnts'))
@@ -78,8 +77,8 @@ def test_convert_xyz_exception_in_run(tmp_dir):
             mock_run.side_effect = Exception('Exception in run')
             convert(os.path.join(fixtures_dir, 'simple.xyz'),
                     outfolder=tmp_dir,
-                    srs_in='3857',
-                    srs_out='4978')
+                    source_srs='3857',
+                    destination_srs='4978')
 
 
 def test_convert_las_exception_in_run(tmp_dir):
@@ -88,8 +87,8 @@ def test_convert_las_exception_in_run(tmp_dir):
             mock_run.side_effect = Exception('Exception in run')
             convert(os.path.join(fixtures_dir, 'with_srs.las'),
                     outfolder=tmp_dir,
-                    srs_in='3857',
-                    srs_out='4978')
+                    source_srs='3857',
+                    destination_srs='4978')
 
 
 def test_convert_export_folder_already_exists(tmp_dir):
@@ -99,12 +98,12 @@ def test_convert_export_folder_already_exists(tmp_dir):
     with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
         convert(os.path.join(fixtures_dir, 'with_srs.las'),
                 outfolder=tmp_dir,
-                srs_out='4978',
+                destination_srs='4978',
                 jobs=1)
 
     convert(os.path.join(fixtures_dir, 'with_srs.las'),
             outfolder=tmp_dir,
             overwrite=True,
-            srs_out='4978',
+            destination_srs='4978',
             jobs=1)
     assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
