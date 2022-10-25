@@ -19,6 +19,7 @@ requirements = (
 
 dev_requirements = (
     'flake8',
+    'py',
     'pytest',
     'pytest-cov',
     'pytest-benchmark',
