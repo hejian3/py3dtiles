@@ -1,9 +1,8 @@
 import gc
 import os
-from typing import Tuple
-
 from sys import getsizeof
 import time
+from typing import Tuple
 
 import lz4.frame as gzip
 

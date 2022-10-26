@@ -1,4 +1,4 @@
-from py3dtiles import TileContentReader, TileContent
+from py3dtiles import TileContent, TileContentReader
 
 
 def print_pnts_info(tile: TileContent):

@@ -1,8 +1,7 @@
 import math
+from typing import Union
 
 __all__ = ['earcut', 'deviation', 'flatten']
-
-from typing import Union
 
 
 class Node:

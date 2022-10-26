@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import pickle
-from typing import TYPE_CHECKING, List, Tuple, Union, Iterator
-import concurrent.futures
+from typing import Iterator, List, Tuple, TYPE_CHECKING, Union
 
 import numpy as np
 
