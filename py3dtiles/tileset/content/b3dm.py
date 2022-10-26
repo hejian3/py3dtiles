@@ -52,14 +52,14 @@ class B3dm(TileContent):
         """
 
         # build tile header
-        h_arr = array[0:B3dmHeader.BYTELENGTH]
+        h_arr = array[0:B3dmHeader.BYTE_LENGTH]
         h = B3dmHeader.from_array(h_arr)
 
         if h.tile_byte_length != len(array):
             raise RuntimeError("Invalid byte length in header")
 
         # build tile body
-        b_arr = array[B3dmHeader.BYTELENGTH:h.tile_byte_length]
+        b_arr = array[B3dmHeader.BYTE_LENGTH:h.tile_byte_length]
         b = B3dmBody.from_array(h, b_arr)
 
         # build TileContent with header and body
@@ -71,7 +71,7 @@ class B3dm(TileContent):
 
 
 class B3dmHeader(TileContentHeader):
-    BYTELENGTH = 28
+    BYTE_LENGTH = 28
 
     def __init__(self):
         super().__init__()
@@ -100,7 +100,7 @@ class B3dmHeader(TileContentHeader):
         glTF_arr = body.glTF.to_array()
 
         # sync the tile header with feature table contents
-        self.tile_byte_length = len(glTF_arr) + B3dmHeader.BYTELENGTH
+        self.tile_byte_length = len(glTF_arr) + B3dmHeader.BYTE_LENGTH
         self.bt_json_byte_length = 0
         self.bt_bin_byte_length = 0
         self.ft_json_byte_length = 0
@@ -126,7 +126,7 @@ class B3dmHeader(TileContentHeader):
 
         h = B3dmHeader()
 
-        if len(array) != B3dmHeader.BYTELENGTH:
+        if len(array) != B3dmHeader.BYTE_LENGTH:
             raise RuntimeError("Invalid header length")
 
         h.version = struct.unpack("i", array[4:8])[0]
@@ -193,7 +193,7 @@ class B3dmBody(TileContentBody):
 
         # build glTF
         glTF_len = (th.tile_byte_length - ft_len - bt_len
-                    - B3dmHeader.BYTELENGTH)
+                    - B3dmHeader.BYTE_LENGTH)
         glTF_arr = array[ft_len + bt_len:ft_len + bt_len + glTF_len]
         glTF = GlTF.from_array(glTF_arr)
 
