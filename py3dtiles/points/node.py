@@ -320,6 +320,5 @@ class Node:
                 with open('{}/{}'.format(folder, tileset_name), 'w') as f:
                     f.write(json.dumps(tile_root))
                 tileset['content'] = {'uri': tileset_name}
-                tileset['children'] = []
 
         return tileset
