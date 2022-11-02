@@ -25,6 +25,10 @@ pytype:
   stage: 🐍 lint
   image:
     name: python:3.10-slim
+  cache:
+    - key: $CI_COMMIT_BRANCH
+      paths:
+        - .pytype/
   before_script:
     - pip install .
     - pip install .[dev]
@@ -86,15 +90,29 @@ test:
     - apt install -y python3-pip pdal llvm liblaszip8
     - pip install .
     - pip install laspy[laszip]
+    - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1843_5175.laz
+    - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1845_5173.laz
     - git clone --depth 1 https://github.com/CesiumGS/3d-tiles-validator
     - cd 3d-tiles-validator
     - npm install
-    - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1843_5175.laz
+    - mkdir tilesets
   script:
-    - py3dtiles convert laz/1843_5175.laz
+    # Convert the 2 las files
+    - py3dtiles convert ../laz/1843_5175.laz --out tilesets/1
+    - py3dtiles convert ../laz/1845_5173.laz --out tilesets/2
+    # Validate the first one
+    - npx ts-node src/main.ts --tilesetsDirectory tilesets/1 | tee validator-output.txt
+    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 4
+    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 4
+    # Validate the second one to be sure the 2 las are valid
+    - npx ts-node src/main.ts --tilesetsDirectory tilesets/2 | tee validator-output.txt
+    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 1
+    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 1
+    # Merge the 2 tilesets and validate the result
+    - py3dtiles merge tilesets
     - npx ts-node src/main.ts --tilesetsDirectory tilesets | tee validator-output.txt
-    - grep \"numErrors\"\:\ 0 validator-output.txt
-    - grep \"numWarnings\"\:\ 0 validator-output.txt
+    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 6
+    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 6
   only:
     refs:
       - merge_requests
