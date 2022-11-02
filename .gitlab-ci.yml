@@ -77,16 +77,22 @@ test:
   stage: 🤞 test
   image:
     name: node:18
+  cache:
+    - key: 3d-tiles-validator
+      paths:
+        - laz/
   before_script:
     - apt update
-    - apt install -y python3-pip pdal llvm
+    - apt install -y python3-pip pdal llvm liblaszip8
     - pip install .
+    - pip install laspy[laszip]
     - git clone --depth 1 https://github.com/CesiumGS/3d-tiles-validator
     - cd 3d-tiles-validator
     - npm install
+    - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1843_5175.laz
   script:
-    - py3dtiles convert ../tests/fixtures/with_srs.las
-    - npx ts-node src/main.ts --tilesetFile 3dtiles/tileset.json | tee validator-output.txt
+    - py3dtiles convert laz/1843_5175.laz
+    - npx ts-node src/main.ts --tilesetsDirectory tilesets | tee validator-output.txt
     - grep \"numErrors\"\:\ 0 validator-output.txt
     - grep \"numWarnings\"\:\ 0 validator-output.txt
   only:
