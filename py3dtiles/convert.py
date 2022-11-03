@@ -228,6 +228,10 @@ class ZmqManager:
         self.send_to_all_process([CommandType.SHUTDOWN.value])
         self.killing_processes = True
 
+    def join_all_processes(self):
+        for p in self.processes:
+            p.join()
+
     def terminate_all_processes(self):
         for p in self.processes:
             p.terminate()
@@ -513,7 +517,7 @@ class _Convert:
         self.startup = time.time()
 
         try:
-            while not self.zmq_manager.are_all_processes_killed():
+            while not self.zmq_manager.killing_processes:
                 now = time.time() - self.startup
 
                 at_least_one_job_ended = False
@@ -530,7 +534,7 @@ class _Convert:
                     self.send_file_to_read()
 
                 # if at this point we have no work in progress => we're done
-                if self.zmq_manager.are_all_processes_idle() and not self.zmq_manager.killing_processes:
+                if self.zmq_manager.are_all_processes_idle():
                     self.zmq_manager.kill_all_processes()
 
                 if at_least_one_job_ended:
@@ -540,6 +544,8 @@ class _Convert:
                         print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
 
                 self.node_store.control_memory_usage(self.cache_size, self.verbose)
+
+            self.zmq_manager.join_all_processes()
 
             if self.state.points_in_pnts != self.infos['point_count']:
                 raise ValueError("!!! Invalid point count in the written .pnts"
