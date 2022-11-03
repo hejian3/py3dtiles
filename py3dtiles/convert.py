@@ -203,7 +203,7 @@ class ZmqManager:
             raise ValueError("idle_clients is empty")
         self.socket.send_multipart([self.idle_clients.pop(), pickle.dumps(time.time())] + message)
 
-    def send_to_all_process(self, message):
+    def send_to_all_idle_processes(self, message):
         if not self.idle_clients:
             raise ValueError("idle_clients is empty")
         for client in self.idle_clients:
@@ -225,7 +225,7 @@ class ZmqManager:
         return self.number_processes_killed == self.number_of_jobs
 
     def kill_all_processes(self):
-        self.send_to_all_process([CommandType.SHUTDOWN.value])
+        self.send_to_all_idle_processes([CommandType.SHUTDOWN.value])
         self.killing_processes = True
 
     def join_all_processes(self):
