@@ -54,7 +54,7 @@ test:
     - pip install .[dev]
     - pytest
     # TODO move that in unit tests
-    - py3dtiles info tests/pointCloudRGB.pnts
+    - py3dtiles info tests/fixtures/pointCloudRGB.pnts
   artifacts:
     when: always
     paths:

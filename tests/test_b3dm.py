@@ -11,7 +11,7 @@ from py3dtiles import B3dm, GlTF, TileContentReader, TriangleSoup
 class TestTileContentReader(unittest.TestCase):
 
     def test_read(self):
-        tile = TileContentReader.read_file(Path('tests/dragon_low.b3dm'))
+        tile = TileContentReader.read_file(Path('tests/fixtures/dragon_low.b3dm'))
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 47246)
@@ -20,12 +20,12 @@ class TestTileContentReader(unittest.TestCase):
         self.assertEqual(tile.header.bt_json_byte_length, 0)
         self.assertEqual(tile.header.bt_bin_byte_length, 0)
 
-        with open('tests/dragon_low_gltf_header.json', 'r') as f:
+        with open('tests/fixtures/dragon_low_gltf_header.json', 'r') as f:
             gltf_header = json.loads(f.read())
         self.assertDictEqual(gltf_header, tile.body.glTF.header)
 
     def test_read_and_write(self):
-        tile_content = TileContentReader.read_file(Path('tests/data/buildings.b3dm'))
+        tile_content = TileContentReader.read_file(Path('tests/fixtures/buildings.b3dm'))
 
         self.assertEqual(tile_content.header.tile_byte_length, 6176)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
@@ -40,13 +40,13 @@ class TestTileContentReader(unittest.TestCase):
         path_name.parent.mkdir(parents=True, exist_ok=True)
 
         tile_content.save_as(path_name)
-        self.assertTrue(cmp('tests/data/buildings.b3dm', path_name))
+        self.assertTrue(cmp('tests/fixtures/buildings.b3dm', path_name))
 
 
 class TestTileContentBuilder(unittest.TestCase):
 
     def test_build(self):
-        with open('tests/building.wkb', 'rb') as f:
+        with open('tests/fixtures/building.wkb', 'rb') as f:
             wkb = f.read()
         ts = TriangleSoup.from_wkb_multipolygon(wkb)
         positions = ts.get_position_array()
@@ -84,9 +84,9 @@ class TestTileContentBuilder(unittest.TestCase):
 class TestTexturedTileBuilder(unittest.TestCase):
 
     def test_build(self):
-        with open('tests/square.wkb', 'rb') as f:
+        with open('tests/fixtures/square.wkb', 'rb') as f:
             wkb = f.read()
-        with open('tests/squareUV.wkb', 'rb') as f:
+        with open('tests/fixtures/squareUV.wkb', 'rb') as f:
             wkbuv = f.read()
         ts = TriangleSoup.from_wkb_multipolygon(wkb, [wkbuv])
         positions = ts.get_position_array()

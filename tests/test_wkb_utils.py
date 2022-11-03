@@ -8,7 +8,7 @@ from py3dtiles import wkb_utils
 
 @pytest.fixture
 def clockwise_star():
-    with open('./tests/star_clockwise.geojson', 'r') as f:
+    with open('tests/fixtures/star_clockwise.geojson', 'r') as f:
         star_geo = json.load(f)
         coords = star_geo['features'][0]['geometry']['coordinates']
         # triangulate expects the coordinates to be numpy array
@@ -22,7 +22,7 @@ def clockwise_star():
 
 @pytest.fixture
 def counterclockwise_star():
-    with open('./tests/star_counterclockwise.geojson', 'r') as f:
+    with open('tests/fixtures/star_counterclockwise.geojson', 'r') as f:
         star_geo = json.load(f)
         coords = star_geo['features'][0]['geometry']['coordinates']
         # triangulate expects the coordinates to be numpy array
@@ -36,7 +36,7 @@ def counterclockwise_star():
 
 @pytest.fixture
 def counterclockwise_zx_star():
-    with open('./tests/star_zx_counter_clockwise.geojson', 'r') as f:
+    with open('tests/fixtures/star_zx_counter_clockwise.geojson', 'r') as f:
         star_geo = json.load(f)
         coords = star_geo['features'][0]['geometry']['coordinates']
         # triangulate expects the coordinates to be numpy array
@@ -50,7 +50,7 @@ def counterclockwise_zx_star():
 
 @pytest.fixture
 def big_poly():
-    with open('./tests/big_polygon_counter_clockwise.geojson', 'r') as f:
+    with open('tests/fixtures/big_polygon_counter_clockwise.geojson', 'r') as f:
         big_poly = json.load(f)
         coords = big_poly['features'][0]['geometry']['coordinates']
         # triangulate expects the coordinates to be numpy array
