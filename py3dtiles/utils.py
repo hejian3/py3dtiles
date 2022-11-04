@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
@@ -26,7 +27,7 @@ def convert_to_ecef(x, y, z, epsg_input):
 class TileContentReader:
 
     @staticmethod
-    def read_file(filename: str) -> TileContent:
+    def read_file(filename: Union[str, Path]) -> TileContent:
         with open(filename, 'rb') as f:
             data = f.read()
             arr = np.frombuffer(data, dtype=np.uint8)
