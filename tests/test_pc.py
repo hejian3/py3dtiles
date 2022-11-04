@@ -1,3 +1,4 @@
+from pathlib import Path
 import unittest
 
 import numpy as np
@@ -8,7 +9,7 @@ from py3dtiles import Feature, Pnts, TileContentReader
 class TestTileContentReader(unittest.TestCase):
 
     def test_read(self):
-        tile = TileContentReader().read_file('tests/pointCloudRGB.pnts')
+        tile = TileContentReader().read_file(Path('tests/pointCloudRGB.pnts'))
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 15176)
@@ -26,7 +27,7 @@ class TestTileContentReader(unittest.TestCase):
 class TestTileBuilder(unittest.TestCase):
 
     def test_build_without_colors(self):
-        tread = TileContentReader().read_file('tests/pointCloudRGB.pnts')
+        tread = TileContentReader().read_file(Path('tests/pointCloudRGB.pnts'))
         f0_ref = tread.body.feature_table.feature(0).positions
 
         # numpy dtype for positions and colors
@@ -66,7 +67,7 @@ class TestTileBuilder(unittest.TestCase):
         self.assertAlmostEqual(f0_ref['Z'], f0['Z'])
 
     def test_build(self):
-        tread = TileContentReader().read_file('tests/pointCloudRGB.pnts')
+        tread = TileContentReader().read_file(Path('tests/pointCloudRGB.pnts'))
 
         # numpy dtype for positions and colors
         pdt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])

@@ -1,19 +1,21 @@
 import math
+from pathlib import Path
 import pickle
 import struct
+from typing import List
 
 import numpy as np
 
 from py3dtiles.points.utils import ResponseType
 
 
-def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
+def init(files: List[Path], color_scale=None, srs_in=None, srs_out=None, fraction=100):
     aabb = None
     total_point_count = 0
     pointcloud_file_portions = []
 
     for filename in files:
-        with open(filename) as f:
+        with filename.open() as f:
             count = 0
             seek_values = []
             while True:
@@ -58,7 +60,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
                 (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
             ]
             for p in portions:
-                pointcloud_file_portions += [(filename, p)]
+                pointcloud_file_portions += [(str(filename), p)]
 
             if srs_out and not srs_in:
                 raise Exception(
@@ -76,7 +78,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(filename, offset_scale, portion, queue, transformer, verbose):
+def run(filename: str, offset_scale, portion, queue, transformer, verbose):
     """
     Reads points from a xyz file
 

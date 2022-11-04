@@ -1,8 +1,10 @@
 import json
 import math
+from pathlib import Path
 import pickle
 import struct
 import subprocess
+from typing import List
 
 import laspy
 import numpy as np
@@ -11,7 +13,7 @@ from py3dtiles.points.utils import ResponseType
 from py3dtiles.utils import SrsInMissingException
 
 
-def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
+def init(files: List[Path], color_scale=None, srs_in=None, srs_out=None, fraction=100):
     aabb = None
     total_point_count = 0
     pointcloud_file_portions = []
@@ -19,6 +21,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     color_scale_by_file = {}
 
     for filename in files:
+        filename = str(filename)
         with laspy.open(filename) as f:
             avg_min += (np.array(f.header.mins) / len(files))
 
@@ -67,7 +70,7 @@ def init(files, color_scale=None, srs_in=None, srs_out=None, fraction=100):
     }
 
 
-def run(filename, offset_scale, portion, queue, transformer, verbose):
+def run(filename: str, offset_scale, portion, queue, transformer, verbose):
     """
     Reads points from a las file
     """

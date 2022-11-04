@@ -101,7 +101,7 @@ class Tile(Extendable):
         # nodes is limited to be bounding volume.
         self.bounding_volume.sync_with_children(self)
 
-    def write_content(self, directory: Union[str, Path]) -> None:
+    def write_content(self, directory: Path) -> None:
         """
         Write (or overwrite) the tile _content_ to the directory specified
         as parameter and withing the relative filename designated by
@@ -116,7 +116,7 @@ class Tile(Extendable):
         file_name = self.get_content_uri()
         if not file_name:
             raise AttributeError("Tile with no content or no uri in content.")
-        path_name = Path(directory) / file_name
+        path_name = directory / file_name
 
         # Make sure the output directory exists (note that target_dir may
         # be a sub-directory of 'directory' because the uri might hold its

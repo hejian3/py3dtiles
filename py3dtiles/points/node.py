@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
-import os
+from pathlib import Path
 import pickle
 from typing import Iterator, List, Tuple, TYPE_CHECKING, Union
 
@@ -211,7 +211,7 @@ class Node:
 
     def to_tileset(self,
                    executor: Union[concurrent.futures.ProcessPoolExecutor, None],
-                   folder: str,
+                   folder: Path,
                    scale: np.ndarray) -> dict:
 
         aabb = self.aabb
@@ -222,7 +222,7 @@ class Node:
         # Read tile's pnts file, if existing, we'll need it for:
         #   - computing the real AABB (instead of the one based on the octree)
         #   - merging this tile's small (<100 points) children
-        if os.path.exists(ondisk_tile):
+        if ondisk_tile.exists():
             tile = TileContentReader.read_file(ondisk_tile)
 
             fth = tile.body.feature_table.header
@@ -240,15 +240,13 @@ class Node:
 
         children = []
         tile_needs_rewrite = False
-        if os.path.exists(ondisk_tile):
-            tileset['content'] = {'uri': os.path.relpath(ondisk_tile, folder)}
-        for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
-            child_name = '{}{}'.format(
-                self.name.decode('ascii'),
-                child).encode('ascii')
+        if ondisk_tile.exists():
+            tileset['content'] = {'uri': str(ondisk_tile.relative_to(folder))}
+        for child in range(8):
+            child_name = f"{self.name.decode('ascii')}{child}".encode('ascii')
             child_ondisk_tile = name_to_filename(folder, child_name, '.pnts')
 
-            if os.path.exists(child_ondisk_tile):
+            if child_ondisk_tile.exists():
                 # See if we should merge this child in tile
                 if len(xyz):
                     # Read pnts content
@@ -277,7 +275,7 @@ class Node:
                             [aabb[1], np.max(xyz_float, axis=0)], axis=0)
 
                         tile_needs_rewrite = True
-                        os.remove(child_ondisk_tile)
+                        child_ondisk_tile.unlink()
                         continue
 
                 # Add child to the to-be-processed list if it hasn't been merged
@@ -293,7 +291,7 @@ class Node:
         # If we merged at least one child tile in the current tile
         # the pnts file needs to be rewritten.
         if tile_needs_rewrite:
-            os.remove(ondisk_tile)
+            ondisk_tile.unlink()
             points_to_pnts(self.name, np.concatenate((xyz, rgb)), folder, len(rgb) != 0)
 
         center = ((aabb[0] + aabb[1]) * 0.5).tolist()
@@ -305,7 +303,6 @@ class Node:
                 0, half_size[1], 0,
                 0, 0, half_size[2]]
         }
-
 
         if children:
             tileset['children'] = children
@@ -322,9 +319,10 @@ class Node:
                     'geometricError': tileset['geometricError'],
                     'root': tileset
                 }
-                tileset_name = 'tileset.{}.json'.format(self.name.decode('ascii'))
-                with open('{}/{}'.format(folder, tileset_name), 'w') as f:
-                    f.write(json.dumps(tile_root))
+                tileset_name = f"tileset.{self.name.decode('ascii')}.json"
+                tileset_path = folder / tileset_name
+                with tileset_path.open('w') as f:
+                    json.dump(tile_root, f)
                 tileset['content'] = {'uri': tileset_name}
 
         return tileset

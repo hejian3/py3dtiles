@@ -93,8 +93,10 @@ def test_convert_las_exception_in_run(tmp_dir):
 
 
 def test_convert_export_folder_already_exists(tmp_dir):
-    Path(tmp_dir).mkdir()
-    assert not os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
+    tmp_dir = Path(tmp_dir)
+
+    tmp_dir.mkdir()
+    assert not (tmp_dir / 'tileset.json').exists()
 
     with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
         convert(os.path.join(fixtures_dir, 'with_srs.las'),
@@ -107,4 +109,4 @@ def test_convert_export_folder_already_exists(tmp_dir):
             overwrite=True,
             srs_out='4978',
             jobs=1)
-    assert os.path.exists(os.path.join(tmp_dir, 'tileset.json'))
+    assert (tmp_dir / 'tileset.json').exists()

@@ -55,7 +55,7 @@ class Worker(Process):
     """
     This class waits from jobs commands from the Zmq socket.
     """
-    def __init__(self, activity_graph, transformer, octree_metadata, folder, write_rgb, verbosity, uri):
+    def __init__(self, activity_graph, transformer, octree_metadata, folder: Path, write_rgb, verbosity, uri):
         super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
@@ -386,7 +386,8 @@ class _Convert:
         self.rgb = rgb
 
         # allow str directly if only one input
-        self.files = [files] if isinstance(files, str) else files
+        self.files = [files] if isinstance(files, str) or isinstance(files, Path) else files
+        self.files = [Path(file) for file in self.files]
 
         self.verbose = verbose
         self.graph = graph
@@ -406,27 +407,26 @@ class _Convert:
             self.progression_log = open('progression.csv', 'w')
 
         # create folder
-        self.out_folder = outfolder
-        out_folder_path = Path(self.out_folder)
-        if out_folder_path.is_dir():
+        self.out_folder = Path(outfolder)
+        if self.out_folder.is_dir():
             if overwrite:
-                shutil.rmtree(out_folder_path, ignore_errors=True)
+                shutil.rmtree(self.out_folder, ignore_errors=True)
             else:
                 raise FileExistsError(f"Folder '{self.out_folder}' already exists")
 
-        out_folder_path.mkdir()
-        self.working_dir = out_folder_path / "tmp"
+        self.out_folder.mkdir()
+        self.working_dir = self.out_folder / "tmp"
         self.working_dir.mkdir(parents=True)
 
         self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.verbose))
-        self.node_store = SharedNodeStore(str(self.working_dir))
+        self.node_store = SharedNodeStore(self.working_dir)
         self.state = State(self.infos['portions'], max(1, self.jobs // 2))
 
     def get_infos(self, color_scale, srs_in, srs_out):
         # read all input files headers and determine the aabb/spacing
         extensions = set()
         for file in self.files:
-            extensions.add(PurePath(file).suffix)
+            extensions.add(file.suffix)
         if len(extensions) != 1:
             raise ValueError("All files should have the same extension, currently there are", extensions)
         extension = extensions.pop()
@@ -563,7 +563,7 @@ class _Convert:
             if self.benchmark:
                 print('{},{},{},{}'.format(
                     self.benchmark,
-                    ','.join([os.path.basename(f) for f in self.files]),
+                    ','.join([f.name for f in self.files]),
                     self.state.points_in_pnts,
                     round(time.time() - self.startup, 1)))
         finally:
@@ -743,7 +743,7 @@ class _Convert:
             np.float32)
         for child in range(8):
             ondisk_tile = name_to_filename(self.out_folder, str(child).encode('ascii'), '.pnts')
-            if os.path.exists(ondisk_tile):
+            if ondisk_tile.exists():
                 tile_content = TileContentReader.read_file(ondisk_tile)
 
                 fth = tile_content.body.feature_table.header
@@ -782,7 +782,7 @@ class _Convert:
             'root': root_tileset,
         }
 
-        tileset_path = Path(self.out_folder) / "tileset.json"
+        tileset_path = self.out_folder / "tileset.json"
         with tileset_path.open('w') as f:
             f.write(json.dumps(tileset))
 
@@ -801,10 +801,10 @@ class _Convert:
         dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
         for pid in self.zmq_manager.activities:
             activity = []
-            filename = 'activity.{}.csv'.format(pid)
+            filename = Path(f'activity.{pid}.csv')
             i = len(self.zmq_manager.activities) - self.zmq_manager.activities.index(pid) - 1
             # activities.index(pid) =
-            with open(filename, 'r') as f:
+            with filename.open() as f:
                 content = f.read().split('\n')
                 for line in content[1:]:
                     line = line.split(',')
@@ -813,19 +813,20 @@ class _Convert:
                         value = int(line[1]) / 3.0
                         activity.append((ts, i + value * 0.9))
 
-            os.remove(filename)
+            filename.unlink()
             if activity:
                 activity.append((activity[-1][0], activity[0][1]))
                 activity.append(activity[0])
                 dateline.add(str(pid), activity, show_dots=False, fill=True)
 
-        with open('progression.csv', 'r') as f:
+        progression_file = Path('progression.csv')
+        with progression_file.open() as f:
             values = []
             for line in f.read().split('\n'):
                 if line:
                     line = line.split(',')
                     values += [(float(line[0]), float(line[1]))]
-        os.remove('progression.csv')
+        progression_file.unlink()
         dateline.add('progression', values, show_dots=False, secondary=True,
                      stroke_style={'width': 2, 'color': 'black'})
 

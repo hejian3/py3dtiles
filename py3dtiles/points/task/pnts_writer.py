@@ -9,7 +9,7 @@ import py3dtiles
 from py3dtiles.points.utils import name_to_filename, ResponseType
 
 
-def points_to_pnts(name, points, out_folder, include_rgb):
+def points_to_pnts(name, points, out_folder: Path, include_rgb):
     count = int(len(points) / (3 * 4 + (3 if include_rgb else 0)))
 
     if count == 0:
@@ -32,7 +32,7 @@ def points_to_pnts(name, points, out_folder, include_rgb):
 
     filename = name_to_filename(out_folder, name, '.pnts')
 
-    if Path(filename).exists():
+    if filename.exists():
         raise FileExistsError(f"{filename} already written")
 
     tile.save_as(filename)
@@ -40,19 +40,19 @@ def points_to_pnts(name, points, out_folder, include_rgb):
     return count, filename
 
 
-def node_to_pnts(name, node, out_folder, include_rgb):
-    points = py3dtiles.points.node.Node.get_points(node, include_rgb)
+def node_to_pnts(name, node, out_folder: Path, include_rgb):
+    points = py3dtiles.points.node.Node.get_points(node, include_rgb)  # type: ignore
     return points_to_pnts(name, points, out_folder, include_rgb)
 
 
-def run(sender, data, node_name, folder, write_rgb):
+def run(sender, data, node_name, folder: Path, write_rgb):
     # we can safely write the .pnts file
     if len(data):
         root = pickle.loads(gzip.decompress(data))
         # print('write ', node_name.decode('ascii'))
         total = 0
         for name in root:
-            node = py3dtiles.points.node.DummyNode(pickle.loads(root[name]))
+            node = py3dtiles.points.node.DummyNode(pickle.loads(root[name]))  # type: ignore
             total += node_to_pnts(name, node, folder, write_rgb)[0]
 
         sender.send_multipart([ResponseType.PNTS_WRITTEN.value, struct.pack('>I', total), node_name])

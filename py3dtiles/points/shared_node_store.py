@@ -1,5 +1,5 @@
 import gc
-import os
+from pathlib import Path
 from sys import getsizeof
 import time
 from typing import Tuple
@@ -10,7 +10,7 @@ from py3dtiles.points.utils import name_to_filename
 
 
 class SharedNodeStore:
-    def __init__(self, folder: str) -> None:
+    def __init__(self, folder: Path) -> None:
         self.metadata = {}
         self.data = []
         self.folder = folder
@@ -54,9 +54,9 @@ class SharedNodeStore:
             self.stats['hit'] += stat_inc
         else:
             filename = name_to_filename(self.folder, name)
-            if os.path.exists(filename):
+            if filename.exists():
                 self.stats['miss'] += stat_inc
-                with open(filename, 'rb') as f:
+                with filename.open('rb') as f:
                     data = f.read()
             else:
                 self.stats['new'] += stat_inc
@@ -68,16 +68,16 @@ class SharedNodeStore:
         meta = self.metadata.pop(name, None)
 
         filename = name_to_filename(self.folder, name)
-        if meta is None:
-            assert os.path.exists(filename), '{} should exist'.format(filename)
+        if meta is None and not filename.exists():
+            raise FileNotFoundError(f"{filename} should exist")
         else:
             self.memory_size['content'] -= getsizeof(meta)
             self.memory_size['content'] -= len(self.data[meta[1]])
             self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
             self.data[meta[1]] = None
 
-        if os.path.exists(filename):
-            os.remove(filename)
+        if filename.exists():
+            filename.unlink()
 
     def put(self, name: bytes, data: bytes) -> None:
         compressed_data = gzip.compress(data)
