@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
-import os
+from pathlib import Path
 import pickle
 from typing import Iterator, List, Tuple, TYPE_CHECKING, Union
 
@@ -14,7 +14,7 @@ from py3dtiles.feature_table import SemanticPoint
 from py3dtiles.points.distance import xyz_to_child_index
 from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.task.pnts_writer import points_to_pnts
-from py3dtiles.points.utils import aabb_size_to_subdivision_type, name_to_filename, node_from_name, SubdivisionType
+from py3dtiles.points.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
 
 if TYPE_CHECKING:
     from py3dtiles.points.node_catalog import NodeCatalog
@@ -207,19 +207,19 @@ class Node:
                    name: bytes,
                    parent_aabb: np.ndarray,
                    parent_spacing: float,
-                   folder: str,
+                   folder: Path,
                    scale: np.ndarray) -> dict:
         node = node_from_name(name, parent_aabb, parent_spacing)
         aabb = node.aabb
-        ondisk_tile = name_to_filename(folder, name, '.pnts')
+        tile_path = node_name_to_path(folder, name, '.pnts')
         xyz = np.array(0)
         rgb = np.array(0)
 
         # Read tile's pnts file, if existing, we'll need it for:
         #   - computing the real AABB (instead of the one based on the octree)
         #   - merging this tile's small (<100 points) children
-        if os.path.exists(ondisk_tile):
-            tile = TileContentReader.read_file(ondisk_tile)
+        if tile_path.exists():
+            tile = TileContentReader.read_file(tile_path)
 
             fth = tile.body.feature_table.header
             xyz = tile.body.feature_table.body.positions_arr
@@ -236,19 +236,20 @@ class Node:
 
         children = []
         tile_needs_rewrite = False
-        if os.path.exists(ondisk_tile):
-            tileset['content'] = {'uri': os.path.relpath(ondisk_tile, folder)}
+        if tile_path.exists():
+            tileset['content'] = {'uri': str(tile_path.relative_to(folder))}
         for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
             child_name = '{}{}'.format(
                 name.decode('ascii'),
-                child).encode('ascii')
-            child_ondisk_tile = name_to_filename(folder, child_name, '.pnts')
+                child
+            ).encode('ascii')
+            child_tile_path = node_name_to_path(folder, child_name, '.pnts')
 
-            if os.path.exists(child_ondisk_tile):
+            if child_tile_path.exists():
                 # See if we should merge this child in tile
                 if len(xyz):
                     # Read pnts content
-                    tile = TileContentReader.read_file(child_ondisk_tile)
+                    tile = TileContentReader.read_file(child_tile_path)
 
                     fth = tile.body.feature_table.header
 
@@ -273,7 +274,7 @@ class Node:
                             [aabb[1], np.max(xyz_float, axis=0)], axis=0)
 
                         tile_needs_rewrite = True
-                        os.remove(child_ondisk_tile)
+                        child_tile_path.unlink()
                         continue
 
                 # Add child to the to-be-processed list if it hasn't been merged
@@ -285,8 +286,8 @@ class Node:
         # If we merged at least one child tile in the current tile
         # the pnts file needs to be rewritten.
         if tile_needs_rewrite:
-            os.remove(ondisk_tile)
-            count, filename = points_to_pnts(name, np.concatenate((xyz, rgb)), folder, len(rgb) != 0)
+            tile_path.unlink()
+            points_to_pnts(name, np.concatenate((xyz, rgb)), folder, len(rgb) != 0)
 
         center = ((aabb[0] + aabb[1]) * 0.5).tolist()
         half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
@@ -316,9 +317,10 @@ class Node:
                     'geometricError': tileset['geometricError'],
                     'root': tileset
                 }
-                tileset_name = 'tileset.{}.json'.format(name.decode('ascii'))
-                with open('{}/{}'.format(folder, tileset_name), 'w') as f:
-                    f.write(json.dumps(tile_root))
+                tileset_name = f"tileset.{name.decode('ascii')}.json"
+                tileset_path = folder / tileset_name
+                with tileset_path.open('w') as f:
+                    json.dump(tile_root, f)
                 tileset['content'] = {'uri': tileset_name}
 
         return tileset

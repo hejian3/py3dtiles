@@ -11,7 +11,7 @@ from py3dtiles import B3dm, GlTF, TileContentReader, TriangleSoup
 class TestTileContentReader(unittest.TestCase):
 
     def test_read(self):
-        tile = TileContentReader.read_file('tests/dragon_low.b3dm')
+        tile = TileContentReader.read_file(Path('tests/dragon_low.b3dm'))
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 47246)
@@ -25,7 +25,7 @@ class TestTileContentReader(unittest.TestCase):
         self.assertDictEqual(gltf_header, tile.body.glTF.header)
 
     def test_read_and_write(self):
-        tile_content = TileContentReader.read_file('tests/data/buildings.b3dm')
+        tile_content = TileContentReader.read_file(Path('tests/data/buildings.b3dm'))
 
         self.assertEqual(tile_content.header.tile_byte_length, 6176)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from pathlib import Path
 
 import numpy as np
 
@@ -19,9 +20,9 @@ class TileContent:
         arr = self.to_array()
         return " ".join("{:02X}".format(x) for x in arr)
 
-    def save_as(self, filename):
+    def save_as(self, path: Path):
         tile_arr = self.to_array()
-        with open(filename, 'bw') as f:
+        with path.open('bw') as f:
             f.write(bytes(tile_arr))
 
     def sync(self):

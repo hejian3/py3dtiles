@@ -42,25 +42,24 @@ class SubdivisionType(Enum):
     QUADTREE = 2
 
 
-def name_to_filename(working_dir: str, nameb: bytes, suffix: str = '', split_len: int = 8) -> str:
+def node_name_to_path(working_dir: Path, name: bytes, suffix: str = '', split_len: int = 8) -> Path:
     """
     Get the filename of a tile from its name and the working directory.
     If the name is '222262175' with the suffix '.pnts', the result is 'working_dir/22226217/r5.pnts'
     """
-    name = nameb.decode('ascii')
-    folder_path = Path(working_dir)
+    name = name.decode('ascii')
     if len(name) <= split_len:
         filename = PurePath("r" + name + suffix)
     else:
         # the name is split on every 'split_len' char to avoid to have too many tiles on the same folder.
         sub_folders = [name[i:i + split_len] for i in range(0, len(name), split_len)]
-        folder_path = folder_path.joinpath(*sub_folders[:-1])
+        working_dir = working_dir.joinpath(*sub_folders[:-1])
         filename = PurePath("r" + sub_folders[-1] + suffix)
 
-    full_path = folder_path / filename
-    folder_path.mkdir(parents=True, exist_ok=True)
+    full_path = working_dir / filename
+    working_dir.mkdir(parents=True, exist_ok=True)
 
-    return str(full_path)
+    return full_path
 
 
 def compute_spacing(aabb: np.ndarray) -> float:

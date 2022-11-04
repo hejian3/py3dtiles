@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
@@ -5,7 +7,7 @@ import pytest
 from py3dtiles.points.distance import is_point_far_enough
 from py3dtiles.points.node import Node
 from py3dtiles.points.points_grid import Grid
-from py3dtiles.points.utils import compute_spacing, name_to_filename
+from py3dtiles.points.utils import compute_spacing, node_name_to_path
 
 # test point
 xyz = np.array([0.25, 0.25, 0.25], dtype=np.float32)
@@ -75,25 +77,25 @@ def test_is_point_far_enough_perf(benchmark):
     benchmark(is_point_far_enough, sample_points, xyz, 0.25 ** 2)
 
 
-def test_short_name_to_filename():
+def test_short_name_to_path():
     short_tile_name = ''.encode("ascii")
-    filename = name_to_filename('work/', short_tile_name)
-    assert filename == 'work/r'
+    path = node_name_to_path(Path('work'), short_tile_name)
+    assert str(path) == 'work/r'
 
 
-def test_long_name_to_filename():
+def test_long_name_to_path():
     long_tile_name = '110542453782'.encode("ascii")
-    filename = name_to_filename('work/', long_tile_name)
-    assert filename == 'work/11054245/r3782'
+    path = node_name_to_path(Path('work'), long_tile_name)
+    assert str(path) == 'work/11054245/r3782'
 
 
-def test_long_name_to_filename_with_extension():
+def test_long_name_to_path_with_extension():
     long_tile_name = '110542453782'.encode("ascii")
-    filename = name_to_filename('work/', long_tile_name, suffix='.pnts')
-    assert filename == 'work/11054245/r3782.pnts'
+    path = node_name_to_path(Path('work'), long_tile_name, suffix='.pnts')
+    assert str(path) == 'work/11054245/r3782.pnts'
 
 
-def test_long_name_to_filename_with_short_split():
+def test_long_name_to_path_with_short_split():
     long_tile_name = '110542453782'.encode("ascii")
-    filename = name_to_filename('work/', long_tile_name, split_len=2)
-    assert filename == 'work/11/05/42/45/37/r82'
+    path = node_name_to_path(Path('work'), long_tile_name, split_len=2)
+    assert str(path) == 'work/11/05/42/45/37/r82'

@@ -1,15 +1,16 @@
 from pathlib import Path
 import pickle
 import struct
+from typing import Tuple, Union
 
 import lz4.frame as gzip
 import numpy as np
 
 import py3dtiles
-from py3dtiles.points.utils import name_to_filename, ResponseType
+from py3dtiles.points.utils import node_name_to_path, ResponseType
 
 
-def points_to_pnts(name, points, out_folder, include_rgb):
+def points_to_pnts(name, points, out_folder: Path, include_rgb) -> Tuple[int, Union[Path, None]]:
     count = int(len(points) / (3 * 4 + (3 if include_rgb else 0)))
 
     if count == 0:
@@ -30,22 +31,22 @@ def points_to_pnts(name, points, out_folder, include_rgb):
     tile.header = py3dtiles.pnts.PntsHeader()
     tile.header.sync(body)
 
-    filename = name_to_filename(out_folder, name, '.pnts')
+    node_path = node_name_to_path(out_folder, name, '.pnts')
 
-    if Path(filename).exists():
-        raise FileExistsError(f"{filename} already written")
+    if node_path.exists():
+        raise FileExistsError(f"{node_path} already written")
 
-    tile.save_as(filename)
+    tile.save_as(node_path)
 
-    return count, filename
+    return count, node_path
 
 
-def node_to_pnts(name, node, out_folder, include_rgb):
+def node_to_pnts(name, node, out_folder: Path, include_rgb):
     points = py3dtiles.points.node.Node.get_points(node, include_rgb)
     return points_to_pnts(name, points, out_folder, include_rgb)
 
 
-def run(sender, data, node_name, folder, write_rgb):
+def run(sender, data, node_name, folder: Path, write_rgb):
     # we can safely write the .pnts file
     if len(data):
         root = pickle.loads(gzip.decompress(data))

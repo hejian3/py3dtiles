@@ -1,16 +1,16 @@
 import gc
-import os
+from pathlib import Path
 from sys import getsizeof
 import time
 from typing import Tuple
 
 import lz4.frame as gzip
 
-from py3dtiles.points.utils import name_to_filename
+from py3dtiles.points.utils import node_name_to_path
 
 
 class SharedNodeStore:
-    def __init__(self, folder: str) -> None:
+    def __init__(self, folder: Path) -> None:
         self.metadata = {}
         self.data = []
         self.folder = folder
@@ -53,10 +53,10 @@ class SharedNodeStore:
             data = self.data[metadata[1]]
             self.stats['hit'] += stat_inc
         else:
-            filename = name_to_filename(self.folder, name)
-            if os.path.exists(filename):
+            node_path = node_name_to_path(self.folder, name)
+            if node_path.exists():
                 self.stats['miss'] += stat_inc
-                with open(filename, 'rb') as f:
+                with node_path.open('rb') as f:
                     data = f.read()
             else:
                 self.stats['new'] += stat_inc
@@ -67,17 +67,17 @@ class SharedNodeStore:
     def remove(self, name: bytes) -> None:
         meta = self.metadata.pop(name, None)
 
-        filename = name_to_filename(self.folder, name)
-        if meta is None:
-            assert os.path.exists(filename), '{} should exist'.format(filename)
+        node_path = node_name_to_path(self.folder, name)
+        if meta is None and not node_path.exists():
+            raise FileNotFoundError(f"{node_path} should exist")
         else:
             self.memory_size['content'] -= getsizeof(meta)
             self.memory_size['content'] -= len(self.data[meta[1]])
             self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
             self.data[meta[1]] = None
 
-        if os.path.exists(filename):
-            os.remove(filename)
+        if node_path.exists():
+            node_path.unlink()
 
     def put(self, name: bytes, data: bytes) -> None:
         compressed_data = gzip.compress(data)
@@ -117,8 +117,8 @@ def _remove_all(store: SharedNodeStore) -> Tuple[int, int]:
     bytes_written = 0
     for name, meta in store.metadata.items():
         data = store.data[meta[1]]
-        filename = name_to_filename(store.folder, name)
-        with open(filename, 'wb') as f:
+        node_path = node_name_to_path(store.folder, name)
+        with node_path.open('wb') as f:
             bytes_written += f.write(data)
 
     store.metadata = {}

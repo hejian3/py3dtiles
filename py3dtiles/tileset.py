@@ -34,7 +34,7 @@ class TileSet(Extendable):
             "description": comment
         }
 
-    def write_to_directory(self, directory: Union[str, Path]) -> None:
+    def write_to_directory(self, directory: Path) -> None:
         """
         Write (or overwrite), to the directory whose name is provided, the
         TileSet that is:
@@ -43,7 +43,7 @@ class TileSet(Extendable):
         :param directory: the target directory name
         """
         # Create the output directory
-        target_dir = Path(directory).expanduser()
+        target_dir = directory.expanduser()
         tiles_dir = target_dir / 'tiles'
         tiles_dir.mkdir(parents=True, exist_ok=True)
 
@@ -61,7 +61,7 @@ class TileSet(Extendable):
         for tile in all_tiles:
             tile.write_content(directory)
 
-    def write_as_json(self, directory: Union[str, Path]) -> None:
+    def write_as_json(self, directory: Path) -> None:
         """
         Write the tileset as a JSON file.
         :param directory: the target directory name
@@ -69,7 +69,7 @@ class TileSet(Extendable):
         # Make sure the TileSet is aligned with its children Tiles.
         self.root_tile.sync_bounding_volume_with_children()
 
-        tileset_path = Path(directory) / 'tileset.json'
+        tileset_path = directory / 'tileset.json'
         with tileset_path.open('w') as f:
             f.write(self.to_json())
 

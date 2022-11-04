@@ -11,9 +11,9 @@ from py3dtiles.points.transformations import inverse_matrix
 from py3dtiles.points.utils import split_aabb
 
 
-def _get_root_tile(tileset: dict, filename: Path) -> TileContent:
-    pnts_filename = filename.parent / tileset['root']['content']['uri']
-    return TileContentReader.read_file(pnts_filename)
+def _get_root_tile(tileset: dict, root_tile_path: Path) -> TileContent:
+    pnts_path = root_tile_path.parent / tileset['root']['content']['uri']
+    return TileContentReader.read_file(pnts_path)
 
 
 def _get_root_transform(tileset: dict) -> np.ndarray:
@@ -52,18 +52,18 @@ def _get_tile_points(tile, tile_transform, out_transform):
     return xyzw[:, 0:3].astype(np.float32), rgb
 
 
-def init(files: List[Path]) -> dict:
+def init(tilset_paths: List[Path]) -> dict:
     aabb = None
     total_point_count = 0
     tilesets = []
     transforms = []
 
     idx = 0
-    for filename in files:
-        with filename.open('r') as f:
+    for tileset_path in tilset_paths:
+        with tileset_path.open() as f:
             tileset = json.load(f)
 
-            tile = _get_root_tile(tileset, filename)
+            tile = _get_root_tile(tileset, tileset_path)
             fth = tile.body.feature_table.header
 
             # apply transformation
@@ -81,7 +81,7 @@ def init(files: List[Path]) -> dict:
             total_point_count += fth.points_length
 
             tileset['id'] = idx
-            tileset['filename'] = str(filename)
+            tileset['filename'] = str(tileset_path)
             tileset['center'] = ((bbox[0] + bbox[1]) * 0.5)
             tilesets += [tileset]
 
@@ -218,12 +218,12 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             union_aabb[0] = np.minimum(union_aabb[0], ab[0])
             union_aabb[1] = np.maximum(union_aabb[1], ab[1])
 
-        _, filename = points_to_pnts(
+        _, pnts_path = points_to_pnts(
             name.encode('ascii'),
             np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
-            str(out_folder),
+            out_folder,
             rgb.shape[0] > 0)
-        result['content'] = {'uri': str(Path(filename).relative_to(out_folder))}
+        result['content'] = {'uri': str(pnts_path.relative_to(out_folder)) if pnts_path else ""}
         result['geometricError'] = max([t['root']['geometricError'] for t in insides]) / ratio
         result['boundingVolume'] = _3dtiles_bounding_box_from_aabb(union_aabb, inv_base_transform)
 
@@ -244,12 +244,12 @@ def extract_content_uris(tileset):
     return contents
 
 
-def remove_tileset(tileset_filename: Path) -> None:
-    with tileset_filename.open() as f:
+def remove_tileset(tilset_path: Path) -> None:
+    with tilset_path.open() as f:
         tileset = json.load(f)
 
     contents = [
-        tileset_filename.parent / content
+        tilset_path.parent / content
         for content in extract_content_uris(tileset)
     ]
 
@@ -259,7 +259,7 @@ def remove_tileset(tileset_filename: Path) -> None:
         elif content.suffix != '.json':
             raise ValueError(f'unknown extension {content.suffix}')
 
-    tileset_filename.unlink()
+    tilset_path.unlink()
 
 
 def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -> None:
