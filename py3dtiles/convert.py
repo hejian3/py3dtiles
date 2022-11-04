@@ -763,8 +763,8 @@ class _Convert:
         pnts_writer.node_to_pnts(''.encode('ascii'), root_node, self.out_folder, self.rgb)
 
         executor = concurrent.futures.ProcessPoolExecutor()
-        root_tileset = Node.to_tileset(executor, ''.encode('ascii'), self.root_aabb, self.root_spacing,
-                                       self.out_folder, self.root_scale)
+        root_node = Node.from_name(''.encode('ascii'), self.root_aabb, self.root_spacing)  # do you want the spacing divide by 2 ???
+        root_tileset = root_node.to_tileset(executor, self.out_folder, self.root_scale)
         executor.shutdown()
 
         root_tileset['transform'] = transform.T.reshape(16).tolist()

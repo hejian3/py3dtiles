@@ -102,10 +102,3 @@ def make_aabb_cubic(aabb):
     aabb[1][2] = aabb[0][2] + s
     return aabb
 
-
-def node_from_name(name, parent_aabb, parent_spacing):
-    from .node import Node
-    spacing = parent_spacing * 0.5
-    aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
-    #  let's build a new Node
-    return Node(name, aabb, spacing)

@@ -14,14 +14,15 @@ from py3dtiles.feature_table import SemanticPoint
 from py3dtiles.points.distance import xyz_to_child_index
 from py3dtiles.points.points_grid import Grid
 from py3dtiles.points.task.pnts_writer import points_to_pnts
-from py3dtiles.points.utils import aabb_size_to_subdivision_type, name_to_filename, node_from_name, SubdivisionType
+from py3dtiles.points.utils import aabb_size_to_subdivision_type, name_to_filename, split_aabb, SubdivisionType
 
 if TYPE_CHECKING:
     from py3dtiles.points.node_catalog import NodeCatalog
 
 
 def node_to_tileset(args):
-    return Node.to_tileset(None, args[0], args[1], args[2], args[3], args[4])
+    node = Node.from_name(args[0], args[1], args[2])
+    return node.to_tileset(None, args[3], args[4])
 
 
 class DummyNode:
@@ -56,6 +57,12 @@ class Node:
         self.serialized_at = None
         self.points = []
         self.dirty = False
+
+    @classmethod
+    def from_name(cls, name, parent_aabb, parent_spacing):
+        spacing = parent_spacing * 0.5
+        aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
+        return cls(name, aabb, spacing)
 
     def save_to_bytes(self) -> bytes:
         sub_pickle = {}
@@ -202,16 +209,13 @@ class Node:
         else:
             return data.grid.get_points(include_rgb)
 
-    @staticmethod
-    def to_tileset(executor: Union[concurrent.futures.ProcessPoolExecutor, None],
-                   name: bytes,
-                   parent_aabb: np.ndarray,
-                   parent_spacing: float,
+    def to_tileset(self,
+                   executor: Union[concurrent.futures.ProcessPoolExecutor, None],
                    folder: str,
                    scale: np.ndarray) -> dict:
-        node = node_from_name(name, parent_aabb, parent_spacing)
-        aabb = node.aabb
-        ondisk_tile = name_to_filename(folder, name, '.pnts')
+
+        aabb = self.aabb
+        ondisk_tile = name_to_filename(folder, self.name, '.pnts')
         xyz = np.array(0)
         rgb = np.array(0)
 
@@ -232,7 +236,7 @@ class Node:
                 np.amax(xyz_float, axis=0)])
 
         # geometricError is in meters, so we divide it by the scale
-        tileset = {'geometricError': 10 * node.spacing / scale[0]}
+        tileset = {'geometricError': 10 * self.spacing / scale[0]}
 
         children = []
         tile_needs_rewrite = False
@@ -240,7 +244,7 @@ class Node:
             tileset['content'] = {'uri': os.path.relpath(ondisk_tile, folder)}
         for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
             child_name = '{}{}'.format(
-                name.decode('ascii'),
+                self.name.decode('ascii'),
                 child).encode('ascii')
             child_ondisk_tile = name_to_filename(folder, child_name, '.pnts')
 
@@ -278,15 +282,19 @@ class Node:
 
                 # Add child to the to-be-processed list if it hasn't been merged
                 if executor is not None:
-                    children += [(child_name, node.aabb, node.spacing, folder, scale)]
+                    children += [(child_name, self.aabb, self.spacing, folder, scale)]
                 else:
-                    children += [Node.to_tileset(None, child_name, node.aabb, node.spacing, folder, scale)]
+                    node = Node.from_name(child_name, self.aabb, self.spacing)
+                    children.append(node.to_tileset(None, folder, scale))
+
+        if executor is not None:
+            children = [t for t in executor.map(node_to_tileset, children)]
 
         # If we merged at least one child tile in the current tile
         # the pnts file needs to be rewritten.
         if tile_needs_rewrite:
             os.remove(ondisk_tile)
-            count, filename = points_to_pnts(name, np.concatenate((xyz, rgb)), folder, len(rgb) != 0)
+            points_to_pnts(self.name, np.concatenate((xyz, rgb)), folder, len(rgb) != 0)
 
         center = ((aabb[0] + aabb[1]) * 0.5).tolist()
         half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
@@ -298,15 +306,13 @@ class Node:
                 0, 0, half_size[2]]
         }
 
-        if executor is not None:
-            children = [t for t in executor.map(node_to_tileset, children)]
 
         if children:
             tileset['children'] = children
         else:
             tileset['geometricError'] = 0.0
 
-        if len(name) > 0 and children:
+        if len(self.name) > 0 and children:
             if len(json.dumps(tileset)) > 100000:
                 tile_root = {
                     'asset': {
@@ -316,7 +322,7 @@ class Node:
                     'geometricError': tileset['geometricError'],
                     'root': tileset
                 }
-                tileset_name = 'tileset.{}.json'.format(name.decode('ascii'))
+                tileset_name = 'tileset.{}.json'.format(self.name.decode('ascii'))
                 with open('{}/{}'.format(folder, tileset_name), 'w') as f:
                     f.write(json.dumps(tile_root))
                 tileset['content'] = {'uri': tileset_name}
