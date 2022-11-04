@@ -321,6 +321,8 @@ def init_parser(subparser):
         help='Overwrite the output folder if it already exists.'
     )
 
+    return parser
+
 
 def main(args):
     return merge(args.folder, args.overwrite, args.verbose)

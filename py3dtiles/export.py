@@ -331,6 +331,8 @@ def init_parser(subparser):
     i_help = "Id column name (only with '-D')"
     parser.add_argument('-i', metavar='IDCOLUMN', type=str, help=i_help)
 
+    return parser
+
 
 def main(args):
     if args.D is not None:

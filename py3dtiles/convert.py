@@ -868,7 +868,6 @@ class _Convert:
 
 
 def init_parser(subparser):
-
     parser = subparser.add_parser(
         'convert',
         help='Convert .las files to a 3dtiles tileset.',
@@ -916,6 +915,8 @@ def init_parser(subparser):
     parser.add_argument(
         '--color_scale',
         help='Force color scale', type=float)
+
+    return parser
 
 
 def main(args):

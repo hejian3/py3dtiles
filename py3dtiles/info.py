@@ -81,3 +81,5 @@ def init_parser(subparser):
     parser = subparser.add_parser('info', help='Extract informations from a 3DTiles file')
 
     parser.add_argument('filename', type=str)
+
+    return parser
