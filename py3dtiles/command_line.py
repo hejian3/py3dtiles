@@ -6,16 +6,6 @@ import py3dtiles.info as info
 import py3dtiles.merger as merger
 
 
-# https://stackoverflow.com/a/43357954
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
 def main():
     parser = argparse.ArgumentParser(
         description='Read/write 3dtiles files',
@@ -27,9 +17,9 @@ def main():
     sub_parsers = parser.add_subparsers(dest='command')
 
     # init subparsers
-    convert.init_parser(sub_parsers, str2bool)
-    info.init_parser(sub_parsers, str2bool)
-    merger.init_parser(sub_parsers, str2bool)
+    convert.init_parser(sub_parsers)
+    info.init_parser(sub_parsers)
+    merger.init_parser(sub_parsers)
     export.init_parser(sub_parsers)
 
     args = parser.parse_args()

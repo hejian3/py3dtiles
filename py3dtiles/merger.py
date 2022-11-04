@@ -309,7 +309,7 @@ def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -
         json.dump(tileset, f)
 
 
-def init_parser(subparser, str2bool):
+def init_parser(subparser):
     parser = subparser.add_parser('merge', help='Merge several pointcloud tilesets in 1 tileset')
     parser.add_argument(
         'folder',

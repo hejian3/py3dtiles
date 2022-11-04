@@ -76,7 +76,7 @@ def main(args):
         raise RuntimeError("Unsupported format " + magic)
 
 
-def init_parser(subparser, str2bool):
+def init_parser(subparser):
     # arg parse
     parser = subparser.add_parser('info', help='Extract informations from a 3DTiles file')
 

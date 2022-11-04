@@ -867,7 +867,7 @@ class _Convert:
                   flush=True)
 
 
-def init_parser(subparser, str2bool):
+def init_parser(subparser):
 
     parser = subparser.add_parser(
         'convert',
@@ -885,8 +885,7 @@ def init_parser(subparser, str2bool):
     parser.add_argument(
         '--overwrite',
         help='Delete and recreate the ouput folder if it already exists. WARNING: be careful, there will be no confirmation!',
-        default=False,
-        type=str2bool)
+        action='store_true')
     parser.add_argument(
         '--jobs',
         help='The number of parallel jobs to start. Default to the number of cpu.',
@@ -909,11 +908,11 @@ def init_parser(subparser, str2bool):
         '--benchmark',
         help='Print summary at the end of the process', type=str)
     parser.add_argument(
-        '--rgb',
-        help='Export rgb attributes', type=str2bool, default=True)
+        '--no-rgb',
+        help="Don't export rgb attributes", action='store_true')
     parser.add_argument(
         '--graph',
-        help='Produce debug graphes (requires pygal)', type=str2bool, default=False)
+        help='Produce debug graphes (requires pygal)', action='store_true')
     parser.add_argument(
         '--color_scale',
         help='Force color scale', type=float)
@@ -930,7 +929,7 @@ def main(args):
                        srs_in=args.srs_in,
                        fraction=args.fraction,
                        benchmark=args.benchmark,
-                       rgb=args.rgb,
+                       rgb=not args.no_rgb,
                        graph=args.graph,
                        color_scale=args.color_scale,
                        verbose=args.verbose)
