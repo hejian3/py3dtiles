@@ -1,7 +1,9 @@
 import json
 import struct
+from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 
 from .batch_table import BatchTable
 from .gltf import GlTF
@@ -9,23 +11,8 @@ from .tile_content import TileContent, TileContentBody, TileContentHeader, TileC
 
 
 class B3dm(TileContent):
-
     @classmethod
-    def from_glTF(cls, gltf, bt=None):
-        """
-        Parameters
-        ----------
-        gltf : GlTF
-            glTF object representing a set of objects
-
-        bt : Batch Table (optional)
-            BatchTable object containing per-feature metadata
-
-        Returns
-        -------
-        tile : TileContent
-        """
-
+    def from_glTF(cls, gltf: GlTF, bt: Optional[BatchTable] = None) -> "B3dm":
         tb = B3dmBody()
         tb.glTF = gltf
         tb.batch_table = bt
@@ -40,17 +27,7 @@ class B3dm(TileContent):
         return t
 
     @classmethod
-    def from_array(cls, array):
-        """
-        Parameters
-        ----------
-        array : numpy.array
-
-        Returns
-        -------
-        t : TileContent
-        """
-
+    def from_array(cls, array: npt.ArrayLike) -> "B3dm":
         # build tile header
         h_arr = array[0:B3dmHeader.BYTELENGTH]
         h = B3dmHeader.from_array(h_arr)
@@ -84,7 +61,7 @@ class B3dmHeader(TileContentHeader):
         self.bt_bin_byte_length = 0
         self.bt_length = 0  # number of models in the batch
 
-    def to_array(self):
+    def to_array(self) -> np.ndarray:
         header_arr = np.frombuffer(self.magic_value, np.uint8)
 
         header_arr2 = np.array([self.version,
@@ -96,7 +73,7 @@ class B3dmHeader(TileContentHeader):
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
 
-    def sync(self, body):
+    def sync(self, body: "B3dmBody") -> None:
         """
         Allow to synchronize headers with contents.
         """
@@ -118,17 +95,7 @@ class B3dmHeader(TileContentHeader):
             self.bt_json_byte_length = len(bth_arr)
 
     @classmethod
-    def from_array(cls, array):
-        """
-        Parameters
-        ----------
-        array : numpy.array
-
-        Returns
-        -------
-        h : TileContentHeader
-        """
-
+    def from_array(cls, array: npt.ArrayLike) -> "B3dmHeader":
         h = cls()
 
         if len(array) != B3dmHeader.BYTELENGTH:
@@ -152,7 +119,7 @@ class B3dmBody(TileContentBody):
         self.batch_table = BatchTable()
         self.glTF = GlTF()
 
-    def to_array(self):
+    def to_array(self) -> np.ndarray:
         # TODO : export feature table
         array = self.glTF.to_array()
         if self.batch_table is not None:
@@ -160,19 +127,7 @@ class B3dmBody(TileContentBody):
         return array
 
     @classmethod
-    def from_glTF(cls, glTF):
-        """
-        Parameters
-        ----------
-        th : TileContentHeader
-
-        glTF : GlTF
-
-        Returns
-        -------
-        b : TileContentBody
-        """
-
+    def from_glTF(cls, glTF: GlTF) -> TileContentBody:
         # build tile body
         b = cls()
         b.glTF = glTF
@@ -180,19 +135,7 @@ class B3dmBody(TileContentBody):
         return b
 
     @classmethod
-    def from_array(cls, th, array):
-        """
-        Parameters
-        ----------
-        th : TileContentHeader
-
-        array : numpy.array
-
-        Returns
-        -------
-        b : TileContentBody
-        """
-
+    def from_array(cls, th: B3dmHeader, array: npt.ArrayLike) -> TileContentBody:
         # build feature table
         ft_len = th.ft_json_byte_length + th.ft_bin_byte_length
 
