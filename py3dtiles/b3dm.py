@@ -10,8 +10,8 @@ from .tile_content import TileContent, TileContentBody, TileContentHeader, TileC
 
 class B3dm(TileContent):
 
-    @staticmethod
-    def from_glTF(gltf, bt=None):
+    @classmethod
+    def from_glTF(cls, gltf, bt=None):
         """
         Parameters
         ----------
@@ -33,14 +33,14 @@ class B3dm(TileContent):
         th = B3dmHeader()
         th.sync(tb)
 
-        t = TileContent()
+        t = cls()
         t.body = tb
         t.header = th
 
         return t
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -63,7 +63,7 @@ class B3dm(TileContent):
         b = B3dmBody.from_array(h, b_arr)
 
         # build TileContent with header and body
-        t = TileContent()
+        t = cls()
         t.header = h
         t.body = b
 
@@ -117,8 +117,8 @@ class B3dmHeader(TileContentHeader):
             self.tile_byte_length += len(bth_arr)
             self.bt_json_byte_length = len(bth_arr)
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -129,7 +129,7 @@ class B3dmHeader(TileContentHeader):
         h : TileContentHeader
         """
 
-        h = B3dmHeader()
+        h = cls()
 
         if len(array) != B3dmHeader.BYTELENGTH:
             raise RuntimeError("Invalid header length")
@@ -159,8 +159,8 @@ class B3dmBody(TileContentBody):
             array = np.concatenate((self.batch_table.to_array(), array))
         return array
 
-    @staticmethod
-    def from_glTF(glTF):
+    @classmethod
+    def from_glTF(cls, glTF):
         """
         Parameters
         ----------
@@ -174,13 +174,13 @@ class B3dmBody(TileContentBody):
         """
 
         # build tile body
-        b = B3dmBody()
+        b = cls()
         b.glTF = glTF
 
         return b
 
-    @staticmethod
-    def from_array(th, array):
+    @classmethod
+    def from_array(cls, th, array):
         """
         Parameters
         ----------
@@ -206,7 +206,7 @@ class B3dmBody(TileContentBody):
         glTF = GlTF.from_array(glTF_arr)
 
         # build tile body with batch table
-        b = B3dmBody()
+        b = cls()
         b.glTF = glTF
         if th.bt_json_byte_length > 0:
             b.batch_table.header = json.loads(array[0:th.bt_json_byte_length].tobytes().decode('utf-8'))

@@ -10,8 +10,8 @@ class TriangleSoup:
     def __init__(self):
         self.triangles = []
 
-    @staticmethod
-    def from_wkb_multipolygon(wkb, associated_data=None):
+    @classmethod
+    def from_wkb_multipolygon(cls, wkb, associated_data=None):
         """
         Parameters
         ----------
@@ -42,7 +42,7 @@ class TriangleSoup:
             for array, tri in zip(triangles_array, triangles):
                 array += tri
 
-        ts = TriangleSoup()
+        ts = cls()
         ts.triangles = triangles_array
 
         return ts

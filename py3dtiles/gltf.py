@@ -40,8 +40,8 @@ class GlTF:
                                self.body,
                                padding))
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -52,7 +52,7 @@ class GlTF:
         glTF : GlTf
         """
 
-        glTF = GlTF()
+        glTF = cls()
 
         if struct.unpack("4s", array[0:4])[0] != b"glTF":
             raise RuntimeError("Array does not contain a binary glTF")
@@ -78,8 +78,8 @@ class GlTF:
 
         return glTF
 
-    @staticmethod
-    def from_binary_arrays(arrays, transform, batched=True, uri=None, texture_uri=None):
+    @classmethod
+    def from_binary_arrays(cls, arrays, transform, batched=True, uri=None, texture_uri=None):
         """
         Parameters
         ----------
@@ -99,7 +99,7 @@ class GlTF:
         glTF : GlTF
         """
 
-        glTF = GlTF()
+        glTF = cls()
 
         textured = 'uv' in arrays[0]
         bin_vertices = []

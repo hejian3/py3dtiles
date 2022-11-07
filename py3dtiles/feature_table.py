@@ -21,9 +21,9 @@ class Feature:
 
         return [pos_arr, col_arr]
 
-    @staticmethod
-    def from_values(x, y, z, red=None, green=None, blue=None):
-        f = Feature()
+    @classmethod
+    def from_values(cls, x, y, z, red=None, green=None, blue=None):
+        f = cls()
 
         f.positions = {'X': x, 'Y': y, 'Z': z}
 
@@ -34,8 +34,8 @@ class Feature:
 
         return f
 
-    @staticmethod
-    def from_array(positions_dtype, positions, colors_dtype=None, colors=None):
+    @classmethod
+    def from_array(cls, positions_dtype, positions, colors_dtype=None, colors=None):
         """
         Parameters
         ----------
@@ -54,7 +54,7 @@ class Feature:
         f : Feature
         """
 
-        f = Feature()
+        f = cls()
 
         # extract positions
         f.positions = {}
@@ -142,8 +142,8 @@ class FeatureTableHeader:
 
         return jsond
 
-    @staticmethod
-    def from_dtype(positions_dtype, colors_dtype, nb_points):
+    @classmethod
+    def from_dtype(cls, positions_dtype, colors_dtype, nb_points):
         """
         Parameters
         ----------
@@ -158,7 +158,7 @@ class FeatureTableHeader:
         fth : FeatureTableHeader
         """
 
-        fth = FeatureTableHeader()
+        fth = cls()
         fth.points_length = nb_points
 
         # search positions
@@ -203,8 +203,8 @@ class FeatureTableHeader:
 
         return fth
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -218,7 +218,7 @@ class FeatureTableHeader:
         """
 
         jsond = json.loads(array.tobytes().decode('utf-8'))
-        fth = FeatureTableHeader()
+        fth = cls()
 
         # search position
         if "POSITION" in jsond:
@@ -286,10 +286,10 @@ class FeatureTableBody:
 
         return arr
 
-    @staticmethod
-    def from_features(fth, features):
+    @classmethod
+    def from_features(cls, fth, features):
 
-        b = FeatureTableBody()
+        b = cls()
 
         # extract positions
         b.positions_itemsize = fth.positions_dtype.itemsize
@@ -307,8 +307,8 @@ class FeatureTableBody:
 
         return b
 
-    @staticmethod
-    def from_array(fth, array):
+    @classmethod
+    def from_array(cls, fth, array):
         """
         Parameters
         ----------
@@ -321,7 +321,7 @@ class FeatureTableBody:
         ftb : FeatureTableBody
         """
 
-        b = FeatureTableBody()
+        b = cls()
 
         nb_points = fth.points_length
 
@@ -365,8 +365,8 @@ class FeatureTable:
         ftb_arr = self.body.to_array()
         return np.concatenate((fth_arr, ftb_arr))
 
-    @staticmethod
-    def from_array(th, array):
+    @classmethod
+    def from_array(cls, th, array):
         """
         Parameters
         ----------
@@ -390,14 +390,14 @@ class FeatureTable:
         ftb = FeatureTableBody.from_array(fth, ftb_arr)
 
         # build feature table
-        ft = FeatureTable()
+        ft = cls()
         ft.header = fth
         ft.body = ftb
 
         return ft
 
-    @staticmethod
-    def from_features(pdtype, cdtype, features):
+    @classmethod
+    def from_features(cls, pdtype, cdtype, features):
         """
         pdtype : numpy.dtype
             Numpy description for positions.
@@ -415,7 +415,7 @@ class FeatureTable:
         fth = FeatureTableHeader.from_dtype(pdtype, cdtype, len(features))
         ftb = FeatureTableBody.from_features(fth, features)
 
-        ft = FeatureTable()
+        ft = cls()
         ft.header = fth
         ft.body = ftb
 

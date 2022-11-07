@@ -26,13 +26,13 @@ def convert_to_ecef(x, y, z, epsg_input):
 
 class TileContentReader:
 
-    @staticmethod
-    def read_file(tile_path: Path) -> TileContent:
+    @classmethod
+    def read_file(cls, tile_path: Path) -> TileContent:
         with tile_path.open('rb') as f:
             data = f.read()
             arr = np.frombuffer(data, dtype=np.uint8)
 
-            tile_content = TileContentReader.read_array(arr)
+            tile_content = cls.read_array(arr)
             if tile_content is None or tile_content.header is None:
                 raise ValueError(f"The file {tile_path} doesn't contain a valid TileContent data.")
 

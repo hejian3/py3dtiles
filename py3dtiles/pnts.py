@@ -8,8 +8,8 @@ from .tile_content import TileContent, TileContentBody, TileContentHeader, TileC
 
 class Pnts(TileContent):
 
-    @staticmethod
-    def from_features(pd_type, cd_type, features):
+    @classmethod
+    def from_features(cls, pd_type, cd_type, features):
         """
         Parameters
         ----------
@@ -30,14 +30,14 @@ class Pnts(TileContent):
 
         th = PntsHeader()
 
-        t = TileContent()
+        t = cls()
         t.body = tb
         t.header = th
 
         return t
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -61,7 +61,7 @@ class Pnts(TileContent):
         b = PntsBody.from_array(h, b_arr)
 
         # build TileContent with header and body
-        t = TileContent()
+        t = cls()
         t.header = h
         t.body = b
 
@@ -108,8 +108,8 @@ class PntsHeader(TileContentHeader):
         self.ft_json_byte_length = len(fth_arr)
         self.ft_bin_byte_length = len(ftb_arr)
 
-    @staticmethod
-    def from_array(array):
+    @classmethod
+    def from_array(cls, array):
         """
         Parameters
         ----------
@@ -120,9 +120,9 @@ class PntsHeader(TileContentHeader):
         h : TileContentHeader
         """
 
-        h = PntsHeader()
+        h = cls()
 
-        if len(array) != PntsHeader.BYTE_LENGTH:
+        if len(array) != cls.BYTE_LENGTH:
             raise RuntimeError("Invalid header length")
 
         h.magic_value = "pnts"
@@ -146,8 +146,8 @@ class PntsBody(TileContentBody):
     def to_array(self):
         return self.feature_table.to_array()
 
-    @staticmethod
-    def from_array(th, array):
+    @classmethod
+    def from_array(cls, th, array):
         """
         Parameters
         ----------
@@ -171,7 +171,7 @@ class PntsBody(TileContentBody):
         # bt = BatchTable.from_array(th, bt_arr)
 
         # build tile body with feature table
-        b = PntsBody()
+        b = cls()
         b.feature_table = ft
 
         return b
