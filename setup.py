@@ -23,7 +23,6 @@ dev_requirements = (
     'flake8-import-order',
     'flake8-bugbear',
     'pytype',
-    'py',
     'pytest',
     'pytest-cov',
     'pytest-benchmark',
