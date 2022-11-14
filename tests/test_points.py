@@ -4,10 +4,9 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from py3dtiles.points.distance import is_point_far_enough
-from py3dtiles.points.node import Node
-from py3dtiles.points.points_grid import Grid
-from py3dtiles.points.utils import compute_spacing, node_name_to_path
+from py3dtiles.tilers.node import Grid,Node
+from py3dtiles.tilers.node.distance import is_point_far_enough
+from py3dtiles.utils import compute_spacing, node_name_to_path
 
 # test point
 xyz = np.array([0.25, 0.25, 0.25], dtype=np.float32)

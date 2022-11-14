@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pytest
 
-from py3dtiles import wkb_utils
+from py3dtiles.tilers.b3dm import wkb_utils
 
 
 @pytest.fixture

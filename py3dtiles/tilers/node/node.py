@@ -8,16 +8,16 @@ from typing import Iterator, TYPE_CHECKING
 
 import numpy as np
 
-from py3dtiles import TileContentReader
-from py3dtiles.constants import MIN_POINT_SIZE
-from py3dtiles.feature_table import SemanticPoint
-from py3dtiles.points.distance import xyz_to_child_index
-from py3dtiles.points.points_grid import Grid
-from py3dtiles.points.task.pnts_writer import points_to_pnts
-from py3dtiles.points.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
+from py3dtiles.tilers.pnts import MIN_POINT_SIZE
+from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
+from py3dtiles.tileset.feature_table import SemanticPoint
+from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
+from .distance import xyz_to_child_index
+from .points_grid import Grid
 
 if TYPE_CHECKING:
-    from py3dtiles.points.node_catalog import NodeCatalog
+    from .node_catalog import NodeCatalog
 
 
 def node_to_tileset(args):

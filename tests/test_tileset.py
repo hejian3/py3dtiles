@@ -1,6 +1,9 @@
 import unittest
 
-from py3dtiles import BoundingVolumeBox, Extension, Tile, TileSet
+from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
+from py3dtiles.tileset.extension import BaseExtension
+from py3dtiles.tileset.tile import Tile
+from py3dtiles.tileset.tileset import TileSet
 
 
 class Test_TileSet(unittest.TestCase):
@@ -23,7 +26,7 @@ class Test_TileSet(unittest.TestCase):
         root_tile.set_refine_mode('ADD')
         tile_set.root_tile = root_tile
 
-        extension = Extension('Test')
+        extension = BaseExtension('Test')
         tile_set.add_extension(extension)
 
         return tile_set

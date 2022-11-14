@@ -2,8 +2,6 @@ import json
 from pathlib import Path
 from typing import List
 
-
-
 from .extendable import Extendable
 from .tile import Tile
 

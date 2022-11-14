@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
 
-from py3dtiles.points.node import Node
-from py3dtiles.points.utils import split_aabb
+from py3dtiles.tilers.node.node import Node
+from py3dtiles.utils import split_aabb
 
 if TYPE_CHECKING:
     from py3dtiles.convert import OctreeMetadata

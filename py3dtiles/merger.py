@@ -4,11 +4,12 @@ from typing import List, Union
 
 import numpy as np
 
-from py3dtiles import TileContent, TileContentReader
-from py3dtiles.feature_table import SemanticPoint
-from py3dtiles.points.task.pnts_writer import points_to_pnts
-from py3dtiles.points.transformations import inverse_matrix
-from py3dtiles.points.utils import split_aabb
+from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
+from py3dtiles.tilers.transformations import inverse_matrix
+from py3dtiles.tileset.feature_table import SemanticPoint
+from py3dtiles.tileset.tile_content import TileContent
+from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.utils import split_aabb
 
 
 def _get_root_tile(tileset: dict, root_tile_path: Path) -> TileContent:

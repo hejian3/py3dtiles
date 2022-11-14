@@ -8,7 +8,7 @@ import subprocess
 import laspy
 import numpy as np
 
-from py3dtiles.points.utils import ResponseType
+from py3dtiles.utils import ResponseType
 
 
 def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:

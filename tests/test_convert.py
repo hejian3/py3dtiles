@@ -5,10 +5,11 @@ from unittest.mock import patch
 
 import laspy
 from pyproj import CRS
-from pytest import approx, fixture, raises
+from pytest import fixture, raises
 
-from py3dtiles import convert_to_ecef, TileContentReader
-from py3dtiles.convert import convert, SrsInMissingException, SrsInMixinException
+from py3dtiles.convert import convert
+from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
+from py3dtiles.tileset.utils import TileContentReader
 
 DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
 
@@ -45,17 +46,6 @@ def number_of_points_in_tileset(tileset_path: Path) -> int:
 def tmp_dir():
     yield Path('tmp/')
     shutil.rmtree('./tmp', ignore_errors=True)
-
-
-def test_convert_to_ecef():
-    # results tested with gdaltransform
-    [x, y, z] = convert_to_ecef(-75.61200462622627,
-                                40.03886513981721,
-                                2848.448771114095,
-                                4326)
-    approx(x, 1215626.30684538)
-    approx(y, -4738673.45914053)
-    approx(z, 4083122.83975827)
 
 
 def test_convert(tmp_dir):
@@ -205,7 +195,7 @@ def test_convert_mix_input_crs(tmp_dir):
 
 
 def test_convert_xyz_exception_in_run(tmp_dir):
-    with patch('py3dtiles.points.task.xyz_reader.run') as mock_run:
+    with patch('py3dtiles.reader.xyz_reader.run') as mock_run:
         with raises(Exception, match="An exception occurred in a worker: Exception in run"):
             mock_run.side_effect = Exception('Exception in run')
             convert(DATA_DIRECTORY / 'simple.xyz',
@@ -215,7 +205,7 @@ def test_convert_xyz_exception_in_run(tmp_dir):
 
 
 def test_convert_las_exception_in_run(tmp_dir):
-    with patch('py3dtiles.points.task.las_reader.run') as mock_run:
+    with patch('py3dtiles.reader.las_reader.run') as mock_run:
         with raises(Exception, match="An exception occurred in a worker: Exception in run"):
             mock_run.side_effect = Exception('Exception in run')
             convert(DATA_DIRECTORY / 'with_srs_3857.las',

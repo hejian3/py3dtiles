@@ -6,7 +6,7 @@ from typing import Tuple
 
 import lz4.frame as gzip
 
-from py3dtiles.points.utils import node_name_to_path
+from py3dtiles.utils import node_name_to_path
 
 
 class SharedNodeStore:

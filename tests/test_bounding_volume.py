@@ -1,6 +1,6 @@
 import unittest
 
-from py3dtiles.bounding_volume import BoundingVolume
+from py3dtiles.tileset.bounding_volume import BoundingVolume
 
 
 class TestBoundingVolume(unittest.TestCase):

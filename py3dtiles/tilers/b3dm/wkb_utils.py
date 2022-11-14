@@ -3,7 +3,7 @@ import struct
 
 import numpy as np
 
-from .earcut import earcut
+from py3dtiles.earcut import earcut
 
 
 class TriangleSoup:

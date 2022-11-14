@@ -18,17 +18,18 @@ import psutil
 from pyproj import CRS, Transformer
 import zmq
 
-from py3dtiles import TileContentReader
-from py3dtiles.constants import MIN_POINT_SIZE
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException, WorkerException
-from py3dtiles.points.node import Node
-from py3dtiles.points.shared_node_store import SharedNodeStore
-from py3dtiles.points.task import las_reader, node_process, pnts_writer, xyz_reader
-from py3dtiles.points.transformations import (
+from py3dtiles.reader import las_reader, xyz_reader
+from py3dtiles.tilers.node import Node
+from py3dtiles.tilers.node import node_process
+from py3dtiles.tilers.node import SharedNodeStore
+from py3dtiles.tilers.pnts import pnts_writer
+from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
+from py3dtiles.tilers.transformations import (
     angle_between_vectors, inverse_matrix, rotation_matrix, scale_matrix, translation_matrix, vector_product
 )
-from py3dtiles.points.utils import CommandType, compute_spacing, node_name_to_path, ResponseType
-from py3dtiles.utils import str_to_CRS
+from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.utils import CommandType, compute_spacing, node_name_to_path, ResponseType, str_to_CRS
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)

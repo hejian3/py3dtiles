@@ -6,11 +6,11 @@ from numba import njit
 from numba.typed import List
 import numpy as np
 
-from py3dtiles.points.distance import is_point_far_enough, xyz_to_key
-from py3dtiles.points.utils import aabb_size_to_subdivision_type, SubdivisionType
+from py3dtiles.utils import aabb_size_to_subdivision_type, SubdivisionType
+from .distance import is_point_far_enough, xyz_to_key
 
 if TYPE_CHECKING:
-    from py3dtiles.points.node import Node
+    from .node import Node
 
 
 @njit(fastmath=True, cache=True)

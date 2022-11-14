@@ -1,6 +1,8 @@
 import unittest
 
-from py3dtiles import BoundingVolumeBox, Tile, TileContent
+from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
+from py3dtiles.tileset.tile import Tile
+from py3dtiles.tileset.tile_content import TileContent
 
 
 class TestTile(unittest.TestCase):

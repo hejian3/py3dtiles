@@ -3,7 +3,9 @@ import unittest
 
 import numpy as np
 
-from py3dtiles import Feature, Pnts, TileContentReader
+from py3dtiles.tileset.content import Pnts
+from py3dtiles.tileset.feature_table import Feature
+from py3dtiles.tileset.utils import TileContentReader
 
 
 class TestTileContentReader(unittest.TestCase):

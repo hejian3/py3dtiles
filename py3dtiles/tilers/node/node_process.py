@@ -3,8 +3,8 @@ import pickle
 import struct
 import time
 
-from py3dtiles.points.node_catalog import NodeCatalog
-from py3dtiles.points.utils import ResponseType
+from py3dtiles.tilers.node.node_catalog import NodeCatalog
+from py3dtiles.utils import ResponseType
 
 
 def _forward_unassigned_points(node, queue, log_file):

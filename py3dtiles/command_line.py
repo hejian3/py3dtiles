@@ -1,9 +1,6 @@
 import argparse
 
-import py3dtiles.convert as convert
-import py3dtiles.export as export
-import py3dtiles.info as info
-import py3dtiles.merger as merger
+from py3dtiles import convert, export, info, merger
 
 
 def main():

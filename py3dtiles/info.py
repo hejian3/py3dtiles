@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from py3dtiles import TileContent, TileContentReader
+from py3dtiles.tileset.tile_content import TileContent
+from py3dtiles.tileset.utils import TileContentReader
 
 
 def print_pnts_info(tile: TileContent):

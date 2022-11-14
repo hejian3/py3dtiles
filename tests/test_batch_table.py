@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from py3dtiles import BatchTable
+from py3dtiles.tileset.batch_table import BatchTable
 
 
 class Test_Batch(unittest.TestCase):

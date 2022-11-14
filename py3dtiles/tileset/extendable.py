@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .extension import Extension
+    from py3dtiles.tileset.extension import BaseExtension
 
 
 class Extendable:
@@ -15,7 +15,7 @@ class Extendable:
     def __init__(self):
         self._extensions = {}
 
-    def add_extension(self, extension: Extension) -> None:
+    def add_extension(self, extension: BaseExtension) -> None:
         if not self.has_extensions():
             self._extensions = dict()
         self._extensions[extension.name] = extension
@@ -23,12 +23,12 @@ class Extendable:
     def has_extensions(self) -> bool:
         return len(self._extensions) != 0
 
-    def get_extensions(self) -> list[Extension]:
+    def get_extensions(self) -> list[BaseExtension]:
         if not self.has_extensions():
             return list()
         return list(self._extensions.values())
 
-    def get_extension(self, extension_name: str) -> Extension:
+    def get_extension(self, extension_name: str) -> BaseExtension:
         if not self.has_extensions():
             raise AttributeError('No extension present.')
         if extension_name not in self._extensions:

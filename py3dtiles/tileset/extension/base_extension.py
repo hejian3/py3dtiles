@@ -1,4 +1,4 @@
-class Extension:
+class BaseExtension:
     """
     An instance of some ExtensionType.
     """

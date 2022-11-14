@@ -8,7 +8,7 @@ import numpy as np
 from .bounding_volume import BoundingVolume
 
 if TYPE_CHECKING:
-    from . import Tile
+    from .tile import Tile
 
 # In order to prevent the appearance of ghost newline characters ("\n")
 # when printing a numpy.array (mainly self._box in this file):
