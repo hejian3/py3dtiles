@@ -12,6 +12,6 @@ from .tileset import TileSet
 from .utils import convert_to_ecef, TileContentReader
 from .wkb_utils import TriangleSoup
 
-__version__ = '2.0.0'
+__version__ = '3.0.0'
 __all__ = ['TileContentReader', 'convert_to_ecef', 'TileContent', 'Feature', 'GlTF', 'Pnts',
            'B3dm', 'BatchTable', 'TriangleSoup', 'Extendable', 'BoundingVolumeBox', 'Extension', 'Tile', 'TileSet']

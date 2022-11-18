@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## v3.0.0
+
+### BREAKING
+
+Some renaming has been done to better follow the 3dtiles specification:
+
+- `TileHeader` -> `TileContentHeader`
+- `TileBody` -> `TileContentBody`
+- The API of merger.py::merge wasn't really convenient to use and has now changed. Now the signature is:
+```python3
+def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -> None
+```
+- the argument verbose of the cli interface has changed. To increase the verbosity, the number of -v is counted (-vv will be a verbose of 2).
+- Boolean options has been changed from `--foo=1` to simple flags: `--foo`. Affected options are `--overwrite` and `--graph`.
+- `--rgb=no` has been replaced by a `--no-rgb` option to deactivate it. The default is still to keep color information
+
+### Features
+
+- support laz if laszip is installed
+- windows support (NOTE: testers needed)
+- Some classes to represent 3Dtiles concepts have been added:
+	- BoundingVolumeBox
+	- TileSet
+	- Tile
+	- uExtension
+
+### Fix
+
+- The geometric error of two merged tilesets is now the biggest of the two tileset geometric error divided by the ratio of kept points. We believe this use of GeometricError fits more the spirit of the specification.
+- **node**: avoid empty children array in tileset.json
+- **setup.py**: fix missing dependency pytest
+- **node**: avoid to add empty children array
+- disable padding if already 8-byte aligned instead of adding 8 new empty bytes
+- **featureTable**: add a 8-byte boundary for FeatureTableBody
+- **featureTable**: change the boundary from 4 to 8
+- replace sys.exit(1) in convert by raising an exception
+
 ## v2.0.0
 
 This releases completely reworks py3dtiles command line and add new features.
