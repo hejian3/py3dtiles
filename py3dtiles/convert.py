@@ -392,7 +392,7 @@ class _Convert:
         self.benchmark = benchmark
         self.startup = None
 
-        self.infos = self.get_infos(color_scale, crs_in)
+        self.file_info = self.get_file_info(color_scale, crs_in)
 
         transformer = self.get_transformer(crs_out)
         self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(crs_out, transformer)
@@ -418,9 +418,9 @@ class _Convert:
 
         self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.verbose))
         self.node_store = SharedNodeStore(self.working_dir)
-        self.state = State(self.infos['portions'], max(1, self.jobs // 2))
+        self.state = State(self.file_info['portions'], max(1, self.jobs // 2))
 
-    def get_infos(self, color_scale, crs_in: CRS) -> dict:
+    def get_file_info(self, color_scale, crs_in: Optional[CRS]) -> dict:
 
         pointcloud_file_portions = []
         aabb = None
@@ -457,7 +457,6 @@ class _Convert:
             total_point_count += file_info['point_count']
             avg_min += file_info['avg_min'] / len(self.files)
 
-
         return {
             'portions': pointcloud_file_portions,
             'aabb': aabb,
@@ -469,18 +468,18 @@ class _Convert:
 
     def get_transformer(self, crs_out: CRS) -> Union[Transformer, None]:
         if crs_out:
-            if self.infos['crs_in'] is None:
+            if self.file_info['crs_in'] is None:
                 raise SrsInMissingException("None file has a input srs specified. Should be provided.")
 
-            transformer = Transformer.from_crs(self.infos['crs_in'], crs_out)
+            transformer = Transformer.from_crs(self.file_info['crs_in'], crs_out)
         else:
             transformer = None
 
         return transformer
 
     def get_rotation_matrix(self, crs_out, transformer):
-        avg_min = self.infos['avg_min']
-        aabb = self.infos['aabb']
+        avg_min = self.file_info['avg_min']
+        aabb = self.file_info['aabb']
 
         rotation_matrix = None
         if crs_out:
@@ -566,19 +565,19 @@ class _Convert:
                 if at_least_one_job_ended:
                     self.print_debug(now)
                     if self.graph:
-                        percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
+                        percent = round(100 * self.state.processed_points / self.file_info['point_count'], 3)
                         print(f'{time.time() - self.startup}, {percent}', file=self.progression_log)
 
                 self.node_store.control_memory_usage(self.cache_size, self.verbose)
 
             self.zmq_manager.join_all_processes()
 
-            if self.state.points_in_pnts != self.infos['point_count']:
+            if self.state.points_in_pnts != self.file_info['point_count']:
                 raise ValueError("!!! Invalid point count in the written .pnts"
-                                 + f"(expected: {self.infos['point_count']}, was: {self.state.points_in_pnts})")
+                                 + f"(expected: {self.file_info['point_count']}, was: {self.state.points_in_pnts})")
 
             if self.verbose >= 1:
-                print('Writing 3dtiles {}'.format(self.infos['avg_min']))
+                print('Writing 3dtiles {}'.format(self.file_info['avg_min']))
 
             self.write_tileset()
             shutil.rmtree(self.working_dir)
@@ -750,7 +749,7 @@ class _Convert:
                 -self.avg_min,
                 self.root_scale,
                 self.rotation_matrix[:3, :3].T if self.rotation_matrix is not None else None,
-                self.infos['color_scale'].get(file) if self.infos['color_scale'] is not None else None,
+                self.file_info['color_scale'].get(file) if self.file_info['color_scale'] is not None else None,
             ),
             'portion': portion,
         })])
@@ -820,7 +819,7 @@ class _Convert:
 
     def print_summary(self):
         print('Summary:')
-        print('  - points to process: {}'.format(self.infos['point_count']))
+        print('  - points to process: {}'.format(self.file_info['point_count']))
         print(f'  - offset to use: {self.avg_min}')
         print(f'  - root spacing: {self.root_spacing / self.root_scale[0]}')
         print(f'  - root aabb: {self.root_aabb}')
@@ -887,14 +886,14 @@ class _Convert:
 
         if self.verbose >= 1:
             print('{} % points in {} sec [{} tasks, {} nodes, {} wip]'.format(
-                round(100 * self.state.processed_points / self.infos['point_count'], 2),
+                round(100 * self.state.processed_points / self.file_info['point_count'], 2),
                 round(now, 1),
                 self.jobs - len(self.zmq_manager.idle_clients),
                 len(self.state.processing_nodes),
                 self.state.points_in_progress))
 
         elif self.verbose >= 0:
-            percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
+            percent = round(100 * self.state.processed_points / self.file_info['point_count'], 2)
             time_left = (100 - percent) * now / (percent + 0.001)
             print(f'\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]', end='',
                   flush=True)
