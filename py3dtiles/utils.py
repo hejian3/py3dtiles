@@ -13,9 +13,6 @@ if TYPE_CHECKING:
     from . import TileContent
 
 
-class SrsInMissingException(Exception):
-    pass
-
 
 def convert_to_ecef(x, y, z, epsg_input):
     crs_in = CRS(f'epsg:{epsg_input}')

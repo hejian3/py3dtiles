@@ -19,7 +19,7 @@ import zmq
 
 from py3dtiles import TileContentReader
 from py3dtiles.constants import MIN_POINT_SIZE
-from py3dtiles.exceptions import WorkerException
+from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException, WorkerException
 from py3dtiles.points.node import Node
 from py3dtiles.points.shared_node_store import SharedNodeStore
 from py3dtiles.points.task import las_reader, node_process, pnts_writer, xyz_reader
@@ -27,7 +27,6 @@ from py3dtiles.points.transformations import (
     angle_between_vectors, inverse_matrix, rotation_matrix, scale_matrix, translation_matrix, vector_product
 )
 from py3dtiles.points.utils import CommandType, compute_spacing, node_name_to_path, ResponseType
-from py3dtiles.utils import SrsInMissingException
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)
