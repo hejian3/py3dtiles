@@ -15,7 +15,9 @@ requirements = (
     'numba',
     'psutil',
     'lz4',
-    'pyzmq'
+    'pyzmq',
+    'earcut==1.1.5',
+    'transformations'
 )
 
 dev_requirements = (

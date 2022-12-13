@@ -1,10 +1,8 @@
 import math
 import struct
 
+from earcut.earcut import earcut
 import numpy as np
-
-from py3dtiles.earcut import earcut
-
 
 class TriangleSoup:
     def __init__(self):
