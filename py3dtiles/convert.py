@@ -396,7 +396,7 @@ class _Convert:
         self.infos = self.get_infos(color_scale, srs_in, srs_out)
 
         crs_in, crs_out, transformer = self.get_crs(srs_in, srs_out)
-        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_in, transformer)
+        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_out, transformer)
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(self.original_aabb)
         octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
 

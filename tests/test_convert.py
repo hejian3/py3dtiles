@@ -96,7 +96,7 @@ def test_convert_without_srs(tmp_dir):
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [0.4398, 0.9692, 0.538, 0.4398, 0, 0, 0, 0.9692, 0, 0, 0, 0.538]
+    expecting_box = [0.9662, 0.0008, 0.7066, 0.9662, 0, 0, 0, 0.0024, 0, 0, 0, 0.7066]
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
@@ -118,7 +118,7 @@ def test_convert_with_srs(tmp_dir):
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [100935.9141, -91072.5469, 32925.8359, 5.2656, 0, 0, 0, 3.0898, 0, 0, 0, 4.4121]
+    expecting_box = [5.1633, 5.1834, 0.1731, 5.1631, 0, 0, 0, 5.1834, 0, 0, 0, 0.1867]
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
@@ -152,7 +152,7 @@ def test_convert_simple_xyz(tmp_dir):
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [-0.0347, 0.3909, 0.3247, 0.0213, 0, 0, 0, 0.3899, 0, 0, 0, 0.3094]
+    expecting_box = [0.3916, 0.3253, -0.0001, 0.39, 0, 0, 0, 0.3099, 0, 0, 0, 0.0001]
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
