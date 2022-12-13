@@ -4,69 +4,49 @@ from pathlib import Path
 import pickle
 import struct
 import subprocess
-from typing import List
 
 import laspy
 import numpy as np
 
 from py3dtiles.points.utils import ResponseType
-from py3dtiles.utils import SrsInMissingException
 
 
-def init(paths: List[Path], color_scale=None, srs_in=None, srs_out=None, fraction=100):
-    aabb = None
-    total_point_count = 0
+def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
     pointcloud_file_portions = []
-    avg_min = np.array([0., 0., 0.])
-    color_scale_by_file = {}
+    srs_in = None
 
-    for path in paths:
-        filename = str(path)
-        with laspy.open(filename) as f:
-            avg_min += (np.array(f.header.mins) / len(paths))
+    filename = str(path)
+    with laspy.open(filename) as f:
+        point_count = f.header.point_count * fraction // 100
 
-            if aabb is None:
-                aabb = np.array([f.header.mins, f.header.maxs])
-            else:
-                bb = np.array([f.header.mins, f.header.maxs])
-                aabb[0] = np.minimum(aabb[0], bb[0])
-                aabb[1] = np.maximum(aabb[1], bb[1])
-
-            count = f.header.point_count * fraction // 100
-            total_point_count += count
-
-            # read the first points red channel
-            if color_scale:
-                color_scale_by_file[filename] = color_scale
-            elif 'red' in f.header.point_format.dimension_names:
+        # read the first points red channel
+        if not color_scale:
+            if 'red' in f.header.point_format.dimension_names:
                 points = next(f.chunk_iterator(10_000))['red']
                 if np.max(points) > 255:
-                    color_scale_by_file[filename] = 1.0 / 255
+                    color_scale = 1.0 / 255
             else:
                 # the intensity is then used as color
-                color_scale_by_file[filename] = 1.0 / 255
+                color_scale = 1.0 / 255
 
-            _1M = min(count, 1_000_000)
-            steps = math.ceil(count / _1M)
-            portions = [(i * _1M, min(count, (i + 1) * _1M)) for i in range(steps)]
-            for p in portions:
-                pointcloud_file_portions += [(filename, p)]
+        _1M = min(point_count, 1_000_000)
+        steps = math.ceil(point_count / _1M)
+        portions = [(i * _1M, min(point_count, (i + 1) * _1M)) for i in range(steps)]
+        for p in portions:
+            pointcloud_file_portions += [(filename, p)]
 
-            if srs_out and not srs_in:
-                output = subprocess.check_output(['pdal', 'info', '--summary', filename])
-                summary = json.loads(output)['summary']
-                if 'srs' not in summary or not summary['srs'].get('proj4'):
-                    raise SrsInMissingException(f"'{filename}' file doesn't contain srs information."
-                                                "Please use the --srs_in option to declare it.")
-                srs_in = summary['srs']['proj4']
+        output = subprocess.check_output(['pdal', 'info', '--summary', filename])
+        summary = json.loads(output)['summary']
+        if 'srs' in summary:
+            srs_in = summary['srs'].get('proj4')
 
     return {
         'portions': pointcloud_file_portions,
-        'aabb': aabb,
-        'color_scale': color_scale_by_file,
+        'aabb': np.array([f.header.mins, f.header.maxs]),
+        'color_scale': color_scale,
         'srs_in': srs_in,
-        'point_count': total_point_count,
-        'avg_min': avg_min
+        'point_count': point_count,
+        'avg_min': np.array(f.header.mins)
     }
 
 

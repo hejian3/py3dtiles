@@ -431,21 +431,54 @@ class _Convert:
         self.state = State(self.infos['portions'], max(1, self.jobs // 2))
 
     def get_infos(self, color_scale, srs_in, srs_out):
+        crs_in = CRS('epsg:{}'.format(srs_in)) if srs_in else None
+
+        pointcloud_file_portions = []
+        aabb = None
+        color_scale_by_file = {}
+        total_point_count = 0
+        avg_min = np.array([0., 0., 0.])
+
         # read all input files headers and determine the aabb/spacing
-        extensions = set()
         for file in self.files:
-            extensions.add(file.suffix)
-        if len(extensions) != 1:
-            raise ValueError("All files should have the same extension, currently there are", extensions)
-        extension = extensions.pop()
+            extension = file.suffix
+            if extension in READER_MAP:
+                reader = READER_MAP[extension]
+            else:
+                raise ValueError(f"The file with {extension} extension can't be read, "
+                                 f"the available extensions are: {READER_MAP.keys()}")
 
-        if extension in READER_MAP:
-            reader = READER_MAP[extension]
-        else:
-            raise ValueError(f"The file with {extension} extension can't be read, "
-                             f"the available extensions are: {READER_MAP.keys()}")
+            file_info = reader.get_metadata(file, color_scale=color_scale)
 
-        return reader.init(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
+            pointcloud_file_portions += file_info['portions']
+            if aabb is None:
+                aabb = file_info['aabb']
+            else:
+                aabb[0] = np.minimum(aabb[0], file_info['aabb'][0])
+                aabb[1] = np.maximum(aabb[1], file_info['aabb'][1])
+            color_scale_by_file[str(file)] = file_info['color_scale']
+
+            if file_info['srs_in'] is not None:
+                new_crs_in = CRS(file_info['srs_in'])
+                if crs_in is None:
+                    crs_in = new_crs_in
+                elif crs_in != new_crs_in:
+                    raise SrsInMixinException("All input files should have the same srs in, currently there are a mix of"
+                                     f" {crs_in} and {new_crs_in}")
+            total_point_count += file_info['point_count']
+            avg_min += file_info['avg_min'] / len(self.files)
+
+        if srs_out is not None and crs_in is None:
+            raise SrsInMissingException("None file has a input srs specified. Should be provided.")
+
+        return {
+            'portions': pointcloud_file_portions,
+            'aabb': aabb,
+            'color_scale': color_scale_by_file,
+            'srs_in': crs_in,
+            'point_count': total_point_count,
+            'avg_min': avg_min
+        }
 
     def get_crs(self, srs_in, srs_out):
         if srs_out:

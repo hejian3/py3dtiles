@@ -2,81 +2,71 @@ import math
 from pathlib import Path
 import pickle
 import struct
-from typing import List
 
 import numpy as np
 
 from py3dtiles.points.utils import ResponseType
 
-
-def init(paths: List[Path], color_scale=None, srs_in=None, srs_out=None, fraction=100):
+def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
     aabb = None
-    total_point_count = 0
-    pointcloud_file_portions = []
+    count = 0
+    seek_values = []
 
-    for path in paths:
-        with path.open() as f:
-            count = 0
-            seek_values = []
-            while True:
-                batch = 10_000
-                points = np.zeros((batch, 3))
+    with path.open() as f:
+        while True:
+            batch = 10_000
+            points = np.zeros((batch, 3))
 
-                offset = f.tell()
-                for i in range(batch):
-                    line = f.readline()
-                    if not line:
-                        points = np.resize(points, (i, 3))
-                        break
-                    points[i] = [float(s) for s in line.split(" ")][:3]
-
-                if points.shape[0] == 0:
+            offset = f.tell()
+            for i in range(batch):
+                line = f.readline()
+                if not line:
+                    points = np.resize(points, (i, 3))
                     break
+                points[i] = [float(s) for s in line.split(" ")][:3]
 
-                if not count % 1_000_000:
-                    seek_values += [offset]
+            if points.shape[0] == 0:
+                break
 
-                count += points.shape[0]
-                batch_aabb = np.array([
-                    np.min(points, axis=0), np.max(points, axis=0)
-                ])
+            if not count % 1_000_000:
+                seek_values += [offset]
 
-                # Update aabb
-                if aabb is None:
-                    aabb = batch_aabb
-                else:
-                    aabb[0] = np.minimum(aabb[0], batch_aabb[0])
-                    aabb[1] = np.maximum(aabb[1], batch_aabb[1])
+            count += points.shape[0]
+            batch_aabb = np.array([
+                np.min(points, axis=0), np.max(points, axis=0)
+            ])
 
-            # We need an exact point count
-            total_point_count += count * fraction / 100
+            # Update aabb
+            if aabb is None:
+                aabb = batch_aabb
+            else:
+                aabb[0] = np.minimum(aabb[0], batch_aabb[0])
+                aabb[1] = np.maximum(aabb[1], batch_aabb[1])
 
-            _1M = min(count, 1_000_000)
-            steps = math.ceil(count / _1M)
-            if steps != len(seek_values):
-                raise ValueError("the size of seek_values should be equal to steps,"
-                                 f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
-            portions = [
-                (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
-            ]
-            for p in portions:
-                pointcloud_file_portions += [(str(path), p)]
+        # We need an exact point count
+        point_count = count * fraction / 100
 
-            if srs_out and not srs_in:
-                raise Exception(
-                    f"'{path}' file doesn't contain srs information."
-                    "Please use the --srs_in option to declare it."
-                )
+        _1M = min(count, 1_000_000)
+        steps = math.ceil(count / _1M)
+        if steps != len(seek_values):
+            raise ValueError("the size of seek_values should be equal to steps,"
+                             f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
+        portions = [
+            (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
+        ]
+
+        pointcloud_file_portions = [
+            (str(path), p) for p in portions
+        ]
 
     return {
         "portions": pointcloud_file_portions,
         "aabb": aabb,
         "color_scale": color_scale,
-        "srs_in": srs_in,
-        "point_count": total_point_count,
+        "srs_in": None,
+        "point_count": point_count,
         "avg_min": aabb[0],
     }
-
 
 def run(filename: str, offset_scale, portion, queue, transformer):
     """
