@@ -21,6 +21,20 @@ def convert_to_ecef(x, y, z, epsg_input):
     return transformer.transform(x, y, z)
 
 
+def str_to_CRS(srs: str | CRS | None) -> CRS | None:
+    """
+    Convert a string in a pyproj CRS object. The string could be an epsg code or a Proj4 string. If srs is already
+    a CRS object, the function returns the same CRS definition.
+    """
+    if srs is None:
+        return None
+
+    try:
+        return CRS.from_epsg(int(srs))
+    except ValueError:
+        return CRS(srs)
+
+
 class TileContentReader:
 
     @staticmethod

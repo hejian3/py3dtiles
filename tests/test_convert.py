@@ -4,6 +4,7 @@ import shutil
 from unittest.mock import patch
 
 import laspy
+from pyproj import CRS
 from pytest import approx, fixture, raises
 
 from py3dtiles import convert_to_ecef, TileContentReader
@@ -82,14 +83,14 @@ def test_convert_without_srs(tmp_dir):
     with raises(SrsInMissingException):
         convert(DATA_DIRECTORY / 'without_srs.las',
                 outfolder=tmp_dir,
-                srs_out='4978',
+                crs_out=CRS.from_epsg(4978),
                 jobs=1)
     assert not tmp_dir.exists()
 
     convert(DATA_DIRECTORY / 'without_srs.las',
             outfolder=tmp_dir,
-            srs_in='3949',
-            srs_out='4978',
+            crs_in=CRS.from_epsg(3949),
+            crs_out=CRS.from_epsg(4978),
             jobs=1)
 
     tileset_path = tmp_dir / 'tileset.json'
@@ -111,7 +112,7 @@ def test_convert_without_srs(tmp_dir):
 def test_convert_with_srs(tmp_dir):
     convert(DATA_DIRECTORY / 'with_srs_3857.las',
             outfolder=tmp_dir,
-            srs_out='4978',
+            crs_out=CRS.from_epsg(4978),
             jobs=1)
 
     tileset_path = tmp_dir / 'tileset.json'
@@ -133,8 +134,8 @@ def test_convert_with_srs(tmp_dir):
 def test_convert_simple_xyz(tmp_dir):
     convert(DATA_DIRECTORY / 'simple.xyz',
             outfolder=tmp_dir,
-            srs_in='3857',
-            srs_out='4978',
+            crs_in=CRS.from_epsg(3857),
+            crs_out=CRS.from_epsg(4978),
             jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
     assert Path(tmp_dir, 'r.pnts').exists()
@@ -160,7 +161,7 @@ def test_convert_simple_xyz(tmp_dir):
 def test_convert_mix_las_xyz(tmp_dir):
     convert([DATA_DIRECTORY / 'simple.xyz', DATA_DIRECTORY / 'with_srs_3857.las'],
             outfolder=tmp_dir,
-            srs_out='4978',
+            crs_out=CRS.from_epsg(4978),
             jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
     assert Path(tmp_dir, 'r.pnts').exists()
@@ -209,8 +210,8 @@ def test_convert_xyz_exception_in_run(tmp_dir):
             mock_run.side_effect = Exception('Exception in run')
             convert(DATA_DIRECTORY / 'simple.xyz',
                     outfolder=tmp_dir,
-                    srs_in='3857',
-                    srs_out='4978')
+                    crs_in=CRS.from_epsg(3857),
+                    crs_out=CRS.from_epsg(4978))
 
 
 def test_convert_las_exception_in_run(tmp_dir):
@@ -219,8 +220,8 @@ def test_convert_las_exception_in_run(tmp_dir):
             mock_run.side_effect = Exception('Exception in run')
             convert(DATA_DIRECTORY / 'with_srs_3857.las',
                     outfolder=tmp_dir,
-                    srs_in='3857',
-                    srs_out='4978')
+                    crs_in=CRS.from_epsg(3857),
+                    crs_out=CRS.from_epsg(4978))
 
 
 def test_convert_export_folder_already_exists(tmp_dir):
@@ -232,13 +233,13 @@ def test_convert_export_folder_already_exists(tmp_dir):
     with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
         convert(DATA_DIRECTORY / 'with_srs_3857.las',
                 outfolder=tmp_dir,
-                srs_out='4978',
+                crs_out=CRS.from_epsg(4978),
                 jobs=1)
 
     convert(DATA_DIRECTORY / 'with_srs_3857.las',
             outfolder=tmp_dir,
             overwrite=True,
-            srs_out='4978',
+            crs_out=CRS.from_epsg(4978),
             jobs=1)
 
     assert (tmp_dir / 'tileset.json').exists()

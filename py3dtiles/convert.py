@@ -11,6 +11,7 @@ import struct
 import sys
 import time
 import traceback
+from typing import List, Optional, Union
 
 import numpy as np
 import psutil
@@ -27,6 +28,7 @@ from py3dtiles.points.transformations import (
     angle_between_vectors, inverse_matrix, rotation_matrix, scale_matrix, translation_matrix, vector_product
 )
 from py3dtiles.points.utils import CommandType, compute_spacing, node_name_to_path, ResponseType
+from py3dtiles.utils import str_to_CRS
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)
@@ -339,7 +341,6 @@ class State:
             self.number_of_writing_jobs,
             ''))
 
-
 def convert(*args, **kwargs):
     converter = _Convert(*args, **kwargs)
     return converter.convert()
@@ -347,46 +348,35 @@ def convert(*args, **kwargs):
 
 class _Convert:
     def __init__(self,
-                 files,
-                 outfolder='./3dtiles',
-                 overwrite=False,
-                 jobs=CPU_COUNT,
-                 cache_size=DEFAULT_CACHE_SIZE,
-                 srs_out=None,
-                 srs_in=None,
-                 fraction=100,
-                 benchmark=None,
-                 rgb=True,
-                 graph=False,
-                 color_scale=None,
-                 verbose=False):
+                 files: List[Union[str, Path]],
+                 outfolder: Union[str, Path] = './3dtiles',
+                 overwrite: bool = False,
+                 jobs: int = CPU_COUNT,
+                 cache_size: int = DEFAULT_CACHE_SIZE,
+                 crs_out: Optional[CRS] = None,
+                 crs_in: Optional[CRS] = None,
+                 fraction: int = 100,
+                 benchmark: Optional[str] = None,
+                 rgb: bool = True,
+                 graph: bool = False,
+                 color_scale: Optional[float] = None,
+                 verbose: bool = False):
         """
         :param files: Filenames to process. The file must use the .las, .laz or .xyz format.
-        :type files: list of str, or str
         :param outfolder: The folder where the resulting tileset will be written.
-        :type outfolder: path-like object
         :param overwrite: Overwrite the ouput folder if it already exists.
-        :type overwrite: bool
         :param jobs: The number of parallel jobs to start. Default to the number of cpu.
-        :type jobs: int
         :param cache_size: Cache size in MB. Default to available memory / 10.
-        :type cache_size: int
-        :param srs_out: SRS to convert the output with (numeric part of the EPSG code)
-        :type srs_out: int or str
-        :param srs_in: Override input SRS (numeric part of the EPSG code)
-        :type srs_in: int or str
+        :param crs_out: CRS to convert the output with
+        :param crs_in: Set a default input CRS
         :param fraction: Percentage of the pointcloud to process, between 0 and 100.
-        :type fraction: int
         :param benchmark: Print summary at the end of the process
-        :type benchmark: str
         :param rgb: Export rgb attributes.
-        :type rgb: bool
-        :param graph: Produce debug graphes (requires pygal).
-        :type graph: bool
+        :param graph: Produce debug graphs (requires pygal).
         :param color_scale: Force color scale
-        :type color_scale: float
 
         :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
+        :raises SrsInMixinException: if the input files have different CRS
 
         """
         self.jobs = jobs
@@ -402,10 +392,10 @@ class _Convert:
         self.benchmark = benchmark
         self.startup = None
 
-        self.infos = self.get_infos(color_scale, srs_in, srs_out)
+        self.infos = self.get_infos(color_scale, crs_in)
 
-        crs_in, crs_out, transformer = self.get_crs(srs_in, srs_out)
-        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(srs_out, transformer)
+        transformer = self.get_transformer(crs_out)
+        self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(crs_out, transformer)
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(self.original_aabb)
         octree_metadata = OctreeMetadata(aabb=self.root_aabb, spacing=self.root_spacing, scale=self.root_scale[0])
 
@@ -430,8 +420,7 @@ class _Convert:
         self.node_store = SharedNodeStore(self.working_dir)
         self.state = State(self.infos['portions'], max(1, self.jobs // 2))
 
-    def get_infos(self, color_scale, srs_in, srs_out):
-        crs_in = CRS('epsg:{}'.format(srs_in)) if srs_in else None
+    def get_infos(self, color_scale, crs_in: CRS) -> dict:
 
         pointcloud_file_portions = []
         aabb = None
@@ -458,52 +447,43 @@ class _Convert:
                 aabb[1] = np.maximum(aabb[1], file_info['aabb'][1])
             color_scale_by_file[str(file)] = file_info['color_scale']
 
-            if file_info['srs_in'] is not None:
-                new_crs_in = CRS(file_info['srs_in'])
+            file_crs_in = str_to_CRS(file_info['srs_in'])
+            if file_crs_in is not None:
                 if crs_in is None:
-                    crs_in = new_crs_in
-                elif crs_in != new_crs_in:
+                    crs_in = file_crs_in
+                elif crs_in != file_crs_in:
                     raise SrsInMixinException("All input files should have the same srs in, currently there are a mix of"
-                                     f" {crs_in} and {new_crs_in}")
+                                     f" {crs_in} and {file_crs_in}")
             total_point_count += file_info['point_count']
             avg_min += file_info['avg_min'] / len(self.files)
 
-        if srs_out is not None and crs_in is None:
-            raise SrsInMissingException("None file has a input srs specified. Should be provided.")
 
         return {
             'portions': pointcloud_file_portions,
             'aabb': aabb,
             'color_scale': color_scale_by_file,
-            'srs_in': crs_in,
+            'crs_in': crs_in,
             'point_count': total_point_count,
             'avg_min': avg_min
         }
 
-    def get_crs(self, srs_in, srs_out):
-        if srs_out:
-            crs_out = CRS(f'epsg:{srs_out}')
-            if srs_in:
-                crs_in = CRS(f'epsg:{srs_in}')
-            elif not self.infos['srs_in']:
-                raise SrsInMissingException('No SRS information in the provided files')
-            else:
-                crs_in = CRS(self.infos['srs_in'])
+    def get_transformer(self, crs_out: CRS) -> Union[Transformer, None]:
+        if crs_out:
+            if self.infos['crs_in'] is None:
+                raise SrsInMissingException("None file has a input srs specified. Should be provided.")
 
-            transformer = Transformer.from_crs(crs_in, crs_out)
+            transformer = Transformer.from_crs(self.infos['crs_in'], crs_out)
         else:
-            crs_in = None
-            crs_out = None
             transformer = None
 
-        return crs_in, crs_out, transformer
+        return transformer
 
-    def get_rotation_matrix(self, srs_out, transformer):
+    def get_rotation_matrix(self, crs_out, transformer):
         avg_min = self.infos['avg_min']
         aabb = self.infos['aabb']
 
         rotation_matrix = None
-        if srs_out:
+        if crs_out:
 
             bl = np.array(list(transformer.transform(
                 aabb[0][0], aabb[0][1], aabb[0][2])))
@@ -520,7 +500,7 @@ class _Convert:
             bl = bl - avg_min
             tr = tr - avg_min
 
-            if srs_out == '4978':
+            if crs_out.to_epsg() == 4978:
                 # Transform geocentric normal => (0, 0, 1)
                 # and 4978-bbox x axis => (1, 0, 0),
                 # to have a bbox in local coordinates that's nicely aligned with the data
@@ -979,8 +959,8 @@ def main(args):
                        overwrite=args.overwrite,
                        jobs=args.jobs,
                        cache_size=args.cache_size,
-                       srs_out=args.srs_out,
-                       srs_in=args.srs_in,
+                       crs_out=str_to_CRS(args.srs_out),
+                       crs_in=str_to_CRS(args.srs_in),
                        fraction=args.fraction,
                        benchmark=args.benchmark,
                        rgb=not args.no_rgb,
