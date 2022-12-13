@@ -207,7 +207,8 @@ class Node:
                    parent_aabb: np.ndarray,
                    parent_spacing: float,
                    folder: Path,
-                   scale: np.ndarray) -> dict:
+                   scale: np.ndarray,
+                   prune: bool = True) -> dict:
         node = node_from_name(name, parent_aabb, parent_spacing)
         aabb = node.aabb
         tile_path = node_name_to_path(folder, name, '.pnts')
@@ -252,8 +253,11 @@ class Node:
 
                     fth = tile.body.feature_table.header
 
-                    # If this child is small enough, merge in the current tile
-                    if fth.points_length < 100:
+                    # If this child is small enough, merge in the current tile.
+                    # prune should be set at False is the refine mode is REPLACE.
+                    # In some cases, we cannot know which point in the parent tile should be deleted
+                    # (for example when 2 points are at the same location)
+                    if prune and fth.points_length < 100:
                         xyz = np.concatenate(
                             (xyz,
                              tile.body.feature_table.body.positions_arr))

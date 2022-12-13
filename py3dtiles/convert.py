@@ -739,7 +739,7 @@ class _Convert:
         transform = np.dot(transform, scale_matrix(1.0 / self.root_scale[0]))
         transform = np.dot(translation_matrix(self.avg_min), transform)
 
-        # build fake points
+        # Create the root tile by sampling (or taking all points?) of child nodes
         root_node = Node(''.encode('utf-8'), self.root_aabb, self.root_spacing * 2)
         root_node.children = []
         inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, self.root_aabb[1] - self.root_aabb[0])).astype(
@@ -767,12 +767,14 @@ class _Convert:
 
         executor = concurrent.futures.ProcessPoolExecutor()
         root_tileset = Node.to_tileset(executor, ''.encode('ascii'), self.root_aabb, self.root_spacing,
-                                       self.out_folder, self.root_scale)
+                                       self.out_folder, self.root_scale, prune=False)
         executor.shutdown()
 
         root_tileset['transform'] = transform.T.reshape(16).tolist()
-        root_tileset['refine'] = 'REPLACE'
+        root_tileset['refine'] = 'REPLACE'  # The root tile is in the "REPLACE" refine mode
         if "children" in root_tileset:
+            # And children with the "ADD" refine mode
+            # No need to set this property in their children, they will take the parent value if it is not present
             for child in root_tileset['children']:
                 child['refine'] = 'ADD'  # type: ignore
 
