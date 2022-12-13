@@ -7,7 +7,7 @@ import laspy
 from pytest import approx, fixture, raises
 
 from py3dtiles import convert_to_ecef, TileContentReader
-from py3dtiles.convert import convert, SrsInMissingException
+from py3dtiles.convert import convert, SrsInMissingException, SrsInMixinException
 
 DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
 
@@ -59,7 +59,7 @@ def test_convert_to_ecef():
 
 def test_convert(tmp_dir):
     path = DATA_DIRECTORY / "ripple.las"
-    convert(str(path), outfolder=tmp_dir)
+    convert(path, outfolder=tmp_dir)
 
     # basic asserts
     tileset_path = tmp_dir / 'tileset.json'
@@ -80,13 +80,13 @@ def test_convert(tmp_dir):
 
 def test_convert_without_srs(tmp_dir):
     with raises(SrsInMissingException):
-        convert(str(DATA_DIRECTORY / 'without_srs.las'),
+        convert(DATA_DIRECTORY / 'without_srs.las',
                 outfolder=tmp_dir,
                 srs_out='4978',
                 jobs=1)
     assert not tmp_dir.exists()
 
-    convert(str(DATA_DIRECTORY / 'without_srs.las'),
+    convert(DATA_DIRECTORY / 'without_srs.las',
             outfolder=tmp_dir,
             srs_in='3949',
             srs_out='4978',
@@ -102,14 +102,14 @@ def test_convert_without_srs(tmp_dir):
 
     assert Path(tmp_dir, 'r.pnts').exists()
 
-    with laspy.open(str(DATA_DIRECTORY / 'without_srs.las')) as f:
+    with laspy.open(DATA_DIRECTORY / 'without_srs.las') as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
 def test_convert_with_srs(tmp_dir):
-    convert(str(DATA_DIRECTORY / 'with_srs.las'),
+    convert(DATA_DIRECTORY / 'with_srs_3857.las',
             outfolder=tmp_dir,
             srs_out='4978',
             jobs=1)
@@ -124,14 +124,14 @@ def test_convert_with_srs(tmp_dir):
 
     assert Path(tmp_dir, 'r.pnts').exists()
 
-    with laspy.open(str(DATA_DIRECTORY / 'with_srs.las')) as f:
+    with laspy.open(DATA_DIRECTORY / 'with_srs_3857.las') as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
 def test_convert_simple_xyz(tmp_dir):
-    convert(str(DATA_DIRECTORY / 'simple.xyz'),
+    convert(DATA_DIRECTORY / 'simple.xyz',
             outfolder=tmp_dir,
             srs_in='3857',
             srs_out='4978',
@@ -157,11 +157,57 @@ def test_convert_simple_xyz(tmp_dir):
     assert box == expecting_box
 
 
+def test_convert_mix_las_xyz(tmp_dir):
+    convert([DATA_DIRECTORY / 'simple.xyz', DATA_DIRECTORY / 'with_srs_3857.las'],
+            outfolder=tmp_dir,
+            srs_out='4978',
+            jobs=1)
+    assert Path(tmp_dir, 'tileset.json').exists()
+    assert Path(tmp_dir, 'r.pnts').exists()
+
+    xyz_point_count = 0
+    with open(DATA_DIRECTORY / 'simple.xyz') as f:
+        line = True
+        while line:
+            line = f.readline()
+            xyz_point_count += 1 if line else 0
+
+    with laspy.open(DATA_DIRECTORY / 'with_srs_3857.las') as f:
+        las_point_count = f.header.point_count
+
+    tileset_path = tmp_dir / 'tileset.json'
+    assert xyz_point_count + las_point_count == number_of_points_in_tileset(tileset_path)
+
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [3416.2871, 5508.4194, -20921.0391, 44316.4531, 0, 0, 0, 14853.5332, 0, 0, 0, 1582.79]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
+
+
+def test_convert_mix_input_crs(tmp_dir):
+    with raises(SrsInMixinException):
+        convert([DATA_DIRECTORY / 'with_srs_3950.las', DATA_DIRECTORY / 'with_srs_3857.las'],
+                outfolder=tmp_dir,
+                crs_out=CRS.from_epsg(4978),
+                jobs=1)
+    assert not tmp_dir.exists()
+
+    with raises(SrsInMixinException):
+        convert([DATA_DIRECTORY / 'with_srs_3950.las', DATA_DIRECTORY / 'with_srs_3857.las'],
+                outfolder=tmp_dir,
+                crs_in=CRS.from_epsg(3432),
+                crs_out=CRS.from_epsg(4978),
+                jobs=1)
+    assert not tmp_dir.exists()
+
+
 def test_convert_xyz_exception_in_run(tmp_dir):
     with patch('py3dtiles.points.task.xyz_reader.run') as mock_run:
         with raises(Exception, match="An exception occurred in a worker: Exception in run"):
             mock_run.side_effect = Exception('Exception in run')
-            convert(str(DATA_DIRECTORY / 'simple.xyz'),
+            convert(DATA_DIRECTORY / 'simple.xyz',
                     outfolder=tmp_dir,
                     srs_in='3857',
                     srs_out='4978')
@@ -171,7 +217,7 @@ def test_convert_las_exception_in_run(tmp_dir):
     with patch('py3dtiles.points.task.las_reader.run') as mock_run:
         with raises(Exception, match="An exception occurred in a worker: Exception in run"):
             mock_run.side_effect = Exception('Exception in run')
-            convert(str(DATA_DIRECTORY / 'with_srs.las'),
+            convert(DATA_DIRECTORY / 'with_srs_3857.las',
                     outfolder=tmp_dir,
                     srs_in='3857',
                     srs_out='4978')
@@ -184,12 +230,12 @@ def test_convert_export_folder_already_exists(tmp_dir):
     assert not (tmp_dir / 'tileset.json').exists()
 
     with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
-        convert(str(DATA_DIRECTORY / 'with_srs.las'),
+        convert(DATA_DIRECTORY / 'with_srs_3857.las',
                 outfolder=tmp_dir,
                 srs_out='4978',
                 jobs=1)
 
-    convert(str(DATA_DIRECTORY / 'with_srs.las'),
+    convert(DATA_DIRECTORY / 'with_srs_3857.las',
             outfolder=tmp_dir,
             overwrite=True,
             srs_out='4978',
