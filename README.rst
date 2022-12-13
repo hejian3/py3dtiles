@@ -26,8 +26,7 @@ py3dtiles is distributed under the Apache 2 Licence.
 
 Gitlab repository: https://gitlab.com/Oslandia/py3dtiles
 
-Documentation : 
+Documentation :
 
 - master: https://oslandia.gitlab.io/py3dtiles/master
 - last stable: https://oslandia.gitlab.io/py3dtiles/
-

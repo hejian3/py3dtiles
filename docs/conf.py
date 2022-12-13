@@ -13,9 +13,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u'py3dtiles'
-copyright = u'2019, Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
-author = u'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
+project = 'py3dtiles'
+copyright = '2019, Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
+author = 'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine'
 
 # -- General configuration ---------------------------------------------------
 
@@ -60,7 +60,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
@@ -145,8 +145,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'py3dtiles.tex', u'py3dtiles Documentation',
-     u'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine', 'manual'),
+    (master_doc, 'py3dtiles.tex', 'py3dtiles Documentation',
+     'Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine', 'manual'),
 ]
 
 
@@ -155,7 +155,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'py3dtiles', u'py3dtiles Documentation',
+    (master_doc, 'py3dtiles', 'py3dtiles Documentation',
      [author], 1)
 ]
 
@@ -166,7 +166,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'py3dtiles', u'py3dtiles Documentation',
+    (master_doc, 'py3dtiles', 'py3dtiles Documentation',
      author, 'py3dtiles', 'One line description of project.',
      'Miscellaneous'),
 ]

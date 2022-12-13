@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from numba import njit
 from numba.typed import List
@@ -73,7 +73,7 @@ class Grid:
     def max_key_value(self) -> int:
         return 1 << (2 * int(self.cell_count[0]).bit_length() + int(self.cell_count[2]).bit_length())
 
-    def insert(self, aabmin: np.ndarray, inv_aabb_size: np.ndarray, xyz: np.ndarray, rgb: np.ndarray, force: bool = False) -> Tuple[np.ndarray, np.ndarray, bool]:
+    def insert(self, aabmin: np.ndarray, inv_aabb_size: np.ndarray, xyz: np.ndarray, rgb: np.ndarray, force: bool = False) -> tuple[np.ndarray, np.ndarray, bool]:
         return _insert(
             self.cells_xyz,
             self.cells_rgb,

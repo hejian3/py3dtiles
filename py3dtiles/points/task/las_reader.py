@@ -136,7 +136,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 queue.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
-                        ''.encode('ascii'),
+                        b'',
                         pickle.dumps({'xyz': coords, 'rgb': colors}),
                         struct.pack('>I', len(coords))
                     ], copy=False)

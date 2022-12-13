@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .extension import Extension
@@ -23,7 +23,7 @@ class Extendable:
     def has_extensions(self) -> bool:
         return len(self._extensions) != 0
 
-    def get_extensions(self) -> List[Extension]:
+    def get_extensions(self) -> list[Extension]:
         if not self.has_extensions():
             return list()
         return list(self._extensions.values())

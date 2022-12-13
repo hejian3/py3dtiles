@@ -72,7 +72,7 @@ Other features:
 
 ### Fixes
 
-* 53580ba Jeremy Gaillard       fix: use y-up orientation for glTF objects in export script  
-* 65d6f67 Jeremy Gaillard       fix: proper bounding box size in export script  
-* 3603b00 Augustin Trancart     fix: reliably select triangulation projection plane and orientation  
+* 53580ba Jeremy Gaillard       fix: use y-up orientation for glTF objects in export script
+* 65d6f67 Jeremy Gaillard       fix: proper bounding box size in export script
+* 3603b00 Augustin Trancart     fix: reliably select triangulation projection plane and orientation
 * fd2105a jailln                Fix gltf min and max value

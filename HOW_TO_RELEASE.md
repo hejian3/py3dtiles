@@ -2,7 +2,7 @@
 
 - edit the CHANGELOG.md
 - edit the version in `py3dtiles/__init__.py`
-- create a tagged release on gitlab. 
+- create a tagged release on gitlab.
 - wait for pages to execute and update the documentation
 - publish on pypi:
 ```bash

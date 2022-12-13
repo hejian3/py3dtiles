@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 from pyproj import CRS, Transformer
@@ -18,7 +18,7 @@ class SrsInMissingException(Exception):
 
 
 def convert_to_ecef(x, y, z, epsg_input):
-    crs_in = CRS('epsg:{0}'.format(epsg_input))
+    crs_in = CRS(f'epsg:{epsg_input}')
     crs_out = CRS('epsg:4978')  # ECEF
     transformer = Transformer.from_crs(crs_in, crs_out)
     return transformer.transform(x, y, z)
@@ -39,7 +39,7 @@ class TileContentReader:
             return tile_content
 
     @staticmethod
-    def read_array(array: np.ndarray) -> Union[TileContent, None]:
+    def read_array(array: np.ndarray) -> TileContent | None:
         magic = ''.join([c.decode('UTF-8') for c in array[0:4].view('c')])
         if magic == 'pnts':
             return Pnts.from_array(array)

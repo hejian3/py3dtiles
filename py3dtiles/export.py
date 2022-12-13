@@ -83,7 +83,7 @@ class Node:
         }
         if len(self.features) != 0:
             tile["content"] = {
-                "uri": "tiles/{0}.b3dm".format(self.id)
+                "uri": f"tiles/{self.id}.b3dm"
             }
 
         return tile
@@ -192,7 +192,7 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
                 bt = BatchTable()
                 bt.add_property_from_array("id", gids)
             b3dm = B3dm.from_glTF(gltf, bt).to_array()
-            f = open("tiles/{0}.b3dm".format(node.id), 'wb')
+            f = open(f"tiles/{node.id}.b3dm", 'wb')
             f.write(b3dm)
 
 
@@ -244,7 +244,7 @@ def build_secure_conn(db_conn_info):
         connection = psycopg2.connect(db_conn_info)
     except psycopg2.OperationalError:
         pw = getpass.getpass("Postgres password: ")
-        connection = psycopg2.connect(db_conn_info + " password={pw}".format(pw=pw))
+        connection = psycopg2.connect(db_conn_info + f" password={pw}")
     return connection
 
 
@@ -253,7 +253,7 @@ def from_db(db_conn_info, table_name, column_name, id_column_name):
     cur = connection.cursor()
 
     print("Loading data from database...")
-    cur.execute("SELECT ST_3DExtent({0}) FROM {1}".format(column_name, table_name))
+    cur.execute(f"SELECT ST_3DExtent({column_name}) FROM {table_name}")
     extent = cur.fetchall()[0][0]
     extent = [m.split(" ") for m in extent[6:-1].split(",")]
     offset = [(float(extent[1][0]) + float(extent[0][0])) / 2,

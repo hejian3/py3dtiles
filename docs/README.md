@@ -9,7 +9,7 @@ pip install -e .
 pip install -e .[doc]
 ```
 
-API doc structure is generated with 
+API doc structure is generated with
 ```
 SPHINX_APIDOC_OPTIONS="members,show-inheritance" sphinx-apidoc -o ./api ../py3dtiles
 ```

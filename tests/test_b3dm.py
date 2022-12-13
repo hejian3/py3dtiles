@@ -20,7 +20,7 @@ class TestTileContentReader(unittest.TestCase):
         self.assertEqual(tile.header.bt_json_byte_length, 0)
         self.assertEqual(tile.header.bt_bin_byte_length, 0)
 
-        with open('tests/fixtures/dragon_low_gltf_header.json', 'r') as f:
+        with open('tests/fixtures/dragon_low_gltf_header.json') as f:
             gltf_header = json.loads(f.read())
         self.assertDictEqual(gltf_header, tile.body.glTF.header)
 

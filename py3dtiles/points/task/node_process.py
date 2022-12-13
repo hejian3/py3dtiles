@@ -15,7 +15,7 @@ def _forward_unassigned_points(node, queue, log_file):
     for r in result:
         if len(r) > 0:
             if log_file is not None:
-                print('    -> put on queue ({},{})'.format(r[0], r[2]), file=log_file)
+                print(f'    -> put on queue ({r[0]},{r[2]})', file=log_file)
             total += r[2]
             queue.send_multipart([
                 ResponseType.NEW_TASK.value,
@@ -75,7 +75,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
     log_enabled = log_file is not None
 
     if log_enabled:
-        print('[>] process_node: "{}", {}'.format(name, len(tasks)),
+        print(f'[>] process_node: "{name}", {len(tasks)}',
               file=log_file,
               flush=True)
 
@@ -96,7 +96,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
 
     for task in tasks:
         if log_enabled:
-            print('  -> read source [{}]'.format(time.time() - begin), file=log_file, flush=True)
+            print(f'  -> read source [{time.time() - begin}]', file=log_file, flush=True)
 
         data = pickle.loads(task)
 
@@ -113,7 +113,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
         total += point_count
 
         if log_enabled:
-            print('  -> _flush [{}]'.format(time.time() - begin), file=log_file, flush=True)
+            print(f'  -> _flush [{time.time() - begin}]', file=log_file, flush=True)
         # _flush push pending points (= call insert) from level N to level N + 1
         # (_flush is recursive)
         written = _flush(node_catalog, octree_metadata.scale, node, queue, halt_at_depth - 1, index == len(tasks) - 1, log_file)
@@ -124,7 +124,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
     _balance(node_catalog, node, halt_at_depth - 1)
 
     if log_enabled:
-        print('save on disk {} [{}]'.format(name, time.time() - begin), file=log_file)
+        print(f'save on disk {name} [{time.time() - begin}]', file=log_file)
 
     # save node state on disk
     if halt_at_depth > 0:
@@ -133,7 +133,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
         data = b''
 
     if log_enabled:
-        print('saved on disk [{}]'.format(time.time() - begin), file=log_file)
+        print(f'saved on disk [{time.time() - begin}]', file=log_file)
 
     return total, data
 
@@ -143,7 +143,7 @@ def run(work, octree_metadata, queue, verbose):
         begin = time.time()
         log_enabled = verbose >= 2
         if log_enabled:
-            log_filename = 'py3dtiles-{}.log'.format(os.getpid())
+            log_filename = f'py3dtiles-{os.getpid()}.log'
             log_file = open(log_filename, 'a')
         else:
             log_file = None

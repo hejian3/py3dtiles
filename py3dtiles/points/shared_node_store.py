@@ -39,7 +39,7 @@ class SharedNodeStore:
             return
 
         if verbose >= 2:
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CACHE CLEANING [{}]'.format(before))
+            print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CACHE CLEANING [{before}]')
         self.remove_oldest_nodes(1 - max_size_mb / before)
         gc.collect()
 

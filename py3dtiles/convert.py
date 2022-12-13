@@ -78,7 +78,7 @@ class Worker(Process):
         idle_time = 0
 
         if self.activity_graph:
-            activity = open('activity.{}.csv'.format(os.getpid()), 'w')
+            activity = open(f'activity.{os.getpid()}.csv', 'w')
 
         # notify we're ready
         self.skt.send_multipart([ResponseType.IDLE.value])
@@ -97,7 +97,7 @@ class Worker(Process):
 
                 delta = time.time() - pickle.loads(message[0])
                 if delta > 0.01 and self.verbosity >= 1:
-                    print('{} / {} : Delta time: {}'.format(os.getpid(), round(after, 2), round(delta, 3)))
+                    print(f'{os.getpid()} / {round(after, 2)} : Delta time: {round(delta, 3)}')
 
                 if command == CommandType.READ_FILE.value:
                     self.execute_read_file(content)
@@ -435,9 +435,9 @@ class _Convert:
 
     def get_crs(self, srs_in, srs_out):
         if srs_out:
-            crs_out = CRS('epsg:{}'.format(srs_out))
+            crs_out = CRS(f'epsg:{srs_out}')
             if srs_in:
-                crs_in = CRS('epsg:{}'.format(srs_in))
+                crs_in = CRS(f'epsg:{srs_in}')
             elif not self.infos['srs_in']:
                 raise SrsInMissingException('No SRS information in the provided files')
             else:
@@ -540,7 +540,7 @@ class _Convert:
                     self.print_debug(now)
                     if self.graph:
                         percent = round(100 * self.state.processed_points / self.infos['point_count'], 3)
-                        print('{}, {}'.format(time.time() - self.startup, percent), file=self.progression_log)
+                        print(f'{time.time() - self.startup}, {percent}', file=self.progression_log)
 
                 self.node_store.control_memory_usage(self.cache_size, self.verbose)
 
@@ -740,7 +740,7 @@ class _Convert:
         transform = np.dot(translation_matrix(self.avg_min), transform)
 
         # Create the root tile by sampling (or taking all points?) of child nodes
-        root_node = Node(''.encode('utf-8'), self.root_aabb, self.root_spacing * 2)
+        root_node = Node(b'', self.root_aabb, self.root_spacing * 2)
         root_node.children = []
         inv_aabb_size = (1.0 / np.maximum(MIN_POINT_SIZE, self.root_aabb[1] - self.root_aabb[0])).astype(
             np.float32)
@@ -763,10 +763,10 @@ class _Convert:
                     xyz.copy(),
                     rgb)
 
-        pnts_writer.node_to_pnts(''.encode('ascii'), root_node, self.out_folder, self.rgb)
+        pnts_writer.node_to_pnts(b'', root_node, self.out_folder, self.rgb)
 
         executor = concurrent.futures.ProcessPoolExecutor()
-        root_tileset = Node.to_tileset(executor, ''.encode('ascii'), self.root_aabb, self.root_spacing,
+        root_tileset = Node.to_tileset(executor, b'', self.root_aabb, self.root_spacing,
                                        self.out_folder, self.root_scale, prune=False)
         executor.shutdown()
 
@@ -794,11 +794,11 @@ class _Convert:
     def print_summary(self):
         print('Summary:')
         print('  - points to process: {}'.format(self.infos['point_count']))
-        print('  - offset to use: {}'.format(self.avg_min))
-        print('  - root spacing: {}'.format(self.root_spacing / self.root_scale[0]))
-        print('  - root aabb: {}'.format(self.root_aabb))
-        print('  - original aabb: {}'.format(self.original_aabb))
-        print('  - scale: {}'.format(self.root_scale))
+        print(f'  - offset to use: {self.avg_min}')
+        print(f'  - root spacing: {self.root_spacing / self.root_scale[0]}')
+        print(f'  - root aabb: {self.root_aabb}')
+        print(f'  - original aabb: {self.original_aabb}')
+        print(f'  - scale: {self.root_scale}')
 
     def draw_graph(self):
         import pygal  # type: ignore
@@ -869,7 +869,7 @@ class _Convert:
         elif self.verbose >= 0:
             percent = round(100 * self.state.processed_points / self.infos['point_count'], 2)
             time_left = (100 - percent) * now / (percent + 0.001)
-            print('\r{:>6} % in {} sec [est. time left: {} sec]'.format(percent, round(now), round(time_left)), end='',
+            print(f'\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]', end='',
                   flush=True)
 
 

@@ -18,7 +18,7 @@ class TileContent:
 
     def to_hex_str(self):
         arr = self.to_array()
-        return " ".join("{:02X}".format(x) for x in arr)
+        return " ".join(f"{x:02X}" for x in arr)
 
     def save_as(self, path: Path):
         tile_arr = self.to_array()

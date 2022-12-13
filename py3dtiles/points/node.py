@@ -4,7 +4,7 @@ import concurrent.futures
 import json
 from pathlib import Path
 import pickle
-from typing import Iterator, List, Tuple, TYPE_CHECKING, Union
+from typing import Iterator, TYPE_CHECKING
 
 import numpy as np
 
@@ -42,7 +42,7 @@ class Node:
         'points', 'dirty')
 
     def __init__(self, name: bytes, aabb: np.ndarray, spacing: float) -> None:
-        super(Node, self).__init__()
+        super().__init__()
         self.name = name
         self.aabb = aabb.astype(np.float32)
         self.aabb_size = np.maximum(aabb[1] - aabb[0], MIN_POINT_SIZE).astype(np.float32)
@@ -118,7 +118,7 @@ class Node:
         self.pending_xyz = []
         self.pending_rgb = []
 
-    def dump_pending_points(self) -> List[Tuple[bytes, bytes, int]]:
+    def dump_pending_points(self) -> list[tuple[bytes, bytes, int]]:
         result = [
             (name, pickle.dumps({'xyz': xyz, 'rgb': rgb}), len(xyz))
             for name, xyz, rgb in self._get_pending_points()
@@ -131,7 +131,7 @@ class Node:
     def get_pending_points_count(self) -> int:
         return sum([xyz.shape[0] for xyz in self.pending_xyz])
 
-    def _get_pending_points(self) -> Iterator[Tuple[bytes, np.ndarray, np.ndarray]]:
+    def _get_pending_points(self) -> Iterator[tuple[bytes, np.ndarray, np.ndarray]]:
         if not self.pending_xyz:
             return
 
@@ -185,7 +185,7 @@ class Node:
             return count
 
     @staticmethod
-    def get_points(data: Union["Node", DummyNode], include_rgb: bool) -> np.ndarray:  # todo remove staticmethod
+    def get_points(data: Node | DummyNode, include_rgb: bool) -> np.ndarray:  # todo remove staticmethod
         if data.children is None:
             points = data.points
             xyz = np.concatenate(tuple([xyz for xyz, rgb in points])).view(np.uint8).ravel()
@@ -202,7 +202,7 @@ class Node:
             return data.grid.get_points(include_rgb)
 
     @staticmethod
-    def to_tileset(executor: Union[concurrent.futures.ProcessPoolExecutor, None],
+    def to_tileset(executor: concurrent.futures.ProcessPoolExecutor | None,
                    name: bytes,
                    parent_aabb: np.ndarray,
                    parent_spacing: float,

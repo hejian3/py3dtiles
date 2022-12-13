@@ -92,7 +92,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
     (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
     """
     try:
-        with open(filename, "r") as f:
+        with open(filename) as f:
 
             point_count = portion[1] - portion[0]
 
@@ -119,7 +119,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                         line_features.insert(3, None)  # Insert intensity
                     points[j] = line_features
 
-                x, y, z = [points[:, c] for c in [0, 1, 2]]
+                x, y, z = (points[:, c] for c in [0, 1, 2])
 
                 if transformer:
                     x, y, z = transformer.transform(x, y, z)
@@ -143,7 +143,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 queue.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
-                        "".encode("ascii"),
+                        b"",
                         pickle.dumps({"xyz": coords, "rgb": colors}),
                         struct.pack(">I", len(coords)),
                     ],

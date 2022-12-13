@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Union
 
 from .extendable import Extendable
 from .tile_content import TileContent
@@ -20,7 +19,7 @@ class Tile(Extendable):
         # Some possible valid properties left un-delt with viewerRequestVolume
         self._transform = None
 
-    def set_transform(self, transform: List[float]) -> None:
+    def set_transform(self, transform: list[float]) -> None:
         """
         :param transform: a flattened transformation matrix
         :return:
@@ -68,10 +67,10 @@ class Tile(Extendable):
     def has_children(self) -> bool:
         return len(self._children) != 0
 
-    def get_direct_children(self) -> List[Tile]:
+    def get_direct_children(self) -> list[Tile]:
         return self._children
 
-    def get_children(self) -> List[Tile]:
+    def get_children(self) -> list[Tile]:
         """
         :return: the recursive (across the children tree) list of the children
                  tiles

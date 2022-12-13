@@ -46,7 +46,7 @@ def find_version(*file_paths):
     see https://github.com/pypa/sampleproject/blob/master/setup.py
     """
 
-    with open(os.path.join(here, *file_paths), 'r') as f:
+    with open(os.path.join(here, *file_paths)) as f:
         version_file = f.read()
 
     # The version line must have the form
