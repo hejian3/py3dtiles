@@ -41,6 +41,11 @@ else:
 
 OctreeMetadata = namedtuple('OctreeMetadata', ['aabb', 'spacing', 'scale'])
 
+READER_MAP = {
+    '.xyz': xyz_reader,
+    '.las': las_reader,
+    '.laz': las_reader,
+}
 
 def make_rotation_matrix(z1, z2):
     v0 = z1 / np.linalg.norm(z1)
@@ -142,9 +147,14 @@ class Worker(Process):
     def execute_read_file(self, content):
         parameters = pickle.loads(content[1])
 
-        ext = PurePath(parameters['filename']).suffix
-        init_reader_fn = las_reader.run if ext in ('.las', '.laz') else xyz_reader.run
-        init_reader_fn(
+        extension = PurePath(parameters['filename']).suffix
+        if extension in READER_MAP:
+            reader = READER_MAP[extension]
+        else:
+            raise ValueError(f"The file with {extension} extension can't be read, "
+                             f"the available extensions are: {READER_MAP.keys()}")
+
+        reader.run(
             parameters['filename'],
             parameters['offset_scale'],
             parameters['portion'],
@@ -430,8 +440,13 @@ class _Convert:
             raise ValueError("All files should have the same extension, currently there are", extensions)
         extension = extensions.pop()
 
-        init_reader_fn = las_reader.init if extension in ('.las', '.laz') else xyz_reader.init
-        return init_reader_fn(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
+        if extension in READER_MAP:
+            reader = READER_MAP[extension]
+        else:
+            raise ValueError(f"The file with {extension} extension can't be read, "
+                             f"the available extensions are: {READER_MAP.keys()}")
+
+        return reader.init(self.files, color_scale=color_scale, srs_in=srs_in, srs_out=srs_out)
 
     def get_crs(self, srs_in, srs_out):
         if srs_out:
