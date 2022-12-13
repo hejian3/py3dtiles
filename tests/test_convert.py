@@ -1,18 +1,48 @@
+import json
 from pathlib import Path
 import shutil
 from unittest.mock import patch
 
+import laspy
 from pytest import approx, fixture, raises
 
-from py3dtiles import convert_to_ecef
+from py3dtiles import convert_to_ecef, TileContentReader
 from py3dtiles.convert import convert, SrsInMissingException
 
 DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
 
 
+def number_of_points_in_tileset(tileset_path: Path) -> int:
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    nb_points = 0
+
+    children_tileset_info = [(tileset["root"], tileset["root"]["refine"])]
+    while children_tileset_info:
+        child_tileset, parent_refine = children_tileset_info.pop()
+        child_refine = child_tileset["refine"] if child_tileset.get("refine") else parent_refine
+
+        content = tileset_path.parent / child_tileset["content"]['uri']
+        if content.suffix == '.pnts' and child_refine == "ADD":
+            tile = TileContentReader.read_file(content)
+            nb_points += tile.body.feature_table.nb_points()
+        elif content.suffix == '.json':
+            with content.open() as f:
+                sub_tileset = json.load(f)
+            children_tileset_info.append((sub_tileset["root"], child_refine))
+
+        if "children" in child_tileset:
+            children_tileset_info += [
+                (sub_child_tileset, child_refine)for sub_child_tileset in child_tileset["children"]
+            ]
+
+    return nb_points
+
+
 @fixture()
 def tmp_dir():
-    yield './tmp'
+    yield Path('tmp/')
     shutil.rmtree('./tmp', ignore_errors=True)
 
 
@@ -32,10 +62,20 @@ def test_convert(tmp_dir):
     convert(str(path), outfolder=tmp_dir)
 
     # basic asserts
-    assert Path(tmp_dir, 'tileset.json').exists()
+    tileset_path = tmp_dir / 'tileset.json'
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [5.0, 5.0, 0.8593, 5.0, 0, 0, 0, 5.0, 0, 0, 0, 0.8593]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
+
     assert Path(tmp_dir, 'r0.pnts').exists()
 
-    # test
+    with laspy.open(path) as f:
+        las_point_count = f.header.point_count
+
+    assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
 def test_convert_without_srs(tmp_dir):
@@ -44,15 +84,28 @@ def test_convert_without_srs(tmp_dir):
                 outfolder=tmp_dir,
                 srs_out='4978',
                 jobs=1)
-    assert not Path(tmp_dir).exists()
+    assert not tmp_dir.exists()
 
     convert(str(DATA_DIRECTORY / 'without_srs.las'),
             outfolder=tmp_dir,
             srs_in='3949',
             srs_out='4978',
             jobs=1)
-    assert Path(tmp_dir, 'tileset.json').exists()
+
+    tileset_path = tmp_dir / 'tileset.json'
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [0.4398, 0.9692, 0.538, 0.4398, 0, 0, 0, 0.9692, 0, 0, 0, 0.538]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
+
     assert Path(tmp_dir, 'r.pnts').exists()
+
+    with laspy.open(str(DATA_DIRECTORY / 'without_srs.las')) as f:
+        las_point_count = f.header.point_count
+
+    assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
 def test_convert_with_srs(tmp_dir):
@@ -60,8 +113,21 @@ def test_convert_with_srs(tmp_dir):
             outfolder=tmp_dir,
             srs_out='4978',
             jobs=1)
-    assert Path(tmp_dir, 'tileset.json').exists()
+
+    tileset_path = tmp_dir / 'tileset.json'
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [100935.9141, -91072.5469, 32925.8359, 5.2656, 0, 0, 0, 3.0898, 0, 0, 0, 4.4121]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
+
     assert Path(tmp_dir, 'r.pnts').exists()
+
+    with laspy.open(str(DATA_DIRECTORY / 'with_srs.las')) as f:
+        las_point_count = f.header.point_count
+
+    assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
 def test_convert_simple_xyz(tmp_dir):
@@ -72,6 +138,23 @@ def test_convert_simple_xyz(tmp_dir):
             jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
     assert Path(tmp_dir, 'r.pnts').exists()
+
+    xyz_point_count = 0
+    with open(DATA_DIRECTORY / 'simple.xyz') as f:
+        line = True
+        while line:
+            line = f.readline()
+            xyz_point_count += 1 if line else 0
+
+    tileset_path = tmp_dir / 'tileset.json'
+    assert xyz_point_count == number_of_points_in_tileset(tileset_path)
+
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [-0.0347, 0.3909, 0.3247, 0.0213, 0, 0, 0, 0.3899, 0, 0, 0, 0.3094]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
 
 
 def test_convert_xyz_exception_in_run(tmp_dir):
