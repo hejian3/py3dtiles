@@ -192,10 +192,11 @@ class TestBoundingVolumeBox(unittest.TestCase):
         )
 
         # Assert box is translated by [10, 10, 10] on X,Y, Z axis
-        bounding_volume_box.transform([1, 0, 0, 0,
-                                       0, 1, 0, 0,
-                                       0, 0, 1, 0,
-                                       10, 10, 10, 1])
+        translate_transform = [1, 0, 0, 0,
+                               0, 1, 0, 0,
+                               0, 0, 1, 0,
+                               10, 10, 10, 1]
+        bounding_volume_box.transform(translate_transform)
         assert_array_equal(
             bounding_volume_box._box,
             [
@@ -203,21 +204,6 @@ class TestBoundingVolumeBox(unittest.TestCase):
                 4, 5, 6,
                 7, 8, 9,
                 10, 11, 12
-            ]
-        )
-
-        # Assert box is reversed
-        bounding_volume_box.transform([-1, 0, 0, 0,
-                                       0, -1, 0, 0,
-                                       0, 0, -1, 0,
-                                       0, 0, 0, -1])
-        assert_array_equal(
-            bounding_volume_box._box,
-            [
-                -11, -12, -13,
-                -4, -5, -6,
-                -7, -8, -9,
-                -10, -11, -12
             ]
         )
 
@@ -247,7 +233,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
         self.assertDictEqual(
             TestBoundingVolumeBox.build_box_sample().to_dict(),
-            {'boundingVolume': [
+            {'box': [
                 1, 2, 3, 4,
                 5, 6, 7, 8,
                 9, 10, 11, 12

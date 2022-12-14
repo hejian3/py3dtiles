@@ -41,6 +41,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
             srs_in = summary['srs'].get('proj4')
 
     return {
+        'type': 'pnts',
         'portions': pointcloud_file_portions,
         'aabb': np.array([f.header.mins, f.header.maxs]),
         'color_scale': color_scale,
@@ -50,7 +51,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
     }
 
 
-def run(filename: str, offset_scale, portion, queue, transformer):
+def run(filename: str, offset_scale, portion, queue, transformer) -> None:
     """
     Reads points from a las file
     """

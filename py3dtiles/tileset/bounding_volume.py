@@ -1,7 +1,9 @@
+from abc import ABC
+
 from .extendable import Extendable
 
 
-class BoundingVolume(Extendable):
+class BoundingVolume(ABC, Extendable):
     """
     Abstract class used as interface for box, region and sphere
     """
@@ -16,3 +18,14 @@ class BoundingVolume(Extendable):
 
     def is_sphere(self) -> bool:
         return False
+
+    def clone(self: "BoundingVolume") -> "BoundingVolume":
+        return self
+
+    def __add__(self, other: "BoundingVolume") -> "BoundingVolume":
+        if not self.is_box():
+            raise NotImplementedError()
+        if not other.is_box():
+            raise NotImplementedError()
+
+        return self + other

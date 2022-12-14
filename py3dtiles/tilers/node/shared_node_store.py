@@ -96,33 +96,25 @@ class SharedNodeStore:
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
     def remove_oldest_nodes(self, percent) -> Tuple[int, int]:
-        count = _remove_all(self)
+        # delete the entries
+        count = len(self.metadata)
+        bytes_written = 0
+        for name, meta in self.metadata.items():
+            data = self.data[meta[1]]
+            node_path = node_name_to_path(self.folder, name)
+            with node_path.open('wb') as f:
+                bytes_written += f.write(data)
+
+        self.metadata = {}
+        self.data = []
 
         self.memory_size['content'] = 0
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
-        assert len(self.metadata) == 0
-        assert len(self.data) == 0
-        return count
+        return count, bytes_written
 
     def print_statistics(self) -> None:
         print('Stats: Hits = {}, Miss = {}, New = {}'.format(
             self.stats['hit'],
             self.stats['miss'],
             self.stats['new']))
-
-
-def _remove_all(store: SharedNodeStore) -> Tuple[int, int]:
-    # delete the entries
-    count = len(store.metadata)
-    bytes_written = 0
-    for name, meta in store.metadata.items():
-        data = store.data[meta[1]]
-        node_path = node_name_to_path(store.folder, name)
-        with node_path.open('wb') as f:
-            bytes_written += f.write(data)
-
-    store.metadata = {}
-    store.data = []
-
-    return count, bytes_written

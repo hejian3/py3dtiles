@@ -163,8 +163,8 @@ test:
     - py3dtiles convert ../laz/1845_5173.laz --out tilesets/2
     # Validate the first one
     - npx ts-node src/main.ts --tilesetsDirectory tilesets/1 | tee validator-output.txt
-    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 4
-    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 4
+    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 5
+    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 5
     # Validate the second one to be sure the 2 las are valid
     - npx ts-node src/main.ts --tilesetsDirectory tilesets/2 | tee validator-output.txt
     - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 1
@@ -172,8 +172,8 @@ test:
     # Merge the 2 tilesets and validate the result
     - py3dtiles merge tilesets
     - npx ts-node src/main.ts --tilesetsDirectory tilesets | tee validator-output.txt
-    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 6
-    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 6
+    - grep \"numErrors\"\:\ 0 validator-output.txt | wc -l | grep 7
+    - grep \"numWarnings\"\:\ 0 validator-output.txt | wc -l | grep 7
   only:
     refs:
       - merge_requests

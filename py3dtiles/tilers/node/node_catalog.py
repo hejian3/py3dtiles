@@ -2,39 +2,35 @@ from __future__ import annotations
 
 import math
 import pickle
-from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
 
-from py3dtiles.tilers.node.node import Node
 from py3dtiles.utils import split_aabb
-
-if TYPE_CHECKING:
-    from py3dtiles.convert import OctreeMetadata
+from ..pnts.pnts_node import PntsNode
 
 
-class NodeCatalog:
+class NodeCatalog:  # todo make it generic (not only PntsNode)
     """NodeCatalog is a store of Node objects.py3dtiles
 
     Using a NodeCatalog allows to only store a children names
     in nodes, instead of storing a full recursive structure.
     """
 
-    def __init__(self, nodes: bytes, name: bytes, octree_metadata: OctreeMetadata) -> None:
+    def __init__(self, nodes: bytes, name: bytes, aabb, spacing) -> None:
         self.nodes = {}
-        self.root_aabb = octree_metadata.aabb
-        self.root_spacing = octree_metadata.spacing
+        self.root_aabb = aabb
+        self.root_spacing = spacing
         self.node_bytes = {}
         self._load_from_store(name, nodes)
 
-    def get_node(self, name: bytes) -> Node:
+    def get_node(self, name: bytes) -> PntsNode:
         """Returns the node mathing the given name"""
         if name not in self.nodes:
             spacing = self.root_spacing / math.pow(2, len(name))
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing)
+            node = PntsNode(name, aabb, spacing)
             self.nodes[name] = node
         else:
             node = self.nodes[name]
@@ -52,7 +48,7 @@ class NodeCatalog:
 
         return pickle.dumps(self.node_bytes)
 
-    def _load_from_store(self, name: bytes, data: bytes) -> Node:
+    def _load_from_store(self, name: bytes, data: bytes) -> PntsNode:
         if len(data) > 0:
             out = pickle.loads(gzip.decompress(data))
             for n in out:
@@ -60,7 +56,7 @@ class NodeCatalog:
                 aabb = self.root_aabb
                 for i in n:
                     aabb = split_aabb(aabb, int(i))
-                node = Node(n, aabb, spacing)
+                node = PntsNode(n, aabb, spacing)
                 node.load_from_bytes(out[n])
                 self.node_bytes[n] = out[n]
                 self.nodes[n] = node
@@ -69,7 +65,7 @@ class NodeCatalog:
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing)
+            node = PntsNode(name, aabb, spacing)
             self.nodes[name] = node
 
         return self.nodes[name]

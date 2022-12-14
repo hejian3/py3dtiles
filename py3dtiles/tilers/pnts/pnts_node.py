@@ -8,20 +8,21 @@ from typing import Iterator, TYPE_CHECKING
 
 import numpy as np
 
-from py3dtiles.tilers.pnts import MIN_POINT_SIZE
-from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
+from py3dtiles.node import Node
 from py3dtiles.tileset.feature_table import SemanticPoint
 from py3dtiles.tileset.utils import TileContentReader
-from py3dtiles.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
-from .distance import xyz_to_child_index
-from .points_grid import Grid
+from py3dtiles.utils import aabb_size_to_subdivision_type, node_name_to_path, split_aabb, SubdivisionType
+from .constants import MIN_POINT_SIZE
+from .pnts_writer import points_to_pnts
+from ..node.distance import xyz_to_child_index
+from ..node.points_grid import Grid
 
 if TYPE_CHECKING:
-    from .node_catalog import NodeCatalog
+    from ..node.node_catalog import NodeCatalog
 
 
 def node_to_tileset(args):
-    return Node.to_tileset(None, args[0], args[1], args[2], args[3], args[4])
+    return PntsNode.to_tileset(None, args[0], args[1], args[2], args[3], args[4])
 
 
 class DummyNode:
@@ -34,7 +35,7 @@ class DummyNode:
             self.points = _bytes['points']
 
 
-class Node:
+class PntsNode(Node):
     """docstring for Node"""
     __slots__ = (
         'name', 'aabb', 'aabb_size', 'inv_aabb_size', 'aabb_center',
@@ -55,6 +56,13 @@ class Node:
         self.grid = Grid(self)
         self.points = []
         self.dirty = False
+
+    @classmethod
+    def from_name(cls, name, parent_aabb, parent_spacing):
+        spacing = parent_spacing * 0.5
+        aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
+        # let's build a new Node
+        return cls(name, aabb, spacing)
 
     def save_to_bytes(self) -> bytes:
         sub_pickle = {}
@@ -185,7 +193,8 @@ class Node:
             return count
 
     @staticmethod
-    def get_points(data: Node | DummyNode, include_rgb: bool) -> np.ndarray:  # todo remove staticmethod
+
+    def get_points(data: PntsNode | DummyNode, include_rgb: bool) -> np.ndarray:  # todo remove staticmethod
         if data.children is None:
             points = data.points
             xyz = np.concatenate(tuple([xyz for xyz, rgb in points])).view(np.uint8).ravel()
@@ -206,7 +215,7 @@ class Node:
                    folder: Path,
                    scale: np.ndarray,
                    prune: bool = True) -> dict:
-        node = node_from_name(name, parent_aabb, parent_spacing)
+        node = PntsNode.from_name(name, parent_aabb, parent_spacing)
         aabb = node.aabb
         tile_path = node_name_to_path(folder, name, '.pnts')
         xyz = np.array(0)
@@ -281,7 +290,7 @@ class Node:
                 if executor is not None:
                     children += [(child_name, node.aabb, node.spacing, folder, scale)]
                 else:
-                    children += [Node.to_tileset(None, child_name, node.aabb, node.spacing, folder, scale)]
+                    children += [PntsNode.to_tileset(None, child_name, node.aabb, node.spacing, folder, scale)]
 
         # If we merged at least one child tile in the current tile
         # the pnts file needs to be rewritten.
@@ -317,11 +326,10 @@ class Node:
                     'geometricError': tileset['geometricError'],
                     'root': tileset
                 }
-                tileset_name = f"tileset.{name.decode('ascii')}.json"
+                tileset_name = f"tileset_pnts_{name.decode('ascii')}.json"
                 tileset_path = folder / tileset_name
                 with tileset_path.open('w') as f:
                     json.dump(tile_root, f)
                 tileset['content'] = {'uri': tileset_name}
-                del tileset['children']
 
         return tileset

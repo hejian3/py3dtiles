@@ -7,6 +7,7 @@ import numpy as np
 
 from py3dtiles.utils import ResponseType
 
+
 def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
     aabb = None
     count = 0
@@ -60,6 +61,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
         ]
 
     return {
+        'type': 'pnts',
         "portions": pointcloud_file_portions,
         "aabb": aabb,
         "color_scale": color_scale,

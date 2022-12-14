@@ -272,7 +272,7 @@ def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -
             raise FileExistsError(f'Destination tileset {merger_tileset_path} already exists.')
 
     tilesets = [
-        tileset for tileset in folder.glob('**/tileset.json')
+        tileset for tileset in folder.glob('**/*tileset*.json')
     ]
 
     if verbose >= 1:

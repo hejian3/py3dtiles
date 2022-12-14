@@ -28,8 +28,6 @@ def main():
         info.main(args)
     elif args.command == 'merge':
         merger.main(args)
-    elif args.command == 'export':
-        export.main(args)
     else:
         parser.print_help()
 

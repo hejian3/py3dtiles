@@ -137,8 +137,9 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
                 "geometricError": 500,
+                'refine': 'ADD'
             }
         )
 
@@ -147,7 +148,9 @@ class TestTile(unittest.TestCase):
 
         child_tile = Tile()
         child_tile.geometric_error = 21
-        child_tile.bounding_volume = bounding_volume
+        child_bounding_volume = BoundingVolumeBox()
+        child_bounding_volume.set_from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+        child_tile.bounding_volume = child_bounding_volume
         tile.add_child(child_tile)
 
         # cannot test now
@@ -156,16 +159,18 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {"box": [1.0, 2.0, 3.0, 21.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 27.0]},
                 "geometricError": 3.14159,
                 "children": [
                     {
                         "boundingVolume": {
-                            "boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                            "box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
                         "geometricError": 21,
+                        'refine': 'ADD',
 
                     }
-                ]
+                ],
+                'refine': 'ADD'
             }
         )
 

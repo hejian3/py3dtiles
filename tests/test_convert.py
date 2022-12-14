@@ -25,14 +25,15 @@ def number_of_points_in_tileset(tileset_path: Path) -> int:
         child_tileset, parent_refine = children_tileset_info.pop()
         child_refine = child_tileset["refine"] if child_tileset.get("refine") else parent_refine
 
-        content = tileset_path.parent / child_tileset["content"]['uri']
-        if content.suffix == '.pnts' and child_refine == "ADD":
-            tile = TileContentReader.read_file(content)
-            nb_points += tile.body.feature_table.nb_points()
-        elif content.suffix == '.json':
-            with content.open() as f:
-                sub_tileset = json.load(f)
-            children_tileset_info.append((sub_tileset["root"], child_refine))
+        if "content" in child_tileset:
+            content = tileset_path.parent / child_tileset["content"]['uri']
+            if content.suffix == '.pnts' and child_refine == "ADD":
+                tile = TileContentReader.read_file(content)
+                nb_points += tile.body.feature_table.nb_points()
+            elif content.suffix == '.json':
+                with content.open() as f:
+                    sub_tileset = json.load(f)
+                children_tileset_info.append((sub_tileset["root"], child_refine))
 
         if "children" in child_tileset:
             children_tileset_info += [
@@ -61,7 +62,7 @@ def test_convert(tmp_dir):
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
-    assert Path(tmp_dir, 'r0.pnts').exists()
+    assert Path(tmp_dir, 'pnts_tiles', 'r0.pnts').exists()
 
     with laspy.open(path) as f:
         las_point_count = f.header.point_count
@@ -91,7 +92,7 @@ def test_convert_without_srs(tmp_dir):
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
-    assert Path(tmp_dir, 'r.pnts').exists()
+    assert Path(tmp_dir, 'pnts_tiles', 'r.pnts').exists()
 
     with laspy.open(DATA_DIRECTORY / 'without_srs.las') as f:
         las_point_count = f.header.point_count
@@ -113,7 +114,7 @@ def test_convert_with_srs(tmp_dir):
     box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
     assert box == expecting_box
 
-    assert Path(tmp_dir, 'r.pnts').exists()
+    assert Path(tmp_dir, 'pnts_tiles', 'r.pnts').exists()
 
     with laspy.open(DATA_DIRECTORY / 'with_srs_3857.las') as f:
         las_point_count = f.header.point_count
@@ -128,7 +129,7 @@ def test_convert_simple_xyz(tmp_dir):
             crs_out=CRS.from_epsg(4978),
             jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
-    assert Path(tmp_dir, 'r.pnts').exists()
+    assert Path(tmp_dir, 'pnts_tiles', 'r.pnts').exists()
 
     xyz_point_count = 0
     with open(DATA_DIRECTORY / 'simple.xyz') as f:
@@ -151,7 +152,7 @@ def test_convert_simple_xyz(tmp_dir):
 def test_convert_ply(tmp_dir):
     convert(DATA_DIRECTORY / 'simple.ply', outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
-    assert Path(tmp_dir, 'r.pnts').exists()
+    assert Path(tmp_dir, 'pnts_tiles', 'r.pnts').exists()
 
     expected_point_count = 22300
     tileset_path = tmp_dir / 'tileset.json'
@@ -170,8 +171,9 @@ def test_convert_mix_las_xyz(tmp_dir):
             outfolder=tmp_dir,
             crs_out=CRS.from_epsg(4978),
             jobs=1)
-    assert Path(tmp_dir, 'tileset.json').exists()
-    assert Path(tmp_dir, 'r.pnts').exists()
+
+    tileset_path = tmp_dir / 'tileset.json'
+    assert tileset_path.exists()
 
     xyz_point_count = 0
     with open(DATA_DIRECTORY / 'simple.xyz') as f:
@@ -183,7 +185,6 @@ def test_convert_mix_las_xyz(tmp_dir):
     with laspy.open(DATA_DIRECTORY / 'with_srs_3857.las') as f:
         las_point_count = f.header.point_count
 
-    tileset_path = tmp_dir / 'tileset.json'
     assert xyz_point_count + las_point_count == number_of_points_in_tileset(tileset_path)
 
     with tileset_path.open() as f:
@@ -236,6 +237,7 @@ def test_convert_export_folder_already_exists(tmp_dir):
 
     tmp_dir.mkdir()
     assert not (tmp_dir / 'tileset.json').exists()
+    assert not (tmp_dir / 'pnts_tiles').exists()
 
     with raises(FileExistsError, match=f"Folder '{tmp_dir}' already exists"):
         convert(DATA_DIRECTORY / 'with_srs_3857.las',

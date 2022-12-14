@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .extendable import Extendable
-from .tile_content import TileContent
+from .tile_content import TileContent, TileUri
 
 
 class Tile(Extendable):
@@ -14,12 +14,12 @@ class Tile(Extendable):
         self.geometric_error = geometric_error
         self._refine = ""
         self.set_refine_mode(refine_mode)
-        self._content = None
+        self._content: TileContent | TileUri | None = None
         self._children = []
         # Some possible valid properties left un-delt with viewerRequestVolume
         self._transform = None
 
-    def set_transform(self, transform: list[float]) -> None:
+    def set_transform(self, transform: list[float] | None) -> None:
         """
         :param transform: a flattened transformation matrix
         :return:
@@ -39,19 +39,11 @@ class Tile(Extendable):
             return
         self._content = content
 
-    def get_content(self) -> TileContent:
+    def get_content(self) -> TileContent | TileUri | None:
         return self._content
 
-    def set_content_uri(self, uri: str) -> None:
-        if self._content is None:
-            raise AttributeError('Tile with unset content.')
-        # self._content.set_uri(uri) # TODO add set_uri in TileContent
-
-    def get_content_uri(self) -> str:
-        if self._content is None:
-            raise AttributeError('Tile with unset content.')
-        # return self._content.get_uri() # TODO add get_uri in TileContent
-        return ""
+    def set_content_uri(self, uri: Path) -> None:
+        self._content = TileUri(uri)
 
     def set_refine_mode(self, mode: str) -> None:
         if mode != 'ADD' and mode != 'REPLACE':
@@ -63,6 +55,12 @@ class Tile(Extendable):
 
     def add_child(self, tile: Tile) -> None:
         self._children.append(tile)
+
+        if tile.bounding_volume is not None:
+            if self.bounding_volume is None:
+                self.bounding_volume = tile.bounding_volume.clone()
+            else:
+                self.bounding_volume.add(tile.bounding_volume)
 
     def has_children(self) -> bool:
         return len(self._children) != 0
@@ -112,9 +110,13 @@ class Tile(Extendable):
         TileSet attributes)
         :param directory: the target directory
         """
-        file_name = self.get_content_uri()
+        if self._content is None or isinstance(self._content, TileUri):
+            raise AttributeError("Tile with no content.")
+
+        file_name = self._content.get_uri()
         if not file_name:
             raise AttributeError("Tile with no content or no uri in content.")
+
         path_name = directory / file_name
 
         # Make sure the output directory exists (note that target_dir may
@@ -124,16 +126,22 @@ class Tile(Extendable):
 
         # Write the tile content of this tile:
         with path_name.open('wb') as f:
-            f.write(self.get_content().to_array())
+            f.write(self._content.to_array())
 
     def to_dict(self) -> dict:
         dict_data = {}
 
         if self.bounding_volume is not None:
-            bounding_volume = self.bounding_volume
+            dict_data['boundingVolume'] = self.bounding_volume.to_dict()
         else:
             raise AttributeError('Bounding volume is not set')
-        dict_data['boundingVolume'] = bounding_volume.to_dict()
+
+        if self._refine:
+            dict_data['refine'] = self._refine
+
+        if self._transform:
+            dict_data['transform'] = self._transform
+
 
         dict_data['geometricError'] = self.geometric_error
 
@@ -146,6 +154,6 @@ class Tile(Extendable):
 
         if self._content is not None:
             # Refer to children related above comment (mutatis mutandis):
-            dict_data['content'] = self._content
+            dict_data['content'] = {'uri': self._content.get_uri()}
 
         return dict_data

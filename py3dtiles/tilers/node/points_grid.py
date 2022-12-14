@@ -10,8 +10,7 @@ from py3dtiles.utils import aabb_size_to_subdivision_type, SubdivisionType
 from .distance import is_point_far_enough, xyz_to_key
 
 if TYPE_CHECKING:
-    from .node import Node
-
+    from ..pnts.pnts_node import PntsNode
 
 @njit(fastmath=True, cache=True)
 def _insert(cells_xyz, cells_rgb, aabmin, inv_aabb_size, cell_count, xyz, rgb, spacing, shift, force=False):
@@ -45,7 +44,7 @@ class Grid:
 
     __slots__ = ('cell_count', 'cells_xyz', 'cells_rgb', 'spacing')
 
-    def __init__(self, node: Node, initial_count: int = 3) -> None:
+    def __init__(self, node, initial_count: int = 3) -> None:  # todo fix typing
         self.cell_count = np.array([initial_count, initial_count, initial_count], dtype=np.int32)
         self.spacing = node.spacing * node.spacing
 

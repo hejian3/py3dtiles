@@ -31,6 +31,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
     pointcloud_file_portions = [(str(path), (0, point_count, point_count))]
 
     return {
+        'type': 'pnts',
         'portions': pointcloud_file_portions,
         'aabb': aabb,
         'color_scale': color_scale,

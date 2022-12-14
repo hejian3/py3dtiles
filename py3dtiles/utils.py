@@ -63,6 +63,7 @@ def node_name_to_path(working_dir: Path, name: bytes, suffix: str = '', split_le
     Get the path of a tile from its name and the working directory.
     If the name is '222262175' with the suffix '.pnts', the result is 'working_dir/22226217/r5.pnts'
     """
+    working_dir /= "pnts_tiles" # todo document this
     name = name.decode('ascii')
     if len(name) <= split_len:
         filename = PurePath("r" + name + suffix)
@@ -76,10 +77,6 @@ def node_name_to_path(working_dir: Path, name: bytes, suffix: str = '', split_le
     working_dir.mkdir(parents=True, exist_ok=True)
 
     return full_path
-
-
-def compute_spacing(aabb: np.ndarray) -> float:
-    return float(np.linalg.norm(aabb[1] - aabb[0]) / 125)
 
 
 def aabb_size_to_subdivision_type(size: np.ndarray) -> SubdivisionType:
@@ -119,8 +116,7 @@ def make_aabb_cubic(aabb):
 
 
 def node_from_name(name, parent_aabb, parent_spacing):
-    from py3dtiles.tilers.node import Node
+    from py3dtiles.tilers.pnts.pnts_node import PntsNode
     spacing = parent_spacing * 0.5
     aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
-    #  let's build a new Node
-    return Node(name, aabb, spacing)
+    return PntsNode(name, aabb, spacing)

@@ -7,14 +7,10 @@ The example that is run in the test (`simple.ply`) comes from the [CGAL reposito
 from pathlib import Path
 
 import numpy as np
-import numpy.typing as npt
 import plyfile
 from pytest import fixture, raises
-import zmq
 
-from py3dtiles.convert import URI
 from py3dtiles.reader import ply_reader
-from py3dtiles.utils import compute_spacing
 
 
 DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
@@ -54,9 +50,9 @@ def test_ply_get_metadata(ply_filepath):
         np.array([5.966480625e+05, 2.43620015625e+05, 7.350153350830078e+01]),
         np.array([5.967389375e+05, 2.43731984375e+05, 9.718580627441406e+01]),
     )
-    assert list(ply_metadata.keys()) == [
-        "portions", "aabb", "color_scale", "srs_in", "point_count", "avg_min"
-    ]
+    assert set(ply_metadata.keys()) == {
+        "portions", "aabb", "color_scale", "srs_in", "point_count", "avg_min", "type"
+    }
     assert ply_metadata["portions"] == [
         (str(ply_filepath), (0, expected_point_count, expected_point_count))
     ]

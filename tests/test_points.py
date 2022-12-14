@@ -4,9 +4,11 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from py3dtiles.tilers.node import Grid,Node
 from py3dtiles.tilers.node.distance import is_point_far_enough
-from py3dtiles.utils import compute_spacing, node_name_to_path
+from py3dtiles.tilers.node.points_grid import Grid
+from py3dtiles.tilers.pnts.pnts_management import compute_spacing
+from py3dtiles.tilers.pnts.pnts_node import PntsNode
+from py3dtiles.utils import node_name_to_path
 
 # test point
 xyz = np.array([0.25, 0.25, 0.25], dtype=np.float32)
@@ -19,7 +21,7 @@ sample_points = np.array([[x / 30, x / 30, x / 30] for x in range(30)], dtype=np
 @pytest.fixture
 def node():
     bbox = np.array([[0, 0, 0], [2, 2, 2]])
-    return Node(b'noeud', bbox, compute_spacing(bbox))
+    return PntsNode(b'noeud', bbox, compute_spacing(bbox))
 
 
 @pytest.fixture
@@ -79,22 +81,22 @@ def test_is_point_far_enough_perf(benchmark):
 def test_short_name_to_path():
     short_tile_name = b''
     path = node_name_to_path(Path('work'), short_tile_name)
-    assert str(path) == 'work/r'
+    assert str(path) == 'work/pnts_tiles/r'
 
 
 def test_long_name_to_path():
     long_tile_name = b'110542453782'
     path = node_name_to_path(Path('work'), long_tile_name)
-    assert str(path) == 'work/11054245/r3782'
+    assert str(path) == 'work/pnts_tiles/11054245/r3782'
 
 
 def test_long_name_to_path_with_extension():
     long_tile_name = b'110542453782'
     path = node_name_to_path(Path('work'), long_tile_name, suffix='.pnts')
-    assert str(path) == 'work/11054245/r3782.pnts'
+    assert str(path) == 'work/pnts_tiles/11054245/r3782.pnts'
 
 
 def test_long_name_to_path_with_short_split():
     long_tile_name = b'110542453782'
     path = node_name_to_path(Path('work'), long_tile_name, split_len=2)
-    assert str(path) == 'work/11/05/42/45/37/r82'
+    assert str(path) == 'work/pnts_tiles/11/05/42/45/37/r82'

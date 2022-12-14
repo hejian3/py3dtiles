@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import List
 
+from .bounding_volume_box import BoundingVolumeBox
 from .extendable import Extendable
 from .tile import Tile
 
@@ -13,6 +14,35 @@ class TileSet(Extendable):
         self._asset = {"version": "1.0"}
         self.geometric_error = geometric_error
         self.root_tile = Tile()
+
+    @classmethod
+    def from_file(cls, path: Path, shallow: bool = True):
+        tileset = cls()
+
+        with path.open() as f:
+            json_tileset = json.load(f)
+
+        tileset._asset = json_tileset['asset']
+        tileset.geometric_error = json_tileset['geometricError']
+
+        bounding_volume = json_tileset['root']['boundingVolume']
+        if "box" in bounding_volume:
+            tileset.root_tile.bounding_volume = BoundingVolumeBox().set_from_list(bounding_volume["box"])
+        elif "region" in bounding_volume:
+            raise NotImplementedError()
+        elif "sphere" in bounding_volume:
+            raise NotImplementedError()
+        else:
+            raise ValueError("")
+
+        tileset.root_tile.geometric_error = json_tileset['root']['geometricError']
+        tileset.root_tile.set_refine_mode(json_tileset['root']['refine'].upper())
+        tileset.root_tile.set_transform(json_tileset['root']['transform'])
+
+        if not shallow:
+            raise NotImplementedError()
+
+        return tileset
 
     def set_transform(self, transform: List[float]) -> None:
         """
@@ -50,7 +80,7 @@ class TileSet(Extendable):
         # specified:
         all_tiles = self.root_tile.get_children()
         for index, tile in enumerate(all_tiles):
-            tile.set_content_uri('tiles/' + f'{index}.b3dm')
+            tile.set_content_uri(Path('tiles') / f'{index}.b3dm')
 
         # Proceed with the writing of the TileSet per se:
         self.write_as_json(target_dir)
@@ -65,7 +95,7 @@ class TileSet(Extendable):
         :param directory: the target directory name
         """
         # Make sure the TileSet is aligned with its children Tiles.
-        self.root_tile.sync_bounding_volume_with_children()
+        # self.root_tile.sync_bounding_volume_with_children()
 
         tileset_path = directory / 'tileset.json'
         with tileset_path.open('w') as f:

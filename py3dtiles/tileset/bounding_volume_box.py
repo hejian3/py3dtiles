@@ -4,6 +4,7 @@ import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 
 from .bounding_volume import BoundingVolume
 
@@ -43,13 +44,18 @@ class BoundingVolumeBox(BoundingVolume):
         super().__init__()
         self._box = None
 
+    def clone(self) -> BoundingVolumeBox:
+        new = BoundingVolumeBox()
+        new._box = copy.copy(self._box)
+        return new
+
     def get_center(self) -> np.ndarray:
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
         return self._box[0: 3]
 
-    def translate(self, offset: list | np.ndarray) -> None:
+    def translate(self, offset: npt.ArrayLike) -> None:
         """
         Translate the box center with the given offset "vector"
         :param offset: the 3D vector by which the box should be translated
@@ -60,14 +66,11 @@ class BoundingVolumeBox(BoundingVolume):
         for i in range(0, 3):
             self._box[i] += offset[i]
 
-    def transform(self, transform: list[float] | np.ndarray) -> None:
+    def transform(self, transform: npt.ArrayLike) -> None:
         """
         Apply the provided transformation matrix (4x4) to the box
         :param transform: transformation matrix (4x4) to be applied
         """
-        # FIXME: the following code only uses the first three coordinates
-        # of the transformation matrix (and basically ignores the fourth
-        # column of transform). This looks like some kind of mistake...
         rotation = np.array([transform[0:3],
                              transform[4:7],
                              transform[8:11]])
@@ -92,7 +95,7 @@ class BoundingVolumeBox(BoundingVolume):
     def is_box(self) -> bool:
         return True
 
-    def set_from_list(self, box_list: list) -> None:
+    def set_from_list(self, box_list: npt.ArrayLike) -> BoundingVolumeBox:
         box = np.array(box_list, dtype=float)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
@@ -100,7 +103,9 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_array(self, box_array: np.ndarray) -> None:
+        return self
+
+    def set_from_array(self, box_array: np.ndarray) -> BoundingVolumeBox:
         box = box_array.astype(float)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
@@ -108,7 +113,9 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_points(self, points: list) -> None:
+        return self
+
+    def set_from_points(self, points: list) -> BoundingVolumeBox:
         box = BoundingVolumeBox.get_box_array_from_point(points)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
@@ -116,13 +123,17 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_mins_maxs(self, mins_maxs: list | np.ndarray) -> None:
+        return self
+
+    def set_from_mins_maxs(self, mins_maxs: npt.ArrayLike) -> BoundingVolumeBox:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each
                           coordinate axis
         """
         self._box = BoundingVolumeBox.get_box_array_from_mins_maxs(mins_maxs)
+
+        return self
 
     def get_corners(self) -> list:
         """
@@ -195,10 +206,10 @@ class BoundingVolumeBox(BoundingVolume):
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
-        return {'boundingVolume': list(self._box)}
+        return {'box': list(self._box)}
 
     @staticmethod
-    def get_box_array_from_mins_maxs(mins_maxs: list | np.ndarray) -> np.ndarray:
+    def get_box_array_from_mins_maxs(mins_maxs: npt.ArrayLike) -> np.ndarray: # todo return smallest obb, not aabb
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each

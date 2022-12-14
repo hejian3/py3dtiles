@@ -32,6 +32,16 @@ class TileContent:
         """
         self.header.sync(self.body)
 
+    def get_uri(self):
+        raise NotImplementedError()
+
+class TileUri:
+    def __init__(self, path: Path):
+        self.uri = path
+
+    def get_uri(self):
+        return str(self.uri)
+
 
 class TileContentType(Enum):
     UNKNOWN = 0
