@@ -3,34 +3,74 @@ stages:
   - 🤞 test
   - 🚀 deploy
 
-# -- LINT JOBS --------------------------------------------------------------------------
-flake8:
-  stage: 🐍 lint
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+.pre-commit-check:
   image:
-    name: python:3.10-slim
+    name: python:3.10
+  variables:
+    PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+  cache:
+    - paths:
+      - ${PRE_COMMIT_HOME}
+    - paths:
+      - ${PIP_CACHE_DIR}
   before_script:
-    - python -m pip install -U flake8 flake8-import-order flake8-bugbear
-  script:
-    - flake8
+    - pip install pre-commit
+    - pre-commit install -c .pre-commit-config.yaml
   only:
     refs:
       - merge_requests
       - develop
       - tags
       - master
+
+# -- LINT JOBS --------------------------------------------------------------------------
+flake8:
+  extends: .pre-commit-check
+  stage: 🐍 lint
+  script:
+    - pre-commit run --show-diff-on-failure --all-files flake8
+  only:
     changes:
       - "**/*.py"
+
+autoflake:
+  extends: .pre-commit-check
+  stage: 🐍 lint
+  script: pre-commit run --show-diff-on-failure --all-files autoflake
+  only:
+    changes:
+      - "**/*.py"
+
+pyupgrade:
+  extends: .pre-commit-check
+  stage: 🐍 lint
+  script: pre-commit run --show-diff-on-failure --all-files pyupgrade
+  only:
+    changes:
+      - "**/*.py"
+
+pre-commit-built-in:
+  extends: .pre-commit-check
+  stage: 🐍 lint
+  script:
+    - pre-commit run --show-diff-on-failure --all-files trailing-whitespace
+    - pre-commit run --show-diff-on-failure --all-files end-of-file-fixer
+    - pre-commit run --show-diff-on-failure --all-files check-added-large-files
 
 pytype:
   stage: 🐍 lint
   image:
     name: python:3.10-slim
   cache:
-    - key: $CI_COMMIT_BRANCH
+    - key: $CI_COMMIT_REF_NAME
       paths:
         - .pytype/
+    - paths:
+      - ${PIP_CACHE_DIR}
   before_script:
-    - pip install .
     - pip install .[dev]
   script:
     - pytype setup.py py3dtiles/ docs/ tests/
@@ -40,13 +80,17 @@ pytype:
       - develop
       - tags
       - master
+    changes:
+      - "**/*.py"
 
 lint-commit:
   stage: 🐍 lint
   image:
-    name: python:3.10-slim
+    name: python:3.10
+  cache:
+    - paths:
+      - ${PIP_CACHE_DIR}
   before_script:
-    - apt update && apt install -y git
     - pip install commitizen
   script:
     - cz check --rev-range $CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD
@@ -59,11 +103,13 @@ test:
   stage: 🤞 test
   image:
     name: python:$PYTHON_VERSION-slim
+  cache:
+    - paths:
+      - ${PIP_CACHE_DIR}
   before_script:
     - apt update
     - apt install -y pdal llvm
   script:
-    - pip install .
     - pip install .[dev]
     - pytest
     # TODO move that in unit tests
@@ -98,6 +144,8 @@ test:
     - key: 3d-tiles-validator
       paths:
         - laz/
+    - paths:
+      - ${PIP_CACHE_DIR}
   before_script:
     - apt update
     - apt install -y python3-pip pdal llvm liblaszip8
@@ -161,11 +209,8 @@ sonarcloud-check:
 # -- DEPLOY JOBS -------------------------------------------------------------------------
 pages:
   stage: 🚀 deploy
-  image: python:3.10-slim
-  before_script:
-    - apt update && apt install -y git
+  image: python:3.10
   script:
-    - pip install .
     - pip install .[doc]
     # sphinx-multiversion needs to have all the branches
     - git fetch
