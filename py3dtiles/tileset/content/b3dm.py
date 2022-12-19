@@ -127,11 +127,16 @@ class B3dmBody(TileContentBody):
         self.gltf = GlTF()
 
     def to_array(self) -> npt.NDArray[np.uint8]:
-        # TODO : export feature table
-        array = self.gltf.to_array()
-        if self.batch_table is not None:
-            array = np.concatenate((self.batch_table.to_array(), array))
-        return array
+        # TODO : export feature table, reminder, the glTF part must start on an 8-byte boundary.
+        if self.batch_table:
+            batch_table = self.batch_table.to_array()
+        else:
+            batch_table = np.array([], dtype=np.uint8)
+
+        # The glTF part must start and end on an 8-byte boundary
+        gltf_array = self.gltf.to_array()
+
+        return np.concatenate((batch_table, gltf_array))
 
     @staticmethod
     def from_gltf(gltf: GlTF) -> B3dmBody:

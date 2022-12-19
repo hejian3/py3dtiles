@@ -27,7 +27,8 @@ class TestTileContentReader(unittest.TestCase):
 
     def test_read_and_write(self):
         tile_content = read_file(Path("tests/fixtures/buildings.b3dm"))
-        self.assertEqual(tile_content.header.tile_byte_length, 6176)
+
+        self.assertEqual(tile_content.header.tile_byte_length, 6180)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
         self.assertEqual(tile_content.header.ft_bin_byte_length, 0)
         self.assertEqual(tile_content.header.bt_json_byte_length, 64)
@@ -36,7 +37,7 @@ class TestTileContentReader(unittest.TestCase):
             tile_content.body.batch_table.header.data,
             {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]},
         )
-        self.assertEqual(len(tile_content.body.gltf.to_array()), 6084)
+        self.assertEqual(len(tile_content.body.gltf.to_array()), 6088)
         self.assertEqual(tile_content.body.gltf.header["asset"]["version"], "2.0")
 
         path_name = Path("tests/output_tests/buildings.b3dm")

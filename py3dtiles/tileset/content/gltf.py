@@ -15,15 +15,18 @@ class GlTF:
     def to_array(self):  # glb
         scene = json.dumps(self.header, separators=(",", ":"))
 
-        # body must be 4-byte aligned
+        # body must start with 4-byte boundary
         scene += " " * ((4 - len(scene) % 4) % 4)
 
-        padding = np.array(
-            [0 for i in range((4 - len(self.body) % 4) % 4)], dtype=np.uint8
-        )
-
         length = GlTF.HEADER_LENGTH + (2 * GlTF.CHUNK_HEADER_LENGTH)
-        length += len(self.body) + len(scene) + len(padding)
+        length += len(self.body) + len(scene)
+
+        # gltf must end with an 8-byte boundary
+        # the padding is added inside the gltf body
+        # https://github.com/CesiumGS/3d-tiles/tree/main/specification/TileFormats/Batched3DModel#padding
+        body_padding = np.zeros((8 - length % 8) % 8, dtype=np.uint8)
+        length += len(body_padding)
+
         binary_header = np.array(
             [0x46546C67, 2, length], dtype=np.uint32  # "glTF" magic  # version
         )
@@ -33,7 +36,7 @@ class GlTF:
 
         bin_chunk_header = np.array(
             [
-                len(self.body) + len(padding),
+                len(self.body) + len(body_padding),
                 # BIN chunck length
                 0x004E4942,
             ],
@@ -47,7 +50,7 @@ class GlTF:
                 np.frombuffer(scene.encode("utf-8"), dtype=np.uint8),
                 bin_chunk_header.view(np.uint8),
                 self.body,
-                padding,
+                body_padding,
             )
         )
 
