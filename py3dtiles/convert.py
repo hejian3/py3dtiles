@@ -20,14 +20,12 @@ import zmq
 
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException, WorkerException
 from py3dtiles.reader import las_reader, xyz_reader
+from py3dtiles.tilers.matrix_manipulation import make_rotation_matrix, make_scale_matrix, make_translation_matrix
 from py3dtiles.tilers.node import Node
 from py3dtiles.tilers.node import node_process
 from py3dtiles.tilers.node import SharedNodeStore
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
-from py3dtiles.tilers.transformations import (
-    angle_between_vectors, inverse_matrix, rotation_matrix, scale_matrix, translation_matrix, vector_product
-)
 from py3dtiles.tileset.utils import TileContentReader
 from py3dtiles.utils import CommandType, compute_spacing, node_name_to_path, ResponseType, str_to_CRS
 
@@ -48,14 +46,6 @@ READER_MAP = {
     '.las': las_reader,
     '.laz': las_reader,
 }
-
-def make_rotation_matrix(z1, z2):
-    v0 = z1 / np.linalg.norm(z1)
-    v1 = z2 / np.linalg.norm(z2)
-
-    return rotation_matrix(
-        angle_between_vectors(v0, v1),
-        vector_product(v0, v1))
 
 
 class Worker(Process):
@@ -762,9 +752,9 @@ class _Convert:
         if self.rotation_matrix is None:
             transform = np.identity(4)
         else:
-            transform = inverse_matrix(self.rotation_matrix)
-        transform = np.dot(transform, scale_matrix(1.0 / self.root_scale[0]))
-        transform = np.dot(translation_matrix(self.avg_min), transform)
+            transform = np.linalg.inv(self.rotation_matrix)
+        transform = np.dot(transform, make_scale_matrix(1.0 / self.root_scale[0]))
+        transform = np.dot(make_translation_matrix(self.avg_min), transform)
 
         # Create the root tile by sampling (or taking all points?) of child nodes
         root_node = Node(b'', self.root_aabb, self.root_spacing * 2)

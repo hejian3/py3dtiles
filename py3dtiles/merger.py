@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
-from py3dtiles.tilers.transformations import inverse_matrix
 from py3dtiles.tileset.feature_table import SemanticPoint
 from py3dtiles.tileset.tile_content import TileContent
 from py3dtiles.tileset.utils import TileContentReader
@@ -287,7 +286,7 @@ def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -
 
     base_transform = infos['transforms'][0]
 
-    inv_base_transform = inverse_matrix(base_transform)
+    inv_base_transform = np.linalg.inv(base_transform)
     print('------------------------')
     # build hierarchical structure
     result = build_tileset_quadtree(folder, aabb, infos['tilesets'], base_transform, inv_base_transform, '')

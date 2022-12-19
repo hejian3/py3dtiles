@@ -6,18 +6,17 @@ from setuptools import find_packages, setup
 here = os.path.abspath(os.path.dirname(__file__))
 
 requirements = (
-    'numpy>=1.20.0,<1.23',
     'pyproj',
     'cython',
     'triangle',
     'psycopg2-binary',
     'laspy>=2.0,<3.0',
     'numba',
+    'numpy>=1.20.0,<1.23',
     'psutil',
     'lz4',
     'pyzmq',
     'earcut==1.1.5',
-    'transformations'
 )
 
 dev_requirements = (
