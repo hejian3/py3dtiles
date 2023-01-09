@@ -31,10 +31,24 @@ To use py3dtiles from sources:
     (venv)$ pip install -e .
     (venv)$ python setup.py install
 
-If you wan to run unit tests:
+If you want to run unit tests:
 
 .. code-block:: shell
 
     (venv)$ pip install pytest pytest-benchmark
     (venv)$ pytest
-    ...
+
+
+Supporting LAZ files
+~~~~~~~~~~~~~~~~~~~~
+
+To support laz files you need an external library and a laz backend for
+laspy, see [this link]](https://laspy.readthedocs.io/en/latest/installation.html#pip). Short answer, for laszip, you need to follow these steps:
+
+.. code-block:: shell
+
+  # install liblaszip, for instance on ubuntu 22.04
+  apt-get install -y liblaszip8
+
+  # Install with LAZ support via laszip
+  pip install laspy[laszip]
