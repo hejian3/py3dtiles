@@ -19,6 +19,7 @@ requirements = (
 )
 
 dev_requirements = (
+    'commitizen',
     'pre-commit',
     'pytype',
     'pytest',
