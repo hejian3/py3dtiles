@@ -68,8 +68,9 @@ class SharedNodeStore:
         meta = self.metadata.pop(name, None)
 
         node_path = node_name_to_path(self.folder, name)
-        if meta is None and not node_path.exists():
-            raise FileNotFoundError(f"{node_path} should exist")
+        if meta is None:
+            if not node_path.exists():
+                raise FileNotFoundError(f"{node_path} should exist")
         else:
             self.memory_size['content'] -= getsizeof(meta)
             self.memory_size['content'] -= len(self.data[meta[1]])
