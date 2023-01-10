@@ -325,5 +325,6 @@ class Node:
                 with tileset_path.open('w') as f:
                     json.dump(tile_root, f)
                 tileset['content'] = {'uri': tileset_name}
+                del tileset['children']
 
         return tileset
