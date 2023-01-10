@@ -1,6 +1,7 @@
 # How to release
 
-- make sure you've run `pip install -e .[dev]`
+- make sure you've run `pip install -e .[pack]`
+- clean previous builds: `rm dist/ -rf`
 - edit the CHANGELOG.md. The best way is to start with commitizen for that:
 ```bash
 cz changelog --incremental --unreleased-version v4.0.0
@@ -15,10 +16,12 @@ migration guide for instance.
 - publish on pypi:
 ```bash
 # create a package in dist/ folder
-python setup.py sdist
+python -m build
+# check everything is ok (replace <version> by the version you've just built)
+twine check dist/py3dtiles-<version>*
 # check your pypirc for authentication
 # upload it to pypi, eventually using --repository for selecting the right authent
-python setup.py sdist upload
+twine upload dist/py3dtiles-<version>*
 ```
 
 Check if the doc for the new version is published.

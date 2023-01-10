@@ -34,6 +34,18 @@ doc_requirements = (
     'sphinx-multiversion',
 )
 
+packaging_requirements = sum(
+    (
+        dev_requirements,
+        (
+            'build',
+            'twine',
+            'wheel'
+        ),
+    ),
+    ()
+)
+
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -77,7 +89,8 @@ setup(
     test_suite="tests",
     extras_require={
         'dev': dev_requirements,
-        'doc': doc_requirements
+        'doc': doc_requirements,
+        'pack': packaging_requirements,
     },
     entry_points={
         'console_scripts': ['py3dtiles=py3dtiles.command_line:main'],
