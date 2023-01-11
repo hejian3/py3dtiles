@@ -93,7 +93,7 @@ entry point and support multiple commands. The existing commands 'export_tileset
 ### Changes
 
 - relicensed as Apache 2.0.
-- minimal python supported is now 3.7
+- minimal python supported is now 3.8
 - dependencies versions has been updated:
     - laspy should be at least 2.0
     - numpy at least 1.20.0

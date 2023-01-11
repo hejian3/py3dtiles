@@ -78,11 +78,11 @@ setup(
     author='Oslandia',
     author_email='contact@oslandia.com',
     license='Apache License Version 2.0',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     packages=find_packages(),
     install_requires=requirements,
