@@ -201,6 +201,6 @@ class B3dmBody(TileContentBody):
         b = B3dmBody()
         b.glTF = glTF
         if th.bt_json_byte_length > 0:
-            b.batch_table.header = json.loads(array[0:th.bt_json_byte_length].tobytes().decode('utf-8'))
+            b.batch_table = BatchTable.from_array(th, array[0:th.bt_json_byte_length])
 
         return b

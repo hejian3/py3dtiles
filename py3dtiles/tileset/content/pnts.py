@@ -6,8 +6,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tileset.batch_table import BatchTable
 from py3dtiles.tileset.feature_table import Feature, FeatureTable
+from py3dtiles.tileset.batch_table import BatchTable
 from py3dtiles.tileset.tile_content import TileContent, TileContentBody, TileContentHeader, TileContentType
 
 
@@ -43,10 +43,10 @@ class Pnts(TileContent):
         h = PntsHeader.from_array(h_arr)
 
         if h.tile_byte_length != len(array):
-            raise RuntimeError("Invalid byte length in header")
+            raise RuntimeError(f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {h.tile_byte_length}")
 
         # build tile body
-        b_len = h.ft_json_byte_length + h.ft_bin_byte_length
+        b_len = h.ft_json_byte_length + h.ft_bin_byte_length + h.bt_json_byte_length + h.bt_bin_byte_length
         b_arr = array[PntsHeader.BYTE_LENGTH:PntsHeader.BYTE_LENGTH + b_len]
         b = PntsBody.from_array(h, b_arr)
 
@@ -90,8 +90,8 @@ class PntsHeader(TileContentHeader):
         # extract arrays
         feature_table_header_array = body.feature_table.header.to_array()
         feature_table_body_array = body.feature_table.body.to_array()
-        batch_table_header_array = body.batch_table.to_array()  # for now, there is only json part in the batch table
-        batch_table_body_array: list[Any] = []  # body.batch_table.body.to_array()
+        batch_table_header_array = body.batch_table.header.to_array()
+        batch_table_body_array = body.batch_table.body.to_array()
 
         # sync the tile header with feature table contents
         self.tile_byte_length = (

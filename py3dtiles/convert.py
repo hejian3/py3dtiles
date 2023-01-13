@@ -53,13 +53,14 @@ class Worker(Process):
     """
     This class waits from jobs commands from the Zmq socket.
     """
-    def __init__(self, activity_graph, transformer, octree_metadata, folder: Path, write_rgb, verbosity, uri):
+    def __init__(self, activity_graph, transformer, octree_metadata, folder: Path, write_rgb, write_classification, verbosity, uri):
         super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
         self.octree_metadata = octree_metadata
         self.folder = folder
         self.write_rgb = write_rgb
+        self.write_classification = write_classification
         self.verbosity = verbosity
         self.uri = uri
 
@@ -156,7 +157,7 @@ class Worker(Process):
         )
 
     def execute_write_pnts(self, content):
-        pnts_writer.run(self.skt, content[2], content[1], self.folder, self.write_rgb)
+        pnts_writer.run(self.skt, content[2], content[1], self.folder, self.write_rgb, self.write_classification)
 
     def execute_process_jobs(self, content):
         node_process.run(
@@ -352,6 +353,7 @@ class _Convert:
                  fraction: int = 100,
                  benchmark: Optional[str] = None,
                  rgb: bool = True,
+                 classification: bool = True,
                  graph: bool = False,
                  color_scale: Optional[float] = None,
                  verbose: bool = False):
@@ -367,6 +369,7 @@ class _Convert:
         :param fraction: Percentage of the pointcloud to process, between 0 and 100.
         :param benchmark: Print summary at the end of the process
         :param rgb: Export rgb attributes.
+        :param classification: Export classification attribute.
         :param graph: Produce debug graphs (requires pygal).
         :param color_scale: Force color scale
 
@@ -377,6 +380,7 @@ class _Convert:
         self.jobs = jobs
         self.cache_size = cache_size
         self.rgb = rgb
+        self.classification = classification
 
         # allow str directly if only one input
         files = [files] if isinstance(files, str) or isinstance(files, Path) else files
@@ -411,7 +415,7 @@ class _Convert:
         self.working_dir = self.out_folder / "tmp"
         self.working_dir.mkdir(parents=True)
 
-        self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.verbose))
+        self.zmq_manager = ZmqManager(self.jobs, (self.graph, transformer, octree_metadata, self.out_folder, self.rgb, self.classification, self.verbose))
         self.node_store = SharedNodeStore(self.working_dir)
         self.state = State(self.file_info['portions'], max(1, self.jobs // 2))
 
@@ -448,7 +452,7 @@ class _Convert:
                     crs_in = file_crs_in
                 elif crs_in != file_crs_in and not force_crs_in:
                     raise SrsInMixinException("All input files should have the same srs in, currently there are a mix of"
-                                     f" {crs_in} and {file_crs_in}")
+                                              f" {crs_in} and {file_crs_in}")
             total_point_count += file_info['point_count']
             avg_min += file_info['avg_min'] / len(self.files)
 
@@ -777,14 +781,18 @@ class _Convert:
                     rgb = tile_content.body.feature_table.body.colors_arr.reshape((fth.points_length, 3))
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
-
+                if self.classification:
+                    classification = tile_content.body.batch_table.body.data['Classification']['data'].reshape((fth.points_length, 1))
+                else:
+                    classification = np.zeros((fth.points_length, 1), dtype=np.uint8)
                 root_node.grid.insert(
                     self.root_aabb[0].astype(np.float32),
                     inv_aabb_size,
                     xyz.copy(),
-                    rgb)
+                    rgb,
+                    classification)
 
-        pnts_writer.node_to_pnts(b'', root_node, self.out_folder, self.rgb)
+        pnts_writer.node_to_pnts(b'', root_node, self.out_folder, self.rgb, self.classification)
 
         executor = concurrent.futures.ProcessPoolExecutor()
         root_tileset = Node.to_tileset(executor, b'', self.root_aabb, self.root_spacing,
@@ -937,6 +945,9 @@ def init_parser(subparser):
         '--no-rgb',
         help="Don't export rgb attributes", action='store_true')
     parser.add_argument(
+        '--classification',
+        help="Export classification attributes", action='store_true', default=False)
+    parser.add_argument(
         '--graph',
         help='Produce debug graphes (requires pygal)', action='store_true')
     parser.add_argument(
@@ -962,6 +973,7 @@ def main(args):
                        fraction=args.fraction,
                        benchmark=args.benchmark,
                        rgb=not args.no_rgb,
+                       classification=args.classification,
                        graph=args.graph,
                        color_scale=args.color_scale,
                        verbose=args.verbose)

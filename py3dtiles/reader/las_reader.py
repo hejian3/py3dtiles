@@ -113,11 +113,16 @@ def run(filename: str, offset_scale, portion, queue, transformer):
 
                 colors = np.vstack((red, green, blue)).transpose()
 
+                if 'classification' in f.header.point_format.dimension_names:
+                    classification = np.array(points['classification']).reshape((len(points['classification']), 1))
+                else:
+                    classification = np.zeros((len(points.x), 1))
+
                 queue.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
                         b'',
-                        pickle.dumps({'xyz': coords, 'rgb': colors}),
+                        pickle.dumps({'xyz': coords, 'rgb': colors, 'classification': classification}),
                         struct.pack('>I', len(coords))
                     ], copy=False)
 
