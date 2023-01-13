@@ -33,7 +33,8 @@ In the current implementation, the *Pnts* class only contains a *FeatureTable*
 
 .. code-block:: python
 
-    >>> from py3dtiles import Pnts, TileContentReader
+    >>> from py3dtiles.tileset.content import Pnts
+    >>> from py3dtiles.tileset.utils import TileContentReader
     >>>
     >>> filename = 'tests/pointCloudRGB.pnts'
     >>>
@@ -79,8 +80,10 @@ corresponding data type.
 
 .. code-block:: python
 
-    >>> from py3dtiles import Feature, Pnts
     >>> import numpy as np
+    >>>
+    >>> from py3dtiles.tileset.content import Pnts
+    >>> from py3dtiles.tileset.feature_table import Feature
     >>>
     >>> # create the numpy dtype for positions with 32-bit floating point numbers
     >>> dt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])
@@ -116,7 +119,8 @@ https://github.com/AnalyticalGraphicsInc/3d-tiles/tree/master/TileFormats/Batche
 
 .. code-block:: python
 
-    >>> from py3dtiles import B3dm, TileContentReader
+    >>> from py3dtiles.tileset.content import B3dm
+    >>> from py3dtiles.tileset.utils import TileContentReader
     >>>
     >>> filename = 'tests/dragon_low.b3dm'
     >>>
@@ -153,7 +157,9 @@ file containing polyhedralsurfaces or multipolygons.
 .. code-block:: python
 
     >>> import numpy as np
-    >>> from py3dtiles import B3dm, GlTF, TriangleSoup
+    >>>
+    >>> from py3dtiles.tilers.b3dm.wkb_utils import TriangleSoup
+    >>> from py3dtiles.tileset.content import B3dm, GlTF
     >>>
     >>> # load a wkb file
     >>> wkb = open('tests/building.wkb', 'rb').read()

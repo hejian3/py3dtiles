@@ -106,11 +106,11 @@ class Tile(Extendable):
         as parameter and withing the relative filename designated by
         the tile's content uri. Note that it is the responsibility of the
         owning TileSet to
-          - set those uris
-          - to explicitly invoke write_content() (this is to be opposed with
-            the Tile attributes which get serialized when recursing on the
-            TileSet attributes)
-            :param directory: the target directory
+        - set those uris
+        - to explicitly invoke write_content() (this is to be opposed with
+        the Tile attributes which get serialized when recursing on the
+        TileSet attributes)
+        :param directory: the target directory
         """
         file_name = self.get_content_uri()
         if not file_name:
