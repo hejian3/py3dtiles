@@ -19,7 +19,7 @@ from pyproj import CRS, Transformer
 import zmq
 
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException, WorkerException
-from py3dtiles.reader import las_reader, xyz_reader
+from py3dtiles.reader import las_reader, ply_reader, xyz_reader
 from py3dtiles.tilers.matrix_manipulation import make_rotation_matrix, make_scale_matrix, make_translation_matrix
 from py3dtiles.tilers.node import Node
 from py3dtiles.tilers.node import node_process
@@ -45,6 +45,7 @@ READER_MAP = {
     '.xyz': xyz_reader,
     '.las': las_reader,
     '.laz': las_reader,
+    '.ply': ply_reader,
 }
 
 
@@ -353,7 +354,7 @@ class _Convert:
                  color_scale: Optional[float] = None,
                  verbose: bool = False):
         """
-        :param files: Filenames to process. The file must use the .las, .laz or .xyz format.
+        :param files: Filenames to process. The file must use the .las, .laz, .xyz or .ply format.
         :param outfolder: The folder where the resulting tileset will be written.
         :param overwrite: Overwrite the ouput folder if it already exists.
         :param jobs: The number of parallel jobs to start. Default to the number of cpu.
@@ -893,12 +894,12 @@ class _Convert:
 def init_parser(subparser):
     parser = subparser.add_parser(
         'convert',
-        help='Convert .las files to a 3dtiles tileset.',
+        help='Convert input 3D data to a 3dtiles tileset.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'files',
         nargs='+',
-        help='Filenames to process. The file must use the .las, .laz (lastools must be installed) or .xyz format.')
+        help='Filenames to process. The file must use the .las, .laz (lastools must be installed), .xyz or .ply format.')
     parser.add_argument(
         '--out',
         type=str,

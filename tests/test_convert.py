@@ -148,6 +148,23 @@ def test_convert_simple_xyz(tmp_dir):
     assert box == expecting_box
 
 
+def test_convert_ply(tmp_dir):
+    convert(DATA_DIRECTORY / 'b9_training.ply', outfolder=tmp_dir, jobs=1)
+    assert Path(tmp_dir, 'tileset.json').exists()
+    assert Path(tmp_dir, 'r.pnts').exists()
+
+    expected_point_count = 22300
+    tileset_path = tmp_dir / 'tileset.json'
+    assert expected_point_count == number_of_points_in_tileset(tileset_path)
+
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [4.5437, 5.5984, 1.2002, 4.5437, 0, 0, 0, 5.5984, 0, 0, 0, 1.1681]
+    box = [round(value, 4) for value in tileset['root']['boundingVolume']['box']]
+    assert box == expecting_box
+
+
 def test_convert_mix_las_xyz(tmp_dir):
     convert([DATA_DIRECTORY / 'simple.xyz', DATA_DIRECTORY / 'with_srs_3857.las'],
             outfolder=tmp_dir,

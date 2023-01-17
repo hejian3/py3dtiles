@@ -17,6 +17,7 @@ requirements = (
     'lz4',
     'pyzmq',
     'earcut==1.1.5',
+    'plyfile',
 )
 
 dev_requirements = (
