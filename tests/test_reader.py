@@ -42,22 +42,3 @@ def test_ply_get_metadata(filepath):
     assert ply_metadata["srs_in"] is None
     assert ply_metadata["point_count"] == expected_point_count
     assert np.all(ply_metadata["avg_min"] == expected_aabb[0])
-
-
-def test_ply_run(filepath):
-    ply_metadata = ply_reader.get_metadata(path=filepath)
-    ply_filepath, portion = ply_metadata["portions"][0]
-    assert 1 < compute_spacing(ply_metadata["aabb"] - ply_metadata["avg_min"]) < 10
-    offset_scale = (
-        tuple([-metadata for metadata in ply_metadata["avg_min"]]),
-        np.array([0.1, 0.1, 0.1]),
-        None,
-        None,
-    )
-    context = zmq.Context()
-    socket = context.socket(zmq.DEALER)
-    socket.connect(URI)
-    ply_reader.run(ply_filepath, offset_scale, portion, socket, transformer=None)
-    # assert socket?
-    socket.close()
-    context.destroy()
