@@ -7,7 +7,9 @@ The example that is run in the test (`b9_training.ply`) comes from the [CGAL rep
 from pathlib import Path
 
 import numpy as np
-from pytest import fixture
+import numpy.typing as npt
+import plyfile
+from pytest import fixture, raises
 import zmq
 
 from py3dtiles.convert import URI
@@ -19,12 +21,38 @@ DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
 
 
 @fixture
-def filepath():
+def ply_filepath():
     yield DATA_DIRECTORY / "b9_training.ply"
 
 
-def test_ply_get_metadata(filepath):
-    ply_metadata = ply_reader.get_metadata(path=filepath)
+@fixture
+def buggy_ply_filepath():
+    yield DATA_DIRECTORY / "buggy.ply"
+
+
+@fixture
+def buggy_ply_data():
+    dt = np.dtype([('x', np.int32, (5,)), ('y', np.int32, (5,))])
+    arr = np.array(
+        [
+            (
+                np.random.randint(0, 10, (5,)),
+                np.random.randint(0, 10, (5,)),
+            )
+        ],
+        dtype=dt,
+    )
+    yield arr
+
+
+def write_ply(ply_data: npt.ArrayLike, ply_filepath: Path) -> None:
+    ply_item = plyfile.PlyElement.describe(data=ply_data, name="vertex")
+    ply_data = plyfile.PlyData(elements=[ply_item])
+    ply_data.write(ply_filepath)
+
+
+def test_ply_get_metadata(ply_filepath):
+    ply_metadata = ply_reader.get_metadata(path=ply_filepath)
     expected_point_count = 22300
     expected_aabb = (
         np.array([5.966480625e+05, 2.43620015625e+05, 7.350153350830078e+01]),
@@ -34,7 +62,7 @@ def test_ply_get_metadata(filepath):
         "portions", "aabb", "color_scale", "srs_in", "point_count", "avg_min"
     ]
     assert ply_metadata["portions"] == [
-        (str(filepath), (0, expected_point_count, expected_point_count))
+        (str(ply_filepath), (0, expected_point_count, expected_point_count))
     ]
     assert np.all(ply_metadata["aabb"][0] == expected_aabb[0])
     assert np.all(ply_metadata["aabb"][1] == expected_aabb[1])
@@ -42,3 +70,10 @@ def test_ply_get_metadata(filepath):
     assert ply_metadata["srs_in"] is None
     assert ply_metadata["point_count"] == expected_point_count
     assert np.all(ply_metadata["avg_min"] == expected_aabb[0])
+
+
+def test_ply_get_metadata_buggy(buggy_ply_data, buggy_ply_filepath):
+    write_ply(buggy_ply_data, buggy_ply_filepath)
+    with raises(KeyError):
+        _ = ply_reader.get_metadata(path=buggy_ply_filepath)
+    buggy_ply_filepath.unlink()
