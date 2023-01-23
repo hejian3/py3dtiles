@@ -5,7 +5,7 @@ import json
 
 COMPONENT_TYPE_NUMPY_MAPPING = {
     "BYTE": np.byte,
-    "UNSIGNED_BYTE": np.ubyte,
+    "UNSIGNED_BYTE": np.uint8,
     "SHORT": np.short,
     "UNSIGNED_SHORT": np.ushort,
     "INT": np.int32,
@@ -34,17 +34,15 @@ class BatchTableBody:
 
     def to_array(self):
         if not self.data:
-            return np.array([])
+            return np.array([], np.uint8)
         body_array = None
-        current_array = None
         for property, property_data in sorted(self.data.items(), key=lambda x: x[1]['byteOffset']):
-            assert (property_data['byteOffset'] == current_array.nbytes if current_array else 0,
-                    'Mismatch between expected offset and array byte size')
-            current_array = property_data['data'].view(COMPONENT_TYPE_NUMPY_MAPPING[property_data['componentType']])
-            if body_array:
-                body_array = np.concatenate((body_array, current_array))
+            assert property_data['byteOffset'] == (body_array.nbytes if body_array is not None else 0), 'Mismatch between expected offset and array byte size'
+            array = property_data['data'].view(COMPONENT_TYPE_NUMPY_MAPPING[property_data['componentType']])
+            if body_array is not None:
+                body_array = np.concatenate((body_array, array))
             else:
-                body_array = current_array
+                body_array = array
         return body_array
 
 
