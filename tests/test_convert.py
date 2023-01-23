@@ -149,7 +149,7 @@ def test_convert_simple_xyz(tmp_dir):
 
 
 def test_convert_ply(tmp_dir):
-    convert(DATA_DIRECTORY / 'b9_training.ply', outfolder=tmp_dir, jobs=1)
+    convert(DATA_DIRECTORY / 'simple.ply', outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, 'tileset.json').exists()
     assert Path(tmp_dir, 'r.pnts').exists()
 

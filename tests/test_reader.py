@@ -1,6 +1,6 @@
 """Test the point cloud readers.
 
-The example that is run in the test (`b9_training.ply`) comes from the [CGAL repository](https://github.com/CGAL/cgal/blob/master/Data/data/points_3/b9_training.ply). Thanks to their maintainers (for more details, please refer to CGAL, Computational Geometry Algorithms Library, https://www.cgal.org):
+The example that is run in the test (`simple.ply`) comes from the [CGAL repository](https://github.com/CGAL/cgal/blob/master/Data/data/points_3/b9_training.ply). Thanks to their maintainers (for more details, please refer to CGAL, Computational Geometry Algorithms Library, https://www.cgal.org):
 
 """
 
@@ -22,7 +22,7 @@ DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
 
 @fixture
 def ply_filepath():
-    yield DATA_DIRECTORY / "b9_training.ply"
+    yield DATA_DIRECTORY / "simple.ply"
 
 
 @fixture
