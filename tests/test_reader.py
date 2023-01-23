@@ -30,25 +30,21 @@ def buggy_ply_filepath():
     yield DATA_DIRECTORY / "buggy.ply"
 
 
-@fixture
-def buggy_ply_data():
-    dt = np.dtype([('x', np.int32, (5,)), ('y', np.int32, (5,))])
+@fixture(params=["wrongname", "vertex"])
+def buggy_ply_data(request):
+    """This ply data does not contain any 'vertex' element!"""
+    types = [('x', np.float32, (5,)), ('y', np.float32, (5,)), ('z', np.float32, (5,))]
+    data = [(np.random.sample(5), np.random.sample(5), np.random.sample(5))]
     arr = np.array(
-        [
-            (
-                np.random.randint(0, 10, (5,)),
-                np.random.randint(0, 10, (5,)),
-            )
-        ],
-        dtype=dt,
+        data if request.param == "wrongname" else [data[0][:2]],
+        dtype=np.dtype(types) if request.param == "wrongname" else np.dtype(types[:2]),
     )
-    yield arr
-
-
-def write_ply(ply_data: npt.ArrayLike, ply_filepath: Path) -> None:
-    ply_item = plyfile.PlyElement.describe(data=ply_data, name="vertex")
+    ply_item = plyfile.PlyElement.describe(data=arr, name=request.param)
     ply_data = plyfile.PlyData(elements=[ply_item])
-    ply_data.write(ply_filepath)
+    yield {
+        "data": ply_data,
+        "msg": "vertex" if request.param == "wrongname" else "x, y, z"
+    }
 
 
 def test_ply_get_metadata(ply_filepath):
@@ -73,7 +69,7 @@ def test_ply_get_metadata(ply_filepath):
 
 
 def test_ply_get_metadata_buggy(buggy_ply_data, buggy_ply_filepath):
-    write_ply(buggy_ply_data, buggy_ply_filepath)
-    with raises(KeyError):
+    buggy_ply_data["data"].write(buggy_ply_filepath)
+    with raises(KeyError, match=buggy_ply_data["msg"]):
         _ = ply_reader.get_metadata(path=buggy_ply_filepath)
     buggy_ply_filepath.unlink()

@@ -14,14 +14,18 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
     """Get metadata in case of a input ply file.
     """
     ply_point_cloud = PlyData.read(path)
-    ply_elements = ply_point_cloud.elements[0]
-    point_count = ply_elements.count * fraction // 100
-    ply_features = [ply_prop.name for ply_prop in ply_elements.properties]
+    if "vertex" not in [e.name for e in ply_point_cloud.elements]:
+        raise KeyError(
+            "The ply data does not contain any 'vertex' item. Are you sure the file is valid?"
+        )
+    ply_vertices = ply_point_cloud["vertex"]
+    point_count = ply_vertices.count * fraction // 100
+    ply_features = [ply_prop.name for ply_prop in ply_vertices.properties]
     if any(coord not in ply_features for coord in ("x", "y", "z")):
         raise KeyError(
             "At least one of the basic coordinate feature (x, y, z) is missing in the input file."
         )
-    data = np.array([ply_elements["x"], ply_elements["y"], ply_elements["z"]]).transpose()
+    data = np.array([ply_vertices["x"], ply_vertices["y"], ply_vertices["z"]]).transpose()
     aabb = np.min(data, axis=0), np.max(data, axis=0)
 
     pointcloud_file_portions = [(str(path), (0, point_count, point_count))]
@@ -42,7 +46,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
     """
     try:
         ply_point_cloud = PlyData.read(filename)
-        ply_elements = ply_point_cloud.elements[0]
+        ply_vertices = ply_point_cloud["vertex"]
 
         point_count = portion[1] - portion[0]
         step = min(point_count, max(point_count // 10, 100_000))
@@ -53,9 +57,9 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             start_offset = portion[0] + index * step
             num = min(step, portion[1] - start_offset)
 
-            x = ply_elements["x"][start_offset:(start_offset + num)]
-            y = ply_elements["y"][start_offset:(start_offset + num)]
-            z = ply_elements["z"][start_offset:(start_offset + num)]
+            x = ply_vertices["x"][start_offset:(start_offset + num)]
+            y = ply_vertices["y"][start_offset:(start_offset + num)]
+            z = ply_vertices["z"][start_offset:(start_offset + num)]
             if transformer:
                 x, y, z = transformer.transform(x, y, z)
 
@@ -73,10 +77,10 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors
-            if 'red' in ply_elements:
-                red = ply_elements["red"]
-                green = ply_elements["green"]
-                blue = ply_elements["blue"]
+            if 'red' in ply_vertices:
+                red = ply_vertices["red"]
+                green = ply_vertices["green"]
+                blue = ply_vertices["blue"]
             else:
                 red = green = blue = np.zeros(num)
 
