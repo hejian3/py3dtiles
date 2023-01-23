@@ -24,10 +24,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
     data = np.array([ply_elements["x"], ply_elements["y"], ply_elements["z"]]).transpose()
     aabb = np.min(data, axis=0), np.max(data, axis=0)
 
-    _1M = min(point_count, 1_000_000)
-    steps = math.ceil(point_count / _1M)
-    portions = [(i * _1M, point_count, (i + 1) * _1M) for i in range(steps)]
-    pointcloud_file_portions = [(str(path), p) for p in portions]
+    pointcloud_file_portions = [(str(path), (0, point_count, point_count))]
 
     return {
         'portions': pointcloud_file_portions,
