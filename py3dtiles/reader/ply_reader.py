@@ -96,11 +96,13 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             colors = np.vstack((red, green, blue)).transpose()
             colors = colors[start_offset:(start_offset + num)]
 
+            # TODO: handle classification in ply
+            classification = np.zeros((len(coords), 1), dtype=np.uint8)
             queue.send_multipart(
                 [
                     ResponseType.NEW_TASK.value,
                     b'',
-                    pickle.dumps({'xyz': coords, 'rgb': colors}),
+                    pickle.dumps({'xyz': coords, 'rgb': colors, "classification": classification}),
                     struct.pack('>I', len(coords))
                 ], copy=False)
 

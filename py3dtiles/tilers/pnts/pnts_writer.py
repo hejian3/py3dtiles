@@ -22,13 +22,13 @@ def points_to_pnts(name, points, out_folder: Path, include_rgb, include_classifi
 
     pdt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])
     cdt = np.dtype([('Red', 'u1'), ('Green', 'u1'), ('Blue', 'u1')]) if include_rgb else None
-    sdt = np.dtype([('Classification', 'u1')]) if include_classification else None
 
     ft = FeatureTable()
     ft.header = FeatureTableHeader.from_dtype(pdt, cdt, count)
     ft.body = FeatureTableBody.from_array(ft.header, points)
     bt = BatchTable()
     if include_classification:
+        sdt = np.dtype([('Classification', 'u1')])
         offset = count * (3 * 4 + (3 if include_rgb else 0))
         bt.add_binary_property_from_array('Classification', points[offset:offset + count * sdt.itemsize],
                                           'UNSIGNED_BYTE',

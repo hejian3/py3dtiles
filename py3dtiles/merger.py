@@ -221,7 +221,9 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             name.encode('ascii'),
             np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
             out_folder,
-            rgb.shape[0] > 0)
+            rgb.shape[0] > 0,
+            False  # TODO: Handle classification in the merging process
+        )
 
         result: TileDictType = {
             'children': children,

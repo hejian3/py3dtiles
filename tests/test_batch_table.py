@@ -1,8 +1,9 @@
 import json
 import unittest
+
 import numpy as np
 
-from py3dtiles.tileset.batch_table import BatchTable, BatchTableHeader, BatchTableBody
+from py3dtiles.tileset.batch_table import BatchTable, BatchTableBody, BatchTableHeader
 
 
 class TestBatchTableHeader(unittest.TestCase):
@@ -51,7 +52,7 @@ class TestBatchTableBody(unittest.TestCase):
                                              'componentType': 'UNSIGNED_BYTE',
                                              'byteOffset': 6}})
         with self.assertRaises(AssertionError):
-            btb_array = btb.to_array()
+            btb.to_array()
 
 class TestBatchTable(unittest.TestCase):
 

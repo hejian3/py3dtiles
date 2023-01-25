@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import numpy as np
 import json
+
+import numpy as np
+
+from py3dtiles.tileset.tile_content import TileContentHeader
 
 COMPONENT_TYPE_NUMPY_MAPPING = {
     "BYTE": np.byte,
@@ -36,7 +39,7 @@ class BatchTableBody:
         if not self.data:
             return np.array([], np.uint8)
         body_array = None
-        for property, property_data in sorted(self.data.items(), key=lambda x: x[1]['byteOffset']):
+        for property_data in sorted(self.data.values(), key=lambda x: x['byteOffset']):
             assert property_data['byteOffset'] == (body_array.nbytes if body_array is not None else 0), 'Mismatch between expected offset and array byte size'
             array = property_data['data'].view(COMPONENT_TYPE_NUMPY_MAPPING[property_data['componentType']])
             if body_array is not None:
@@ -93,5 +96,5 @@ class BatchTable:
                 body_data[key] = {'data': array[(batch_table_header_length + jsond[key]['byteOffset']):],
                                   'componentType': jsond[key]['componentType'],
                                   'byteOffset': jsond[key]['byteOffset']}
-            bt.body = BatchTableBody(body_data)
+            batch_table.body = BatchTableBody(body_data)
         return batch_table

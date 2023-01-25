@@ -137,7 +137,7 @@ class Node:
     def get_pending_points_count(self) -> int:
         return sum([xyz.shape[0] for xyz in self.pending_xyz])
 
-    def _get_pending_points(self) -> Iterator[tuple[bytes, np.ndarray, np.ndarray]]:
+    def _get_pending_points(self) -> Iterator[tuple[bytes, np.ndarray, np.ndarray,  np.ndarray]]:
         if not self.pending_xyz:
             return
 

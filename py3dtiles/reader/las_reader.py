@@ -116,7 +116,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 if 'classification' in f.header.point_format.dimension_names:
                     classification = np.array(points['classification']).reshape((len(points['classification']), 1))
                 else:
-                    classification = np.zeros((len(points.x), 1))
+                    classification = np.zeros((len(points.x), 1), dtype=np.uint8)
 
                 queue.send_multipart(
                     [

@@ -6,8 +6,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tileset.feature_table import Feature, FeatureTable
 from py3dtiles.tileset.batch_table import BatchTable
+from py3dtiles.tileset.feature_table import Feature, FeatureTable
 from py3dtiles.tileset.tile_content import TileContent, TileContentBody, TileContentHeader, TileContentType
 
 
