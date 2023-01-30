@@ -101,8 +101,6 @@ class SharedNodeStore:
         self.memory_size['content'] = 0
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
-        assert len(self.metadata) == 0
-        assert len(self.data) == 0
         return count
 
     def print_statistics(self) -> None:
