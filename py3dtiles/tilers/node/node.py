@@ -7,17 +7,16 @@ import pickle
 from typing import Generator, Iterator, TYPE_CHECKING
 
 import numpy as np
-from numpy import ScalarType
 import numpy.typing as npt
 
 from py3dtiles.tilers.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.feature_table import SemanticPoint
 from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.typing import BoundingVolumeBoxDictType, ContentType, TileDictType
 from py3dtiles.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
 from .distance import xyz_to_child_index
 from .points_grid import Grid
-from ...typing import TileDictType
 
 if TYPE_CHECKING:
     from .node_catalog import NodeCatalog
@@ -305,12 +304,9 @@ class Node:
                 pnts_path.unlink()
                 prune = True
 
-        tileset = {
-            'geometricError': 10 * self.spacing / scale[0],
-        }
-
+        content: ContentType | None = None
         if not prune:
-            tileset['content'] = {'uri': str(pnts_path.relative_to(folder))}
+            content = {'uri': str(pnts_path.relative_to(folder))}
             xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
 
             # update aabb based on real values
@@ -320,7 +316,7 @@ class Node:
 
             center = ((aabb[0] + aabb[1]) * 0.5).tolist()
             half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
-            tileset['boundingVolume'] = {
+            bounding_volume: BoundingVolumeBoxDictType = {
                 'box': [
                     center[0], center[1], center[2],
                     half_size[0], 0, 0,
@@ -340,7 +336,7 @@ class Node:
 
                 bounding_box = child_tileset_part["boundingVolume"].get("box")
                 if bounding_box is None:
-                    raise NotImplementedError("bounding_volume can only be a bounding volume box")
+                    raise NotImplementedError("bounding_box can only be a bounding volume box")
 
                 center = np.array(bounding_box[:3]) # type: ignore
                 half_size = np.array(bounding_box[3::4]) # type: ignore
@@ -363,13 +359,21 @@ class Node:
 
             center = ((aabb[0] + aabb[1]) * 0.5).tolist()
             half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
-            tileset['boundingVolume'] = {
+            bounding_volume = {
                 'box': [
                     center[0], center[1], center[2],
                     half_size[0], 0, 0,
                     0, half_size[1], 0,
                     0, 0, half_size[2]]
             }
+
+        tileset: TileDictType = {
+            'boundingVolume': bounding_volume,
+            'geometricError': 10 * self.spacing / scale[0],
+        }
+        if content is not None:
+            tileset["content"] = content
+
 
         if children_tileset_parts:
             tileset['children'] = children_tileset_parts
@@ -381,7 +385,7 @@ class Node:
 
         return tileset
 
-def split_tileset(tileset, split_name, folder):
+def split_tileset(tileset: TileDictType, split_name: str, folder: Path):
     tile_root = {
         'asset': {
             'version': '1.0',
