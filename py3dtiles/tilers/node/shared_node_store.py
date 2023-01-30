@@ -95,7 +95,7 @@ class SharedNodeStore:
         self.memory_size['content'] += len(compressed_data) + getsizeof((name, metadata))
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
-    def remove_oldest_nodes(self, percent) -> Tuple[int, int]:
+    def remove_oldest_nodes(self, percent=100) -> Tuple[int, int]:
         count = _remove_all(self)
 
         self.memory_size['content'] = 0
