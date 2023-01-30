@@ -347,6 +347,7 @@ class _Convert:
                  cache_size: int = DEFAULT_CACHE_SIZE,
                  crs_out: Optional[CRS] = None,
                  crs_in: Optional[CRS] = None,
+                 force_crs_in: bool = False,
                  fraction: int = 100,
                  benchmark: Optional[str] = None,
                  rgb: bool = True,
@@ -361,6 +362,7 @@ class _Convert:
         :param cache_size: Cache size in MB. Default to available memory / 10.
         :param crs_out: CRS to convert the output with
         :param crs_in: Set a default input CRS
+        :param force_crs_in: Disable the check that verify if all CRS in input files are same
         :param fraction: Percentage of the pointcloud to process, between 0 and 100.
         :param benchmark: Print summary at the end of the process
         :param rgb: Export rgb attributes.
@@ -384,7 +386,7 @@ class _Convert:
         self.benchmark = benchmark
         self.startup = None
 
-        self.file_info = self.get_file_info(color_scale, crs_in)
+        self.file_info = self.get_file_info(color_scale, crs_in, force_crs_in)
 
         transformer = self.get_transformer(crs_out)
         self.rotation_matrix, self.original_aabb, self.avg_min = self.get_rotation_matrix(crs_out, transformer)
@@ -412,7 +414,7 @@ class _Convert:
         self.node_store = SharedNodeStore(self.working_dir)
         self.state = State(self.file_info['portions'], max(1, self.jobs // 2))
 
-    def get_file_info(self, color_scale, crs_in: Optional[CRS]) -> dict:
+    def get_file_info(self, color_scale, crs_in: Optional[CRS], force_crs_in: bool = False) -> dict:
 
         pointcloud_file_portions = []
         aabb = None
@@ -443,7 +445,7 @@ class _Convert:
             if file_crs_in is not None:
                 if crs_in is None:
                     crs_in = file_crs_in
-                elif crs_in != file_crs_in:
+                elif crs_in != file_crs_in and not force_crs_in:
                     raise SrsInMixinException("All input files should have the same srs in, currently there are a mix of"
                                      f" {crs_in} and {file_crs_in}")
             total_point_count += file_info['point_count']
@@ -939,6 +941,9 @@ def init_parser(subparser):
     parser.add_argument(
         '--color_scale',
         help='Force color scale', type=float)
+    parser.add_argument(
+        '--force-srs-in',
+        help='Force the input srs even if the srs in the input files are different. CAUTION, use only if you know what you are doing.', action='store_true')
 
     return parser
 
@@ -952,6 +957,7 @@ def main(args):
                        cache_size=args.cache_size,
                        crs_out=str_to_CRS(args.srs_out),
                        crs_in=str_to_CRS(args.srs_in),
+                       force_crs_in=args.force_srs_in,
                        fraction=args.fraction,
                        benchmark=args.benchmark,
                        rgb=not args.no_rgb,

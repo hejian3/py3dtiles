@@ -210,6 +210,14 @@ def test_convert_mix_input_crs(tmp_dir):
                 jobs=1)
     assert not tmp_dir.exists()
 
+    convert([DATA_DIRECTORY / 'with_srs_3950.las', DATA_DIRECTORY / 'with_srs_3857.las'],
+            outfolder=tmp_dir,
+            crs_in=CRS.from_epsg(3432),
+            crs_out=CRS.from_epsg(4978),
+            force_crs_in=True,
+            jobs=1)
+    assert tmp_dir.exists()
+
 
 def test_convert_xyz_exception_in_run(tmp_dir):
     with patch('py3dtiles.reader.xyz_reader.run') as mock_run:
