@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+import numpy.typing as npt
+
 from py3dtiles.typing import TilesetDictPart
 from .extendable import Extendable
 from .tile_content import TileContent
 
+DEFAULT_TRANSFORMATION = np.identity(4, dtype=np.float64).reshape(-1)
 
 class Tile(Extendable):
 
@@ -18,22 +22,7 @@ class Tile(Extendable):
         self._content = None
         self._children = []
         # Some possible valid properties left un-delt with viewerRequestVolume
-        self._transform = None
-
-    def set_transform(self, transform: list[float]) -> None:
-        """
-        :param transform: a flattened transformation matrix
-        :return:
-        """
-        self._transform = transform
-
-    def get_transform(self) -> list[float]:
-        if self._transform is not None:
-            return self._transform
-        return [1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0]
+        self.transform: npt.NDArray[np.float] = DEFAULT_TRANSFORMATION
 
     def set_content(self, content: TileContent, force=True) -> None:
         if not force and self._content is not None:
