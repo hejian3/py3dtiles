@@ -362,7 +362,7 @@ class _Convert:
         :param cache_size: Cache size in MB. Default to available memory / 10.
         :param crs_out: CRS to convert the output with
         :param crs_in: Set a default input CRS
-        :param force_crs_in: Disable the check that verify if all CRS in input files are same
+        :param force_crs_in: Force every input CRS to be `crs_in`, even if not null
         :param fraction: Percentage of the pointcloud to process, between 0 and 100.
         :param benchmark: Print summary at the end of the process
         :param rgb: Export rgb attributes.
