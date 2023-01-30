@@ -8,7 +8,6 @@ here = os.path.abspath(os.path.dirname(__file__))
 requirements = (
     'pyproj',
     'cython',
-    'triangle',
     'psycopg2-binary',
     'laspy>=2.0,<3.0',
     'numba',
