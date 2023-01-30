@@ -6,33 +6,33 @@ from setuptools import find_packages, setup
 here = os.path.abspath(os.path.dirname(__file__))
 
 requirements = (
-    'pyproj',
     'cython',
-    'psycopg2-binary',
+    'earcut==1.1.5',
     'laspy>=2.0,<3.0',
+    'lz4',
     'numba',
     'numpy>=1.20.0,<1.23',
-    'psutil',
-    'lz4',
-    'pyzmq',
-    'earcut==1.1.5',
     'plyfile',
+    'psutil',
+    'psycopg2-binary',
+    'pyproj',
+    'pyzmq',
 )
 
 dev_requirements = (
     'commitizen',
+    'line_profiler',
     'pre-commit',
-    'pytype',
     'pytest',
-    'pytest-cov',
     'pytest-benchmark',
-    'line_profiler'
+    'pytest-cov',
+    'pytype',
 )
 
 doc_requirements = (
     'sphinx',
-    'sphinx_rtd_theme',
     'sphinx-multiversion',
+    'sphinx_rtd_theme',
 )
 
 packaging_requirements = sum(
