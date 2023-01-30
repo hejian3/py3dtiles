@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from py3dtiles.typing import TilesetDictPart
 from .extendable import Extendable
 from .tile_content import TileContent
 
 
 class Tile(Extendable):
 
-    def __init__(self, geometric_error=500, bounding_volume=None, refine_mode="ADD"):
+    def __init__(self, geometric_error=500, bounding_volume=None, refine_mode="ADD") -> None:
         super().__init__()
         self.bounding_volume = bounding_volume
         self.geometric_error = geometric_error
@@ -39,7 +40,7 @@ class Tile(Extendable):
             return
         self._content = content
 
-    def get_content(self) -> TileContent:
+    def get_content(self) -> TileContent | None:
         return self._content
 
     def set_content_uri(self, uri: str) -> None:
@@ -126,7 +127,7 @@ class Tile(Extendable):
         with path_name.open('wb') as f:
             f.write(self.get_content().to_array())
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> TilesetDictPart:
         dict_data = {}
 
         if self.bounding_volume is not None:

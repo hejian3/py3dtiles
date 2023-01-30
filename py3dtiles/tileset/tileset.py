@@ -2,15 +2,16 @@ import json
 from pathlib import Path
 from typing import List
 
+from py3dtiles.typing import TilesetDictPart
 from .extendable import Extendable
 from .tile import Tile
 
 
 class TileSet(Extendable):
 
-    def __init__(self, geometric_error=500):
+    def __init__(self, geometric_error: float =500) -> None:
         super().__init__()
-        self._asset = {"version": "1.0"}
+        self._asset: TilesetDictPart = {"version": "1.0"}
         self.geometric_error = geometric_error
         self.root_tile = Tile()
 
@@ -71,7 +72,7 @@ class TileSet(Extendable):
         with tileset_path.open('w') as f:
             f.write(self.to_json())
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> TilesetDictPart:
         """
         Convert to json string possibly mentioning used schemas
         """

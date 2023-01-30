@@ -11,7 +11,7 @@ class TileContent:
         self.header = None
         self.body = None
 
-    def to_array(self):
+    def to_array(self) -> npt.NDArray[np.uint8]:
         self.sync()
         header_arr = self.header.to_array()
         body_arr = self.body.to_array()
