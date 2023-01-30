@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import List
 
 from py3dtiles.typing import TilesetDictPart
 from .extendable import Extendable
@@ -14,13 +13,6 @@ class TileSet(Extendable):
         self._asset: TilesetDictPart = {"version": "1.0"}
         self.geometric_error = geometric_error
         self.root_tile = Tile()
-
-    def set_transform(self, transform: List[float]) -> None:
-        """
-        :param transform: a flattened transformation matrix
-        :return:
-        """
-        self.root_tile.set_transform(transform)
 
     def add_asset_extras(self, comment: str) -> None:
         """
