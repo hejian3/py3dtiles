@@ -1,8 +1,16 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from py3dtiles.tileset.tile import Tile
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+import numpy as np
+import numpy.typing as npt
+
 from py3dtiles.typing import TilesetDictPart
 from .extendable import Extendable
+
+if TYPE_CHECKING:
+    from py3dtiles.tileset.tile import Tile
 
 
 class BoundingVolume(ABC, Extendable):
@@ -26,3 +34,9 @@ class BoundingVolume(ABC, Extendable):
 
     @abstractmethod
     def sync_with_children(self, owner: Tile) -> None: ...
+
+    @abstractmethod
+    def transform(self, transform: npt.NDArray[np.float64]) -> None: ...
+
+    @abstractmethod
+    def add(self, other: BoundingVolume) -> None: ...

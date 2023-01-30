@@ -4,7 +4,9 @@ import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 
+from py3dtiles.typing import TilesetDictPart
 from .bounding_volume import BoundingVolume
 
 if TYPE_CHECKING:
@@ -39,17 +41,17 @@ class BoundingVolumeBox(BoundingVolume):
     box i.e. a box that is parallel to the coordinate axis.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self._box = None
+        self._box: npt.NDArray[np.float64] | None = None
 
-    def get_center(self) -> np.ndarray:
+    def get_center(self) -> npt.NDArray[np.float64]:
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
         return self._box[0: 3]
 
-    def translate(self, offset: list | np.ndarray) -> None:
+    def translate(self, offset: npt.NDArray[np.float64]) -> None:
         """
         Translate the box center with the given offset "vector"
         :param offset: the 3D vector by which the box should be translated
@@ -57,14 +59,16 @@ class BoundingVolumeBox(BoundingVolume):
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
-        for i in range(0, 3):
-            self._box[i] += offset[i]
+        self._box[:3] += offset[:3]
 
-    def transform(self, transform: list[float] | np.ndarray) -> None:
+    def transform(self, transform: npt.NDArray[np.float64]) -> None:
         """
         Apply the provided transformation matrix (4x4) to the box
         :param transform: transformation matrix (4x4) to be applied
         """
+        if self._box is None:
+            raise AttributeError('Bounding Volume Box is not defined.')
+
         # FIXME: the following code only uses the first three coordinates
         # of the transformation matrix (and basically ignores the fourth
         # column of transform). This looks like some kind of mistake...
@@ -86,13 +90,13 @@ class BoundingVolumeBox(BoundingVolume):
                                     new_x_half_axis,
                                     new_y_half_axis,
                                     new_z_half_axis))
-        offset = np.array(transform[12:15])
+        offset = transform[12:15]
         self.translate(offset)
 
     def is_box(self) -> bool:
         return True
 
-    def set_from_list(self, box_list: list) -> None:
+    def set_from_list(self, box_list: npt.ArrayLike) -> None:
         box = np.array(box_list, dtype=float)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
@@ -100,15 +104,7 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_array(self, box_array: np.ndarray) -> None:
-        box = box_array.astype(float)
-
-        valid, reason = BoundingVolumeBox.is_valid(box)
-        if not valid:
-            raise ValueError(reason)
-        self._box = box
-
-    def set_from_points(self, points: list) -> None:
+    def set_from_points(self, points: list[npt.NDArray[np.float64]]) -> None:
         box = BoundingVolumeBox.get_box_array_from_point(points)
 
         valid, reason = BoundingVolumeBox.is_valid(box)
@@ -116,15 +112,15 @@ class BoundingVolumeBox(BoundingVolume):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_mins_maxs(self, mins_maxs: list | np.ndarray) -> None:
+    def set_from_mins_maxs(self, mins_maxs: npt.NDArray[np.float64]) -> None:
         """
-        :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
+        :param mins_maxs: the array [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each
                           coordinate axis
         """
         self._box = BoundingVolumeBox.get_box_array_from_mins_maxs(mins_maxs)
 
-    def get_corners(self) -> list:
+    def get_corners(self) -> list[npt.NDArray[np.float64]]:
         """
         :return: the corners (3D points) of the box as a list
         """
@@ -156,14 +152,14 @@ class BoundingVolumeBox(BoundingVolume):
 
         return [o, ox, oy, oxy, oz, oxz, oyz, oxyz]
 
-    def get_canonical_as_array(self) -> np.ndarray:
+    def get_canonical_as_array(self) -> npt.NDArray[np.float64]:
         """
         :return: the smallest enclosing box (as an array) that is parallel
                  to the coordinate axis
         """
         return BoundingVolumeBox.get_box_array_from_point(self.get_corners())
 
-    def add(self, other: BoundingVolumeBox) -> None:
+    def add(self, other: BoundingVolume) -> None:
         """
         Compute the 'canonical' bounding volume fitting this bounding volume
         together with the added bounding volume. Again (refer above to the
@@ -171,6 +167,9 @@ class BoundingVolumeBox(BoundingVolume):
         not the smallest one (due to its alignment with the coordinate axis).
         :param other: another box bounding volume to be added with this one
         """
+        if not isinstance(other, BoundingVolumeBox):
+            raise NotImplementedError("The add method works only with BoundingVolumeBox")
+
         if self._box is None:
             # Then it is safe to overwrite
             self._box = other._box
@@ -184,21 +183,24 @@ class BoundingVolumeBox(BoundingVolume):
         # can add up in place the boxes of the owner's children
         # If there is no child, no modifications are done.
         for child in owner.get_direct_children():
+            if child.bounding_volume is None:
+                raise ValueError("Child should have a bounding volume.")
+
             bounding_volume = copy.deepcopy(child.bounding_volume)
-            bounding_volume.transform(child.get_transform())
+            bounding_volume.transform(child.transform)
             if not bounding_volume.is_box():
                 raise AttributeError("All children should also have a box as bounding volume"
                                      "if the parent has a bounding box")
             self.add(bounding_volume)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> TilesetDictPart:
         if self._box is None:
             raise AttributeError('Bounding Volume Box is not defined.')
 
         return {'boundingVolume': list(self._box)}
 
     @staticmethod
-    def get_box_array_from_mins_maxs(mins_maxs: list | np.ndarray) -> np.ndarray:
+    def get_box_array_from_mins_maxs(mins_maxs: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
                           that is the boundaries of the box along each
@@ -226,7 +228,7 @@ class BoundingVolumeBox(BoundingVolume):
                                new_z_half_axis))
 
     @staticmethod
-    def get_box_array_from_point(points: list[list[float]]) -> np.ndarray:
+    def get_box_array_from_point(points: list[npt.NDArray[np.float64]]) -> npt.NDArray[np.float64]:
         """
         :param points: a list of 3D points
         :return: the smallest box (as an array, as opposed to a
@@ -234,15 +236,15 @@ class BoundingVolumeBox(BoundingVolume):
                 (3D) points and that is parallel to the coordinate axis.
         """
         return BoundingVolumeBox.get_box_array_from_mins_maxs(
-            [min(c[0] for c in points),
+            np.array([min(c[0] for c in points),
              min(c[1] for c in points),
              min(c[2] for c in points),
              max(c[0] for c in points),
              max(c[1] for c in points),
-             max(c[2] for c in points)])
+             max(c[2] for c in points)]))
 
     @staticmethod
-    def is_valid(box) -> tuple[bool, str]:
+    def is_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
         if box is None:
             return False, 'Bounding Volume Box is not defined.'
         if not box.ndim == 1:
