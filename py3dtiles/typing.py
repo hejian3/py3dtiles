@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, TypedDict, Union
+from typing import Any, Dict, List, Literal, TYPE_CHECKING, TypedDict, Union
 
-from typing_extensions import NotRequired
+if TYPE_CHECKING:
+    from typing_extensions import NotRequired
 
 ExtensionDictType = Dict[str, Any]
 ExtraDictType = Dict[str, Any]
