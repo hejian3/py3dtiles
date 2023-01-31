@@ -247,7 +247,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
         self.assertDictEqual(
             TestBoundingVolumeBox.build_box_sample().to_dict(),
-            {'boundingVolume': [
+            {'box': [
                 1, 2, 3, 4,
                 5, 6, 7, 8,
                 9, 10, 11, 12
