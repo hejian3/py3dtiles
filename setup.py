@@ -26,7 +26,8 @@ dev_requirements = (
     'pytest',
     'pytest-benchmark',
     'pytest-cov',
-    'pytype',
+    'mypy',
+    'typing_extensions',
 )
 
 doc_requirements = (
