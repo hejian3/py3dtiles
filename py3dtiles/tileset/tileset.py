@@ -1,25 +1,18 @@
 import json
 from pathlib import Path
-from typing import List
 
+from py3dtiles.typing import AssetDictType, GeometricErrorType, TilesetDictType
 from .extendable import Extendable
 from .tile import Tile
 
 
 class TileSet(Extendable):
 
-    def __init__(self, geometric_error=500):
+    def __init__(self, geometric_error: float = 500) -> None:
         super().__init__()
-        self._asset = {"version": "1.0"}
-        self.geometric_error = geometric_error
+        self._asset: AssetDictType = {"version": "1.0"}
+        self.geometric_error: GeometricErrorType = geometric_error
         self.root_tile = Tile()
-
-    def set_transform(self, transform: List[float]) -> None:
-        """
-        :param transform: a flattened transformation matrix
-        :return:
-        """
-        self.root_tile.set_transform(transform)
 
     def add_asset_extras(self, comment: str) -> None:
         """
@@ -71,12 +64,12 @@ class TileSet(Extendable):
         with tileset_path.open('w') as f:
             f.write(self.to_json())
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> TilesetDictType:
         """
         Convert to json string possibly mentioning used schemas
         """
 
-        dict_data = {
+        dict_data: TilesetDictType = {
             'root': self.root_tile.to_dict(),
             'asset': self._asset,
             'geometricError': self.geometric_error

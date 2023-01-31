@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
@@ -11,7 +13,7 @@ class TileContent:
         self.header = None
         self.body = None
 
-    def to_array(self):
+    def to_array(self) -> npt.NDArray[np.uint8]:
         self.sync()
         header_arr = self.header.to_array()
         body_arr = self.body.to_array()
@@ -50,19 +52,15 @@ class TileContentHeader(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_array(array: npt.ArrayLike):
-        pass
+    def from_array(array: npt.NDArray) -> TileContentHeader: ...
 
     @abstractmethod
-    def to_array(self):
-        pass
+    def to_array(self) -> npt.NDArray: ...
 
     @abstractmethod
-    def sync(self, body):
-        pass
+    def sync(self, body) -> None: ...
 
 
 class TileContentBody(ABC):
     @abstractmethod
-    def to_array(self):
-        pass
+    def to_array(self) -> npt.NDArray: ...

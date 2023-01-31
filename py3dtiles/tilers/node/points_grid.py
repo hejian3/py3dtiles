@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numba import njit
+from numba import njit # type: ignore
 from numba.typed import List
 import numpy as np
 

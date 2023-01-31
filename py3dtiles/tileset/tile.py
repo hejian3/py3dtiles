@@ -2,44 +2,36 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+import numpy.typing as npt
+
+from py3dtiles.tileset.bounding_volume import BoundingVolume
+from py3dtiles.typing import RefineType, TileDictType
 from .extendable import Extendable
 from .tile_content import TileContent
 
+DEFAULT_TRANSFORMATION = np.identity(4, dtype=np.float64).reshape(-1)
+DEFAULT_TRANSFORMATION.setflags(write=False)
 
 class Tile(Extendable):
 
-    def __init__(self, geometric_error=500, bounding_volume=None, refine_mode="ADD"):
+    def __init__(self, geometric_error: float = 500, bounding_volume: BoundingVolume | None = None, refine_mode: RefineType = "ADD") -> None:
         super().__init__()
         self.bounding_volume = bounding_volume
         self.geometric_error = geometric_error
         self._refine = ""
         self.set_refine_mode(refine_mode)
-        self._content = None
-        self._children = []
+        self._content: None | TileContent = None
+        self._children: list[Tile] = []
         # Some possible valid properties left un-delt with viewerRequestVolume
-        self._transform = None
+        self.transform: npt.NDArray[np.float64] = DEFAULT_TRANSFORMATION
 
-    def set_transform(self, transform: list[float]) -> None:
-        """
-        :param transform: a flattened transformation matrix
-        :return:
-        """
-        self._transform = transform
-
-    def get_transform(self) -> list[float]:
-        if self._transform is not None:
-            return self._transform
-        return [1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0]
-
-    def set_content(self, content: TileContent, force=True) -> None:
+    def set_content(self, content: TileContent, force: bool = True) -> None:
         if not force and self._content is not None:
             return
         self._content = content
 
-    def get_content(self) -> TileContent:
+    def get_content(self) -> TileContent | None:
         return self._content
 
     def set_content_uri(self, uri: str) -> None:
@@ -113,7 +105,7 @@ class Tile(Extendable):
         :param directory: the target directory
         """
         file_name = self.get_content_uri()
-        if not file_name:
+        if not file_name or self._content is None:
             raise AttributeError("Tile with no content or no uri in content.")
         path_name = directory / file_name
 
@@ -124,18 +116,24 @@ class Tile(Extendable):
 
         # Write the tile content of this tile:
         with path_name.open('wb') as f:
-            f.write(self.get_content().to_array())
+            f.write(self._content.to_array().tobytes())
 
-    def to_dict(self) -> dict:
-        dict_data = {}
-
+    def to_dict(self) -> TileDictType:
         if self.bounding_volume is not None:
             bounding_volume = self.bounding_volume
         else:
             raise AttributeError('Bounding volume is not set')
-        dict_data['boundingVolume'] = bounding_volume.to_dict()
+        bounding_volume_dict = bounding_volume.to_dict()
 
-        dict_data['geometricError'] = self.geometric_error
+        refine = self._refine.upper()
+        if refine not in ['ADD', 'REPLACE']:
+            raise ValueError(f"refine should be either ADD or REPLACE, currently {refine}.")
+
+        dict_data: TileDictType = {
+            'boundingVolume': bounding_volume_dict,
+            'geometricError': self.geometric_error,
+            'refine': refine # type: ignore
+        }
 
         if self._children:
             # The children list exists indeed (for technical reasons) yet it
@@ -146,6 +144,8 @@ class Tile(Extendable):
 
         if self._content is not None:
             # Refer to children related above comment (mutatis mutandis):
-            dict_data['content'] = self._content
+            dict_data['content'] = {
+                'uri': self.get_content_uri()
+            }
 
         return dict_data

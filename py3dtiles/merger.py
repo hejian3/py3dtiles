@@ -8,6 +8,7 @@ from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.feature_table import SemanticPoint
 from py3dtiles.tileset.tile_content import TileContent
 from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.typing import TileDictType
 from py3dtiles.utils import split_aabb
 
 
@@ -149,7 +150,7 @@ def _aabb_from_3dtiles_bounding_volume(volume, transform=None):
     return aabb
 
 
-def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name):
+def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name) -> Union[TileDictType, None]:
     insides = [tileset for tileset in tilesets if is_tileset_inside(tileset, aabb)]
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])
@@ -171,9 +172,7 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             }
         }
     else:
-        result = {
-            'children': []
-        }
+        children: List[TileDictType] = []
 
         sub = 0
         for quarter in quadtree_split(aabb):
@@ -187,7 +186,7 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             )
             sub += 1
             if r is not None:
-                result['children'].append(r)
+                children.append(r)
 
         union_aabb = _aabb_from_3dtiles_bounding_volume(
             insides[0]['root']['boundingVolume'],
@@ -223,9 +222,13 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
             np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
             out_folder,
             rgb.shape[0] > 0)
-        result['content'] = {'uri': str(pnts_path.relative_to(out_folder)) if pnts_path else ""}
-        result['geometricError'] = max([t['root']['geometricError'] for t in insides]) / ratio
-        result['boundingVolume'] = _3dtiles_bounding_box_from_aabb(union_aabb, inv_base_transform)
+
+        result: TileDictType = {
+            'children': children,
+            'content': {'uri': str(pnts_path.relative_to(out_folder)) if pnts_path else ""},
+            'geometricError': max([t['root']['geometricError'] for t in insides]) / ratio,
+            'boundingVolume': _3dtiles_bounding_box_from_aabb(union_aabb, inv_base_transform)
+        }
 
         return result
 

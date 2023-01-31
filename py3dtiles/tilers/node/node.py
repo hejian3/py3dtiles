@@ -4,9 +4,10 @@ import concurrent.futures
 import json
 from pathlib import Path
 import pickle
-from typing import Iterator, TYPE_CHECKING
+from typing import Any, Iterator, TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.tilers.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
@@ -49,20 +50,20 @@ class Node:
         self.inv_aabb_size = (1.0 / self.aabb_size).astype(np.float32)
         self.aabb_center = ((aabb[0] + aabb[1]) * 0.5).astype(np.float32)
         self.spacing = spacing
-        self.pending_xyz = []
-        self.pending_rgb = []
-        self.children = None
+        self.pending_xyz: list[npt.NDArray] = []
+        self.pending_rgb: list[npt.NDArray] = []
+        self.children: list[bytes] | None = None
         self.grid = Grid(self)
-        self.points = []
+        self.points: list[tuple[npt.NDArray, npt.NDArray]] = []
         self.dirty = False
 
     def save_to_bytes(self) -> bytes:
         sub_pickle = {}
         if self.children is not None:
-            sub_pickle['children'] = self.children
-            sub_pickle['grid'] = self.grid
+            sub_pickle['children'] = self.children # type: ignore # TODO fix
+            sub_pickle['grid'] = self.grid # type: ignore # TODO fix
         else:
-            sub_pickle['points'] = self.points
+            sub_pickle['points'] = self.points # type: ignore # TODO fix
 
         d = pickle.dumps(sub_pickle)
         return d
@@ -75,7 +76,7 @@ class Node:
         else:
             self.points = sub_pickle['points']
 
-    def insert(self, node_catalog: NodeCatalog, scale: float, xyz: np.ndarray, rgb: np.ndarray, make_empty_node: bool = False):
+    def insert(self, node_catalog: NodeCatalog, scale: float, xyz: npt.NDArray, rgb: npt.NDArray, make_empty_node: bool = False):
         if make_empty_node:
             self.children = []
             self.pending_xyz += [xyz]
@@ -157,7 +158,7 @@ class Node:
             # create missing nodes, only for remembering they exist.
             # We don't want to serialize them
             # probably not needed...
-            if name not in self.children:
+            if self.children is not None and name not in self.children :
                 self.children += [name]
                 self.dirty = True
                 # print('Added node {}'.format(name))
@@ -231,7 +232,7 @@ class Node:
         # geometricError is in meters, so we divide it by the scale
         tileset = {'geometricError': 10 * node.spacing / scale[0]}
 
-        children = []
+        children: list[Any] = [] # todo at the next refacto, fix it
         tile_needs_rewrite = False
         if tile_path.exists():
             tileset['content'] = {'uri': str(tile_path.relative_to(folder))}

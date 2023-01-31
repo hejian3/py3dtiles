@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, TypedDict
+from typing import Any, Dict, List, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired
 
@@ -26,7 +26,7 @@ class BoundingVolumeRegionDictType(ThreeDDictBase):
 class BoundingVolumeSphereDictType(ThreeDDictBase):
     sphere: list[float]
 
-BoundingVolumeDictType = BoundingVolumeBoxDictType | BoundingVolumeRegionDictType | BoundingVolumeSphereDictType
+BoundingVolumeDictType = Union[BoundingVolumeBoxDictType, BoundingVolumeRegionDictType, BoundingVolumeSphereDictType]
 
 class ContentType(ThreeDDictBase):
     boundingVolume: NotRequired[BoundingVolumeDictType]

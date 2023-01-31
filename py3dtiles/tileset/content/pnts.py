@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import struct
-from typing import List
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -12,7 +14,7 @@ from py3dtiles.tileset.tile_content import TileContent, TileContentBody, TileCon
 class Pnts(TileContent):
 
     @staticmethod
-    def from_features(pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: List[Feature]) -> "Pnts":
+    def from_features(pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]) -> Pnts:
         """
         Creates a Pnts from features defined by pd_type and cd_type.
         """
@@ -31,7 +33,7 @@ class Pnts(TileContent):
         return t
 
     @staticmethod
-    def from_array(array: npt.ArrayLike) -> "Pnts":
+    def from_array(array: npt.NDArray) -> Pnts:
         """
         Creates a Pnts from an array
         """
@@ -65,7 +67,7 @@ class PntsHeader(TileContentHeader):
         self.magic_value = b"pnts"
         self.version = 1
 
-    def to_array(self) -> np.ndarray:
+    def to_array(self) -> npt.NDArray[np.uint8]:
         """
         Returns the header as a numpy array.
         """
@@ -80,7 +82,7 @@ class PntsHeader(TileContentHeader):
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
 
-    def sync(self, body: "PntsBody") -> None:
+    def sync(self, body: PntsBody) -> None:
         """
         Synchronizes headers with the Pnts body.
         """
@@ -89,7 +91,7 @@ class PntsHeader(TileContentHeader):
         feature_table_header_array = body.feature_table.header.to_array()
         feature_table_body_array = body.feature_table.body.to_array()
         batch_table_header_array = body.batch_table.to_array()  # for now, there is only json part in the batch table
-        batch_table_body_array = []  # body.batch_table.body.to_array()
+        batch_table_body_array: list[Any] = []  # body.batch_table.body.to_array()
 
         # sync the tile header with feature table contents
         self.tile_byte_length = (
@@ -103,7 +105,7 @@ class PntsHeader(TileContentHeader):
         self.bt_bin_byte_length = len(batch_table_body_array)
 
     @staticmethod
-    def from_array(array: npt.ArrayLike) -> "PntsHeader":
+    def from_array(array: npt.NDArray) -> PntsHeader:
         """
         Create a PntsHeader from an array
         """
@@ -113,12 +115,12 @@ class PntsHeader(TileContentHeader):
         if len(array) != PntsHeader.BYTE_LENGTH:
             raise RuntimeError("Invalid header length")
 
-        h.version = struct.unpack("i", array[4:8])[0]
-        h.tile_byte_length = struct.unpack("i", array[8:12])[0]
-        h.ft_json_byte_length = struct.unpack("i", array[12:16])[0]
-        h.ft_bin_byte_length = struct.unpack("i", array[16:20])[0]
-        h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
-        h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
+        h.version = struct.unpack("i", array[4:8].tobytes())[0]
+        h.tile_byte_length = struct.unpack("i", array[8:12].tobytes())[0]
+        h.ft_json_byte_length = struct.unpack("i", array[12:16].tobytes())[0]
+        h.ft_bin_byte_length = struct.unpack("i", array[16:20].tobytes())[0]
+        h.bt_json_byte_length = struct.unpack("i", array[20:24].tobytes())[0]
+        h.bt_bin_byte_length = struct.unpack("i", array[24:28].tobytes())[0]
 
         return h
 
@@ -128,7 +130,7 @@ class PntsBody(TileContentBody):
         self.feature_table = FeatureTable()
         self.batch_table = BatchTable()
 
-    def to_array(self) -> np.ndarray:
+    def to_array(self) -> npt.NDArray:
         """
         Returns the body as a numpy array.
         """
@@ -137,7 +139,7 @@ class PntsBody(TileContentBody):
         return np.concatenate((feature_table_array, batch_table_array))
 
     @staticmethod
-    def from_array(header: PntsHeader, array: npt.ArrayLike) -> "PntsBody":
+    def from_array(header: PntsHeader, array: npt.NDArray) -> PntsBody:
         """
         Creates a PntsBody from an array and the header
         """

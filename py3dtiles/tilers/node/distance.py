@@ -1,4 +1,4 @@
-from numba import jit, njit
+from numba import jit, njit # type: ignore
 import numpy as np
 
 

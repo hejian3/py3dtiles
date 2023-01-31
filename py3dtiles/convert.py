@@ -11,7 +11,7 @@ import struct
 import sys
 import time
 import traceback
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import psutil
@@ -188,13 +188,14 @@ class ZmqManager:
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            Worker(*process_args, self.uri)
+            Worker(*process_args, self.uri) # type: ignore
             for _ in range(number_of_jobs)
         ]
-        [p.start() for p in self.processes]
+        for p in self.processes:
+            p.start()
 
         self.activities = [p.pid for p in self.processes]
-        self.idle_clients = []
+        self.idle_clients: List[bytes] = []
 
         self.killing_processes = False
         self.number_processes_killed = 0
@@ -280,19 +281,19 @@ class State:
         # so for each entry, it is a list of tasks
         # a task is a tuple (list of points, point_count)
         # points is a dictionary {xyz: list of coordinates, color: the associated color}
-        self.node_to_process = {}
+        self.node_to_process: Dict[bytes, Tuple[List[bytes], int]] = {}
         # when a node is sent to a process, the item moves to processing_nodes
         # the structure is different. The key remains the node name. But the value is : (len(tasks), point_count, now)
         # these values is for loging
-        self.processing_nodes = {}
+        self.processing_nodes: Dict[bytes, Tuple[int, int, float]] = {}
         # when processing is finished, move the tile name in processed_nodes
         # since the content is at this stage, stored in the node_store,
         # just keep the name of the node.
         # This list will be filled until the writing could be started.
-        self.waiting_writing_nodes = []
+        self.waiting_writing_nodes: List[bytes] = []
         # when the node is writing, its name is moved from waiting_writing_nodes to pnts_to_writing
         # the data to write are stored in a node object.
-        self.pnts_to_writing = []
+        self.pnts_to_writing: List[bytes] = []
 
     def is_reading_finish(self):
         return not self.point_cloud_file_parts and self.number_of_reading_jobs == 0
@@ -340,7 +341,7 @@ def convert(*args, **kwargs):
 
 class _Convert:
     def __init__(self,
-                 files: List[Union[str, Path]],
+                 files: Union[List[Union[str, Path]], str, Path],
                  outfolder: Union[str, Path] = './3dtiles',
                  overwrite: bool = False,
                  jobs: int = CPU_COUNT,
@@ -378,8 +379,8 @@ class _Convert:
         self.rgb = rgb
 
         # allow str directly if only one input
-        self.files = [files] if isinstance(files, str) or isinstance(files, Path) else files
-        self.files = [Path(file) for file in self.files]
+        files = [files] if isinstance(files, str) or isinstance(files, Path) else files
+        self.files = [Path(file) for file in files]
 
         self.verbose = verbose
         self.graph = graph
@@ -460,7 +461,7 @@ class _Convert:
             'avg_min': avg_min
         }
 
-    def get_transformer(self, crs_out: CRS) -> Union[Transformer, None]:
+    def get_transformer(self, crs_out: Optional[CRS]) -> Union[Transformer, None]:
         if crs_out:
             if self.file_info['crs_in'] is None:
                 raise SrsInMissingException("None file has a input srs specified. Should be provided.")

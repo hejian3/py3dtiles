@@ -2,6 +2,7 @@ import math
 from pathlib import Path
 import pickle
 import struct
+from typing import List
 
 import numpy as np
 
@@ -59,6 +60,9 @@ def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
             (str(path), p) for p in portions
         ]
 
+    if aabb is None:
+        raise ValueError(f"There is no point in the file {path}")
+
     return {
         "portions": pointcloud_file_portions,
         "aabb": aabb,
@@ -100,7 +104,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                     if not line:
                         points = np.resize(points, (j, feature_nb))
                         break
-                    line_features = [float(s) for s in line.split(" ")]
+                    line_features: List[float | None] = [float(s) for s in line.split(" ")]
                     if len(line_features) == 3:
                         line_features += [None] * 4  # Insert intensity and RGB
                     elif len(line_features) == 4:
