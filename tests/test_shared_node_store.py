@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import unittest
 
 from py3dtiles.tilers.node import SharedNodeStore
@@ -21,3 +22,5 @@ class TestSharedNodeStore(unittest.TestCase):
 
         self.assertEqual(len(shared_node_store.data), 0)
         self.assertEqual(len(shared_node_store.metadata), 0)
+
+        shutil.rmtree(self.TMP_DIR)
