@@ -80,59 +80,6 @@ class TestBoundingVolumeBox(unittest.TestCase):
             bounding_volume_box.set_from_list(bounding_volume_list)
         self.assertIs(bounding_volume_box._box, None)
 
-    def test_set_from_array(self):
-        bounding_volume_box = BoundingVolumeBox()
-        bounding_volume_array = np.array([
-            1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 12
-        ])
-        bounding_volume_box.set_from_array(bounding_volume_array)
-        assert_array_equal(bounding_volume_box._box, bounding_volume_array)
-
-    def test_set_from_invalid_array(self):
-        bounding_volume_box = BoundingVolumeBox()
-
-        # Too short
-        bounding_volume_array = np.array([
-            1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11
-        ])
-        with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_array(bounding_volume_array)
-        self.assertIs(bounding_volume_box._box, None)
-
-        # Too long
-        bounding_volume_array = np.array([
-            1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 12, 13
-        ])
-        with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_array(bounding_volume_array)
-        self.assertIs(bounding_volume_box._box, None)
-
-        # Too many dimensions
-        bounding_volume_array = np.array([
-            [1, 2, 3, 4],
-            [5, 6, 7, 8],
-            [9, 10, 11, 12]
-        ])
-        with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_array(bounding_volume_array)
-        self.assertIs(bounding_volume_box._box, None)
-
-        # Mixins of types
-        bounding_volume_array = np.array([
-            1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 'a'
-        ])
-        with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_array(bounding_volume_array)
-        self.assertIs(bounding_volume_box._box, None)
-
     def test_set_from_points(self):
         pass
 
@@ -157,12 +104,12 @@ class TestBoundingVolumeBox(unittest.TestCase):
     def test_translate(self):
         bounding_volume_box = BoundingVolumeBox()
         with self.assertRaises(AttributeError):
-            bounding_volume_box.translate([-1, -2, -3])
+            bounding_volume_box.translate(np.array([-1, -2, -3]))
 
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()
         assert_array_equal(bounding_volume_box.get_center(), [1, 2, 3])
 
-        bounding_volume_box.translate([-1, -2, -3])
+        bounding_volume_box.translate(np.array([-1, -2, -3]))
         # Should move only the center
         assert_array_equal(
             bounding_volume_box._box,
@@ -177,10 +124,10 @@ class TestBoundingVolumeBox(unittest.TestCase):
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()
 
         # Assert box hasn't change after transformation with identity matrix
-        bounding_volume_box.transform([1, 0, 0, 0,
+        bounding_volume_box.transform(np.array([1, 0, 0, 0,
                                        0, 1, 0, 0,
                                        0, 0, 1, 0,
-                                       0, 0, 0, 1])
+                                       0, 0, 0, 1]))
         assert_array_equal(
             bounding_volume_box._box,
             [
@@ -192,10 +139,10 @@ class TestBoundingVolumeBox(unittest.TestCase):
         )
 
         # Assert box is translated by [10, 10, 10] on X,Y, Z axis
-        bounding_volume_box.transform([1, 0, 0, 0,
+        bounding_volume_box.transform(np.array([1, 0, 0, 0,
                                        0, 1, 0, 0,
                                        0, 0, 1, 0,
-                                       10, 10, 10, 1])
+                                       10, 10, 10, 1]))
         assert_array_equal(
             bounding_volume_box._box,
             [
@@ -207,10 +154,10 @@ class TestBoundingVolumeBox(unittest.TestCase):
         )
 
         # Assert box is reversed
-        bounding_volume_box.transform([-1, 0, 0, 0,
+        bounding_volume_box.transform(np.array([-1, 0, 0, 0,
                                        0, -1, 0, 0,
                                        0, 0, -1, 0,
-                                       0, 0, 0, -1])
+                                       0, 0, 0, -1]))
         assert_array_equal(
             bounding_volume_box._box,
             [
