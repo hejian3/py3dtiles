@@ -782,7 +782,7 @@ class _Convert:
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
                 if self.classification:
-                    classification = tile_content.body.batch_table.body.data['Classification']['data'].reshape((fth.points_length, 1))
+                    classification = tile_content.body.batch_table.get_binary_property('Classification').reshape(-1, 1)
                 else:
                     classification = np.zeros((fth.points_length, 1), dtype=np.uint8)
                 root_node.grid.insert(

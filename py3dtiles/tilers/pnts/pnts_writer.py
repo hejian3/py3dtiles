@@ -30,7 +30,7 @@ def points_to_pnts(name, points, out_folder: Path, include_rgb, include_classifi
     if include_classification:
         sdt = np.dtype([('Classification', 'u1')])
         offset = count * (3 * 4 + (3 if include_rgb else 0))
-        bt.add_binary_property_from_array('Classification', points[offset:offset + count * sdt.itemsize],
+        bt.add_property_as_binary('Classification', points[offset:offset + count * sdt.itemsize],
                                           'UNSIGNED_BYTE',
                                           'SCALAR')
 

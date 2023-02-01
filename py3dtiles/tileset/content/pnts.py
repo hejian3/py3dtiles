@@ -152,7 +152,7 @@ class PntsBody(TileContentBody):
         # build batch table
         batch_table_size = header.bt_json_byte_length + header.bt_bin_byte_length
         batch_table_array = array[feature_table_size:feature_table_size + batch_table_size]
-        batch_table = BatchTable.from_array(header, batch_table_array)
+        batch_table = BatchTable.from_array(header, batch_table_array, feature_table.nb_points())
 
         # build tile body with feature table
         body = PntsBody()

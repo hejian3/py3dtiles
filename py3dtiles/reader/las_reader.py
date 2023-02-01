@@ -114,7 +114,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 colors = np.vstack((red, green, blue)).transpose()
 
                 if 'classification' in f.header.point_format.dimension_names:
-                    classification = np.array(points['classification']).reshape((len(points['classification']), 1))
+                    classification = np.array(points['classification'], dtype=np.uint8).reshape(-1, 1)
                 else:
                     classification = np.zeros((len(points.x), 1), dtype=np.uint8)
 

@@ -237,8 +237,8 @@ class Node:
             if fth.colors != SemanticPoint.NONE:
                 rgb = tile.body.feature_table.body.colors_arr
 
-            if 'Classification' in tile.body.batch_table.body.data.keys():
-                classification = tile.body.batch_table.body.data['Classification']['data']
+            if 'Classification' in tile.body.batch_table.header.data.keys():
+                classification = tile.body.batch_table.get_binary_property('Classification')
             xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
             # update aabb based on real values
             aabb = np.array([
@@ -284,7 +284,7 @@ class Node:
                         if 'Classification' in tile.body.batch_table.header.data.keys():
                             classification = np.concatenate(
                                 (classification,
-                                 tile.body.batch_table.body.data['Classification']['data']))
+                                 tile.body.batch_table.get_binary_property('Classification')))
 
                         # update aabb
                         xyz_float = tile.body.feature_table.body.positions_arr.view(
