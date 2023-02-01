@@ -8,14 +8,14 @@ import numpy.typing as npt
 from py3dtiles.tileset.tile_content import TileContentHeader
 
 COMPONENT_TYPE_NUMPY_MAPPING = {
-    "BYTE": np.byte,
+    "BYTE": np.int8,
     "UNSIGNED_BYTE": np.uint8,
-    "SHORT": np.short,
-    "UNSIGNED_SHORT": np.ushort,
+    "SHORT": np.int16,
+    "UNSIGNED_SHORT": np.uint16,
     "INT": np.int32,
     "UNSIGNED_INT": np.uint32,
-    "FLOAT": np.single,
-    "DOUBLE": np.double
+    "FLOAT": np.float32,
+    "DOUBLE": np.float64,
 }
 
 TYPE_LENGTH_MAPPING = {
