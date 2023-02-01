@@ -112,8 +112,10 @@ test:
   script:
     - pip install .[dev]
     - pytest
+    - coverage report --omit=venv/*
     # TODO move that in unit tests
     - py3dtiles info tests/fixtures/pointCloudRGB.pnts
+  coverage: '/TOTAL.*\s+(\d+\%)/'
   artifacts:
     when: always
     paths:
