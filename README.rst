@@ -1,8 +1,8 @@
-.. image:: https://travis-ci.org/Oslandia/py3dtiles.svg?branch=master
-    :target: https://travis-ci.org/Oslandia/py3dtiles
+.. image:: https://img.shields.io/gitlab/pipeline/Oslandia/py3dtiles/master
+    :target: https://gitlab.com/Oslandia/py3dtiles/-/pipelines
 
-.. image:: https://badge.fury.io/py/py3dtiles.svg
-    :target: https://badge.fury.io/py/py3dtiles
+.. image:: https://img.shields.io/pypi/v/py3dtiles
+    :target: https://pypi.org/project/py3dtiles/
 
 =========
 py3dtiles
