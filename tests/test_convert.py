@@ -4,6 +4,7 @@ import shutil
 from unittest.mock import patch
 
 import laspy
+import numpy as np
 from pyproj import CRS
 from pytest import fixture, raises
 
@@ -212,7 +213,6 @@ def test_convert_las_exception_in_run(tmp_dir):
 
 
 def test_convert_export_folder_already_exists(tmp_dir):
-    tmp_dir = Path(tmp_dir)
 
     tmp_dir.mkdir()
     assert not (tmp_dir / 'tileset.json').exists()
@@ -230,3 +230,18 @@ def test_convert_export_folder_already_exists(tmp_dir):
             jobs=1)
 
     assert (tmp_dir / 'tileset.json').exists()
+
+
+def test_convert_many_point_same_location(tmp_dir):
+    tmp_dir.mkdir()
+
+    # This is how the file has been generated.
+    xyz_path = tmp_dir / 'pc_with_many_points_at_same_location.xyz'
+    xyz_data = np.concatenate((np.random.random((10000, 3)), np.repeat([[0, 0, 0]], repeats=20000, axis=0)))
+    with xyz_path.open('w') as f:
+        np.savetxt(f, xyz_data, delimiter=" ", fmt='%.10f')
+
+    convert(xyz_path, outfolder=tmp_dir / 'tiles')
+
+    tileset_path = tmp_dir / 'tiles' / 'tileset.json'
+    assert 30000 == number_of_points_in_tileset(tileset_path)
