@@ -18,7 +18,7 @@ def str_to_CRS(srs: str | CRS | None) -> CRS | None:
         return None
 
     try:
-        return CRS.from_epsg(int(srs))
+        return CRS.from_epsg(int(srs)) # type: ignore
     except ValueError:
         return CRS(srs)
 
@@ -63,12 +63,12 @@ def node_name_to_path(working_dir: Path, name: bytes, suffix: str = '', split_le
     Get the path of a tile from its name and the working directory.
     If the name is '222262175' with the suffix '.pnts', the result is 'working_dir/22226217/r5.pnts'
     """
-    name = name.decode('ascii')
-    if len(name) <= split_len:
-        filename = PurePath("r" + name + suffix)
+    str_name = name.decode('ascii')
+    if len(str_name) <= split_len:
+        filename = PurePath("r" + str_name + suffix)
     else:
         # the name is split on every 'split_len' char to avoid to have too many tiles on the same folder.
-        sub_folders = [name[i:i + split_len] for i in range(0, len(name), split_len)]
+        sub_folders = [str_name[i:i + split_len] for i in range(0, len(str_name), split_len)]
         working_dir = working_dir.joinpath(*sub_folders[:-1])
         filename = PurePath("r" + sub_folders[-1] + suffix)
 

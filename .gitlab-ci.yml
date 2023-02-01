@@ -60,20 +60,20 @@ pre-commit-built-in:
     - pre-commit run --show-diff-on-failure --all-files end-of-file-fixer
     - pre-commit run --show-diff-on-failure --all-files check-added-large-files
 
-pytype:
+typing-check:
   stage: 🐍 lint
   image:
     name: python:3.10-slim
   cache:
     - key: $CI_COMMIT_REF_NAME
       paths:
-        - .pytype/
+        - .mypy_cache/
     - paths:
       - ${PIP_CACHE_DIR}
   before_script:
     - pip install .[dev]
   script:
-    - pytype setup.py py3dtiles/ docs/ tests/
+    - mypy setup.py py3dtiles/ tests/ --ignore-missing-imports
   only:
     refs:
       - merge_requests

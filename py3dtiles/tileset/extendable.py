@@ -12,8 +12,8 @@ class Extendable:
     a schema of the 3DTiles specifications (either core of extensions).
     """
 
-    def __init__(self):
-        self._extensions = {}
+    def __init__(self) -> None:
+        self._extensions: dict[str, BaseExtension] = {}
 
     def add_extension(self, extension: BaseExtension) -> None:
         if not self.has_extensions():

@@ -1,3 +1,6 @@
+from py3dtiles.typing import ExtensionDictType
+
+
 class BaseExtension:
     """
     An instance of some ExtensionType.
@@ -7,5 +10,5 @@ class BaseExtension:
         super().__init__()
         self.name = name
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> ExtensionDictType:
         return {}

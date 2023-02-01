@@ -21,10 +21,10 @@ class NodeCatalog:
     """
 
     def __init__(self, nodes: bytes, name: bytes, octree_metadata: OctreeMetadata) -> None:
-        self.nodes = {}
+        self.nodes: dict[bytes, Node] = {}
         self.root_aabb = octree_metadata.aabb
         self.root_spacing = octree_metadata.spacing
-        self.node_bytes = {}
+        self.node_bytes: dict[bytes, bytes] = {}
         self._load_from_store(name, nodes)
 
     def get_node(self, name: bytes) -> Node:

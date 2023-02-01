@@ -2,7 +2,7 @@ import gc
 from pathlib import Path
 from sys import getsizeof
 import time
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 import lz4.frame as gzip
 
@@ -11,8 +11,8 @@ from py3dtiles.utils import node_name_to_path
 
 class SharedNodeStore:
     def __init__(self, folder: Path) -> None:
-        self.metadata = {}
-        self.data = []
+        self.metadata: Dict[bytes, Tuple[float, int] | None] = {}
+        self.data: List[bytes | None] = []
         self.folder = folder
         self.stats = {
             'hit': 0,
@@ -50,7 +50,11 @@ class SharedNodeStore:
         metadata = self.metadata.get(name, None)
         data = b''
         if metadata is not None:
-            data = self.data[metadata[1]]
+            tmp_data = self.data[metadata[1]]
+            if tmp_data is None:
+                raise RuntimeError("tmp_data shouldn't be None if metadata is not None.")
+            else:
+                data = tmp_data
             self.stats['hit'] += stat_inc
         else:
             node_path = node_name_to_path(self.folder, name)
@@ -73,7 +77,9 @@ class SharedNodeStore:
                 raise FileNotFoundError(f"{node_path} should exist")
         else:
             self.memory_size['content'] -= getsizeof(meta)
-            self.memory_size['content'] -= len(self.data[meta[1]])
+            if self.data[meta[1]] is None:
+                raise ValueError(f"{name!r} is present in self.metadata but not in self.data.")
+            self.memory_size['content'] -= len(self.data[meta[1]]) # type: ignore
             self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
             self.data[meta[1]] = None
 
@@ -95,7 +101,7 @@ class SharedNodeStore:
         self.memory_size['content'] += len(compressed_data) + getsizeof((name, metadata))
         self.memory_size['container'] = getsizeof(self.data) + getsizeof(self.metadata)
 
-    def remove_oldest_nodes(self, percent=100) -> Tuple[int, int]:
+    def remove_oldest_nodes(self, percent: float = 100) -> Tuple[int, int]:
         count = _remove_all(self)
 
         self.memory_size['content'] = 0
@@ -115,7 +121,11 @@ def _remove_all(store: SharedNodeStore) -> Tuple[int, int]:
     count = len(store.metadata)
     bytes_written = 0
     for name, meta in store.metadata.items():
+        if meta is None:
+            continue
         data = store.data[meta[1]]
+        if data is None:
+            raise ValueError(f"{name!r} is present in self.metadata but not in self.data.")
         node_path = node_name_to_path(store.folder, name)
         with node_path.open('wb') as f:
             bytes_written += f.write(data)

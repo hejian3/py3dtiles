@@ -43,8 +43,10 @@ class Test_TileSet(unittest.TestCase):
             self.build_sample().to_dict(),
             {
                 "root": {
-                    "boundingVolume": {"boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
-                    "geometricError": 3.14159},
+                    "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                    "geometricError": 3.14159,
+                    "refine": "ADD",
+                },
                 "extensions": {
                     'Test': {}},
                 "geometricError": 500.0, "asset": {"version": "1.0"},

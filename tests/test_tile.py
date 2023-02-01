@@ -1,5 +1,8 @@
 import unittest
 
+import numpy as np
+from numpy.testing import assert_array_equal
+
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.tileset.tile_content import TileContent
@@ -14,7 +17,7 @@ class TestTile(unittest.TestCase):
         self.assertEqual(tile._refine, "ADD")
         self.assertIsNone(tile._content)
         self.assertListEqual(tile._children, [])
-        self.assertIsNone(tile._transform)
+        assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
         bounding_volume = BoundingVolumeBox()
         bounding_volume.set_from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
@@ -24,40 +27,29 @@ class TestTile(unittest.TestCase):
         self.assertEqual(tile._refine, "ADD")
         self.assertIsNone(tile._content)
         self.assertListEqual(tile._children, [])
-        self.assertIsNone(tile._transform)
+        assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
     def test_transform(self):
         tile = Tile()
 
-        self.assertListEqual(
-            tile.get_transform(),
-            [1.0, 0.0, 0.0, 0.0,
-             0.0, 1.0, 0.0, 0.0,
-             0.0, 0.0, 1.0, 0.0,
-             0.0, 0.0, 0.0, 1.0]
+        assert_array_equal(
+            tile.transform,
+            np.identity(4).reshape(-1)
         )
 
-        tile.set_transform([
+        tile.transform = np.array([
             1.0001, 0.0, 0.0, 0.0,
             0.0, 1.001, 0.0, 0.0,
             0.0, 0.0, 1.01, 0.0,
             0.0, 0.0, 0.0, 1.1
         ])
 
-        self.assertListEqual(
-            tile._transform,
-            [1.0001, 0.0, 0.0, 0.0,
+        assert_array_equal(
+            tile.transform,
+            np.array([1.0001, 0.0, 0.0, 0.0,
              0.0, 1.001, 0.0, 0.0,
              0.0, 0.0, 1.01, 0.0,
-             0.0, 0.0, 0.0, 1.1]
-        )
-
-        self.assertListEqual(
-            tile.get_transform(),
-            [1.0001, 0.0, 0.0, 0.0,
-             0.0, 1.001, 0.0, 0.0,
-             0.0, 0.0, 1.01, 0.0,
-             0.0, 0.0, 0.0, 1.1]
+             0.0, 0.0, 0.0, 1.1])
         )
 
     def test_content(self):
@@ -137,8 +129,9 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
                 "geometricError": 500,
+                "refine": "ADD",
             }
         )
 
@@ -156,14 +149,15 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
                 "geometricError": 3.14159,
+                "refine": "ADD",
                 "children": [
                     {
                         "boundingVolume": {
-                            "boundingVolume": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                            "box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
                         "geometricError": 21,
-
+                        "refine": "ADD",
                     }
                 ]
             }
