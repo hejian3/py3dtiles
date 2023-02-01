@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any, Literal, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -26,38 +27,57 @@ TYPE_LENGTH_MAPPING = {
 }
 
 
+ComponentLiteralType = Literal[
+    "BYTE", "UNSIGNED_BYTE", "SHORT", "UNSIGNED_SHORT", "INT", "UNSIGNED_INT", "FLOAT", "DOUBLE"
+]
+
+ComponentNumpyType = Union[
+    np.byte, np.ubyte, np.short, np.ushort, np.intc, np.uintc, np.single, np.double
+]
+
+PropertyLiteralType = Literal[
+    "SCALAR", "VEC2", "VEC3", "VEC4"
+]
+
+
 class BatchTableHeader:
 
-    def __init__(self, data=None):
-        self.data = data or {}
+    def __init__(self, data: dict[str, list[Any] | dict[str, Any]] | None = None) -> None:
+        if data is not None:
+            self.data = data
+        else:
+            self.data = {}
 
-    def to_array(self):
+    def to_array(self) -> npt.NDArray[np.ubyte]:
         if not self.data:
-            return np.empty((0,), dtype=np.uint8)
+            return np.empty((0,), dtype=np.ubyte)
 
         json_str = json.dumps(self.data, separators=(',', ':'))
         if len(json_str) % 8 != 0:
             json_str += ' ' * (8 - len(json_str) % 8)
-        return np.frombuffer(json_str.encode('utf-8'), dtype=np.uint8)
+        return np.frombuffer(json_str.encode('utf-8'), dtype=np.ubyte)
 
 
 class BatchTableBody:
-    def __init__(self, data=None):
-        self.data = data or []
+    def __init__(self, data: list[npt.NDArray[ComponentNumpyType]] | None = None):
+        if data is not None:
+            self.data = data
+        else:
+            self.data = []
 
-    def to_array(self):
+    def to_array(self) -> npt.NDArray[np.ubyte]:
         if not self.data:
-            return np.empty((0,), dtype=np.uint8)
+            return np.empty((0,), dtype=np.ubyte)
 
         if self.nbytes % 8 != 0:
-            padding = ' ' * (8 - self.nbytes % 8)
-            padding = np.frombuffer(padding.encode('utf-8'), dtype=np.uint8)
+            padding_str = ' ' * (8 - self.nbytes % 8)
+            padding = np.frombuffer(padding_str.encode('utf-8'), dtype=np.ubyte)
             self.data.append(padding)
 
-        return np.concatenate([data.view(np.ubyte) for data in self.data], dtype=np.uint8)
+        return np.concatenate([data.view(np.ubyte) for data in self.data], dtype=np.ubyte)
 
     @property
-    def nbytes(self):
+    def nbytes(self) -> int:
         return sum([data.nbytes for data in self.data])
 
 
@@ -68,16 +88,19 @@ class BatchTable:
     data (better performances)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.header = BatchTableHeader()
         self.body = BatchTableBody()
 
-    def add_property_as_json(self, property_name, array):
+    def add_property_as_json(self, property_name: str, array: list[Any]) -> None:
         self.header.data[property_name] = array
 
-    def add_property_as_binary(self, property_name, array, component_type, property_type):
+    def add_property_as_binary(self, property_name: str, array: npt.NDArray[ComponentNumpyType],
+                               component_type: ComponentLiteralType, property_type: PropertyLiteralType) -> None:
         if array.dtype != COMPONENT_TYPE_NUMPY_MAPPING[component_type]:
-            raise RuntimeError("The dtype of array should be the same as component_type")
+            raise RuntimeError("The dtype of array should be the same as component_type,"
+                               f"the dtype of the array is {array.dtype} and"
+                               f"the dytpe of {component_type} is {COMPONENT_TYPE_NUMPY_MAPPING[component_type]}")
 
         self.header.data[property_name] = {
             "byteOffset": self.body.nbytes,
@@ -88,7 +111,7 @@ class BatchTable:
         transformed_array = array.reshape(-1)
         self.body.data.append(transformed_array)
 
-    def get_binary_property(self, property_name_to_fetch):
+    def get_binary_property(self, property_name_to_fetch: str) -> npt.NDArray[ComponentNumpyType]:
         binary_property_index = 0
         # The order in self.header.data is the same as in self.body.data
         # We should filter properties added as json.
@@ -102,7 +125,7 @@ class BatchTable:
         else:
             raise ValueError(f"The property {property_name_to_fetch} is not found")
 
-    def to_array(self):
+    def to_array(self) -> npt.NDArray[np.ubyte]:
         batch_table_header_array = self.header.to_array()
         batch_table_body_array = self.body.to_array()
 
@@ -128,7 +151,7 @@ class BatchTable:
                 raise ValueError("batch_len shouldn't be None if there are binary property in the batch table array")
 
             if previous_byte_offset != property_definition["byteOffset"]:
-                raise ValueError("Bad byteOffset")
+                raise ValueError(f"The byte offset is {property_definition['byteOffset']} but the byte offset computed is {previous_byte_offset}")
 
             numpy_type = COMPONENT_TYPE_NUMPY_MAPPING[property_definition["componentType"]]
             end_byte_offset = property_definition["byteOffset"] + (
