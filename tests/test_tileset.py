@@ -1,12 +1,18 @@
+import json
+from pathlib import Path
+import shutil
 import unittest
 
+from py3dtiles.convert import convert
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.extension import BaseExtension
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.tileset.tileset import TileSet
 
+DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
-class Test_TileSet(unittest.TestCase):
+
+class TestTileSet(unittest.TestCase):
     @classmethod
     def build_sample(cls):
         """
@@ -62,10 +68,28 @@ class Test_TileSet(unittest.TestCase):
                     "refine": "ADD",
                 },
                 "extensions": {"Test": {}},
-                "geometricError": 500.0,
+                "geometricError": 500,
                 "asset": {"version": "1.0"},
             },
         )
+
+    def test_from_dict(self):
+        tmp_dir = Path("tmp/")
+        tmp_dir.mkdir(exist_ok=True)
+
+        convert(DATA_DIRECTORY / "simple.xyz", outfolder=tmp_dir, overwrite=True)
+
+        assert Path(tmp_dir, "tileset.json").exists()
+        assert Path(tmp_dir, "r.pnts").exists()
+
+        with (tmp_dir / "tileset.json").open() as f:
+            tileset_dict = json.load(f)
+
+        tileset = TileSet.from_dict(tileset_dict, tmp_dir)
+
+        self.assertDictEqual(tileset.to_dict(), tileset_dict)
+
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
