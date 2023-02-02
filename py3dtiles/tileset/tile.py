@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -44,6 +45,7 @@ class Tile(Extendable):
     def from_dict(cls, tile_dict: TileDictType) -> Tile:
         if "box" in tile_dict["boundingVolume"]:
             bounding_volume = BoundingVolumeBox()
+            bounding_volume.set_from_list(tile_dict["boundingVolume"]["box"])  # type: ignore
         elif tile_dict["boundingVolume"] in ("region", "sphere"):
             raise NotImplementedError(
                 "The support of bounding volume region and sphere is not implemented yet"
@@ -108,6 +110,12 @@ class Tile(Extendable):
         return self._refine
 
     def add_child(self, tile: Tile) -> None:
+        if tile.bounding_volume is not None:
+            if self.bounding_volume is None:
+                self.bounding_volume = copy.deepcopy(tile.bounding_volume)
+            else:
+                self.bounding_volume.add(tile.bounding_volume)
+
         self.children.append(tile)
 
     def get_all_children(self) -> list[Tile]:

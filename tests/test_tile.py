@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 import numpy as np
@@ -181,7 +182,7 @@ class TestTile(unittest.TestCase):
 
         child_tile = Tile()
         child_tile.geometric_error = 21
-        child_tile.bounding_volume = bounding_volume
+        child_tile.bounding_volume = copy.deepcopy(bounding_volume)
         tile.add_child(child_tile)
 
         # cannot test now
@@ -195,15 +196,15 @@ class TestTile(unittest.TestCase):
                         1.0,
                         2.0,
                         3.0,
-                        4.0,
-                        5.0,
-                        6.0,
-                        7.0,
-                        8.0,
-                        9.0,
-                        10.0,
-                        11.0,
-                        12.0,
+                        21.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        24.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        27.0,
                     ]
                 },
                 "geometricError": 3.14159,
