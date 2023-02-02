@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal, Union
+from typing import Any, Literal, TYPE_CHECKING, Union
 
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tileset.tile_content import TileContentHeader
+if TYPE_CHECKING:
+    from py3dtiles.tileset.content import TileContentHeader
 
 COMPONENT_TYPE_NUMPY_MAPPING = {
     "BYTE": np.int8,

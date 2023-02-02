@@ -7,9 +7,9 @@ import numpy.typing as npt
 
 from py3dtiles.tileset.bounding_volume import BoundingVolume
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
+from py3dtiles.tileset.content import TileContent
 from py3dtiles.typing import RefineType, TileDictType
 from .extendable import Extendable
-from .tile_content import TileContent
 
 DEFAULT_TRANSFORMATION = np.identity(4, dtype=np.float64).reshape(-1)
 DEFAULT_TRANSFORMATION.setflags(write=False)

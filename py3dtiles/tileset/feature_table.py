@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 from enum import Enum
 import json
-from typing import List
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tileset.tile_content import TileContentHeader
+if TYPE_CHECKING:
+    from py3dtiles.tileset.content import TileContentHeader
 
 
 class Feature:
@@ -293,8 +296,8 @@ class FeatureTableBody:
 
     @staticmethod
     def from_features(
-        fth: FeatureTableHeader, features: List[Feature]
-    ) -> "FeatureTableBody":
+        fth: FeatureTableHeader, features: list[Feature]
+    ) -> FeatureTableBody:
 
         b = FeatureTableBody()
 
@@ -376,7 +379,7 @@ class FeatureTable:
         return np.concatenate((fth_arr, ftb_arr))
 
     @staticmethod
-    def from_array(th: TileContentHeader, array: np.ndarray) -> "FeatureTable":
+    def from_array(th: TileContentHeader, array: np.ndarray) -> FeatureTable:
         # build feature table header
         fth_len = th.ft_json_byte_length
         fth_arr = array[0:fth_len]
@@ -396,8 +399,8 @@ class FeatureTable:
 
     @staticmethod
     def from_features(
-        pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: List[Feature]
-    ) -> "FeatureTable":
+        pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]
+    ) -> FeatureTable:
         """
         pdtype : Numpy description for positions.
         cdtype : Numpy description for colors.

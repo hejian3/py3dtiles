@@ -8,13 +8,12 @@ import numpy as np
 
 import py3dtiles
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.content import PntsBody, PntsHeader
+from py3dtiles.tileset.content import Pnts, PntsBody, PntsHeader
 from py3dtiles.tileset.feature_table import (
     FeatureTable,
     FeatureTableBody,
     FeatureTableHeader,
 )
-from py3dtiles.tileset.tile_content import TileContent
 from py3dtiles.utils import node_name_to_path, ResponseType
 
 
@@ -54,9 +53,7 @@ def points_to_pnts(
     body.feature_table = ft
     body.batch_table = bt
 
-    tile = TileContent()
-    tile.body = body
-    tile.header = PntsHeader()
+    tile = Pnts(PntsHeader(), body)
     tile.header.sync(body)
 
     node_path = node_name_to_path(out_folder, name, ".pnts")

@@ -5,8 +5,8 @@ from typing import List, Optional, Union
 import numpy as np
 
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
+from py3dtiles.tileset.content import TileContent
 from py3dtiles.tileset.feature_table import SemanticPoint
-from py3dtiles.tileset.tile_content import TileContent
 from py3dtiles.tileset.tile_content_reader import read_file
 from py3dtiles.typing import TileDictType
 from py3dtiles.utils import split_aabb

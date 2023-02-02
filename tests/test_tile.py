@@ -4,8 +4,15 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
+from py3dtiles.tileset.content import (
+    B3dm,
+    B3dmBody,
+    B3dmHeader,
+    Pnts,
+    PntsBody,
+    PntsHeader,
+)
 from py3dtiles.tileset.tile import Tile
-from py3dtiles.tileset.tile_content import TileContent
 
 
 class TestTile(unittest.TestCase):
@@ -83,15 +90,15 @@ class TestTile(unittest.TestCase):
 
         self.assertIsNone(tile.get_content())
 
-        tile_content = TileContent()
+        tile_content = Pnts(PntsHeader(), PntsBody())
         tile.set_content(tile_content)
         self.assertIs(tile.get_content(), tile_content)
 
-        new_tile_content = TileContent()
+        new_tile_content = Pnts(PntsHeader(), PntsBody())
         tile.set_content(new_tile_content, force=False)
         self.assertIs(tile.get_content(), tile_content)
 
-        new_tile_content = TileContent()
+        new_tile_content = B3dm(B3dmHeader(), B3dmBody())
         tile.set_content(new_tile_content)
         self.assertIs(tile.get_content(), new_tile_content)
 
