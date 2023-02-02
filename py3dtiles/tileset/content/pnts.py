@@ -15,7 +15,8 @@ from .tile_content import (
 
 
 class Pnts(TileContent):
-    def __init__(self, header: PntsHeader, body: PntsBody):
+    def __init__(self, header: PntsHeader, body: PntsBody) -> None:
+        super().__init__()
         self.header: PntsHeader = header
         self.body: PntsBody = body
 

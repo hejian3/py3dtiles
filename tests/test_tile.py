@@ -21,7 +21,7 @@ class TestTile(unittest.TestCase):
         self.assertIsNone(tile.bounding_volume)
         self.assertEqual(tile.geometric_error, 500)
         self.assertEqual(tile._refine, "ADD")
-        self.assertIsNone(tile._content)
+        self.assertIsNone(tile.get_or_fetch_content())
         self.assertListEqual(tile.children, [])
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
@@ -31,7 +31,7 @@ class TestTile(unittest.TestCase):
         self.assertIs(tile.bounding_volume, bounding_volume)
         self.assertEqual(tile.geometric_error, 200)
         self.assertEqual(tile._refine, "ADD")
-        self.assertIsNone(tile._content)
+        self.assertIsNone(tile.get_or_fetch_content())
         self.assertListEqual(tile.children, [])
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
@@ -88,19 +88,15 @@ class TestTile(unittest.TestCase):
     def test_content(self):
         tile = Tile()
 
-        self.assertIsNone(tile.get_content())
+        self.assertIsNone(tile.get_or_fetch_content())
 
         tile_content = Pnts(PntsHeader(), PntsBody())
         tile.set_content(tile_content)
-        self.assertIs(tile.get_content(), tile_content)
-
-        new_tile_content = Pnts(PntsHeader(), PntsBody())
-        tile.set_content(new_tile_content, force=False)
-        self.assertIs(tile.get_content(), tile_content)
+        self.assertIs(tile.get_or_fetch_content(), tile_content)
 
         new_tile_content = B3dm(B3dmHeader(), B3dmBody())
         tile.set_content(new_tile_content)
-        self.assertIs(tile.get_content(), new_tile_content)
+        self.assertIs(tile.get_or_fetch_content(), new_tile_content)
 
     def test_content_uri(self):
         pass

@@ -14,7 +14,9 @@ from .tile_content import (
 
 
 class B3dm(TileContent):
-    def __init__(self, header: B3dmHeader, body: B3dmBody):
+    def __init__(self, header: B3dmHeader, body: B3dmBody) -> None:
+        super().__init__()
+
         self.header: B3dmHeader = header
         self.body: B3dmBody = body
 

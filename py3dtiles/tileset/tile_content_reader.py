@@ -8,7 +8,7 @@ import numpy as np
 from py3dtiles.tileset.content import B3dm, Pnts
 
 if TYPE_CHECKING:
-    from .tile_content import TileContent
+    from content.tile_content import TileContent
 
 __all__ = ["read_file"]
 
