@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -12,6 +14,15 @@ class TileSet(Extendable):
         self._asset: AssetDictType = {"version": "1.0"}
         self.geometric_error: GeometricErrorType = geometric_error
         self.root_tile = Tile()
+
+    @classmethod
+    def from_dict(cls, tileset_dict: TilesetDictType) -> TileSet:
+        tileset = cls(geometric_error=tileset_dict["geometricError"])
+
+        tileset._asset = tileset_dict["asset"]
+        tileset.root_tile = Tile.from_dict(tileset_dict["root"])
+
+        return tileset
 
     def add_asset_extras(self, comment: str) -> None:
         """
@@ -40,7 +51,7 @@ class TileSet(Extendable):
         # Prior to writing the TileSet, the future location of the enclosed
         # Tile's content (set as their respective TileContent uri) must be
         # specified:
-        all_tiles = self.root_tile.get_children()
+        all_tiles = self.root_tile.children
         for index, tile in enumerate(all_tiles):
             tile.set_content_uri("tiles/" + f"{index}.b3dm")
 

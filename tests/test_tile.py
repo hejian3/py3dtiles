@@ -15,7 +15,7 @@ class TestTile(unittest.TestCase):
         self.assertEqual(tile.geometric_error, 500)
         self.assertEqual(tile._refine, "ADD")
         self.assertIsNone(tile._content)
-        self.assertListEqual(tile._children, [])
+        self.assertListEqual(tile.children, [])
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
         bounding_volume = BoundingVolumeBox()
@@ -25,7 +25,7 @@ class TestTile(unittest.TestCase):
         self.assertEqual(tile.geometric_error, 200)
         self.assertEqual(tile._refine, "ADD")
         self.assertIsNone(tile._content)
-        self.assertListEqual(tile._children, [])
+        self.assertListEqual(tile.children, [])
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
     def test_transform(self):
@@ -113,33 +113,30 @@ class TestTile(unittest.TestCase):
     def test_children(self):
         tile1 = Tile()
 
-        self.assertFalse(tile1.has_children())
-        self.assertListEqual(tile1.get_direct_children(), [])
-        self.assertListEqual(tile1.get_children(), [])
+        self.assertListEqual(tile1.children, [])
+        self.assertListEqual(tile1.get_all_children(), [])
 
         tile11 = Tile()
         tile1.add_child(tile11)
-        self.assertTrue(tile1.has_children())
-        self.assertListEqual(tile1.get_direct_children(), [tile11])
-        self.assertListEqual(tile1.get_children(), [tile11])
+        self.assertListEqual(tile1.children, [tile11])
+        self.assertListEqual(tile1.get_all_children(), [tile11])
 
         tile12 = Tile()
         tile1.add_child(tile12)
-        self.assertTrue(tile1.has_children())
-        self.assertListEqual(tile1.get_direct_children(), [tile11, tile12])
-        self.assertListEqual(tile1.get_children(), [tile11, tile12])
+        self.assertListEqual(tile1.children, [tile11, tile12])
+        self.assertListEqual(tile1.get_all_children(), [tile11, tile12])
 
         tile111 = Tile()
         tile11.add_child(tile111)
 
-        self.assertTrue(tile1.has_children())
-        self.assertTrue(tile11.has_children())
-        self.assertFalse(tile111.has_children())
-        self.assertFalse(tile12.has_children())
+        self.assertTrue(tile1.children)
+        self.assertTrue(tile11.children)
+        self.assertFalse(tile111.children)
+        self.assertFalse(tile12.children)
 
-        self.assertListEqual(tile1.get_direct_children(), [tile11, tile12])
-        self.assertListEqual(tile1.get_children(), [tile11, tile111, tile12])
-        self.assertListEqual(tile11.get_children(), [tile111])
+        self.assertListEqual(tile1.children, [tile11, tile12])
+        self.assertListEqual(tile1.get_all_children(), [tile11, tile111, tile12])
+        self.assertListEqual(tile11.get_all_children(), [tile111])
 
     def test_to_dict(self):
         tile = Tile()

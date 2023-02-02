@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tileset.bounding_volume import BoundingVolume
+from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.typing import RefineType, TileDictType
 from .extendable import Extendable
 from .tile_content import TileContent
@@ -24,12 +25,41 @@ class Tile(Extendable):
         super().__init__()
         self.bounding_volume = bounding_volume
         self.geometric_error = geometric_error
-        self._refine = ""
+        self._refine: RefineType = "ADD"
         self.set_refine_mode(refine_mode)
         self._content: None | TileContent = None
-        self._children: list[Tile] = []
+        self.children: list[Tile] = []
         # Some possible valid properties left un-delt with viewerRequestVolume
         self.transform: npt.NDArray[np.float64] = DEFAULT_TRANSFORMATION
+
+    @classmethod
+    def from_dict(cls, tile_dict: TileDictType) -> Tile:
+        if "box" in tile_dict["boundingVolume"]:
+            bounding_volume = BoundingVolumeBox()
+        elif tile_dict["boundingVolume"] in ("region", "sphere"):
+            raise NotImplementedError(
+                "The support of bounding volume region and sphere is not implemented yet"
+            )
+        else:
+            raise ValueError(
+                f"The bounding volume {list(tile_dict['boundingVolume'].keys())[0]} is unknown"
+            )
+
+        tile = cls(
+            geometric_error=tile_dict["geometricError"], bounding_volume=bounding_volume
+        )
+
+        if "refine" in tile_dict:
+            tile.set_refine_mode(tile_dict["refine"])
+
+        if "transform" in tile_dict:
+            tile.transform = np.array(tile_dict["transform"])
+
+        if "children" in tile_dict:
+            for child in tile_dict["children"]:
+                tile.children.append(Tile.from_dict(child))
+
+        return tile
 
     def set_content(self, content: TileContent, force: bool = True) -> None:
         if not force and self._content is not None:
@@ -50,37 +80,31 @@ class Tile(Extendable):
         # return self._content.get_uri() # TODO add get_uri in TileContent
         return ""
 
-    def set_refine_mode(self, mode: str) -> None:
+    def set_refine_mode(self, mode: RefineType) -> None:
         if mode != "ADD" and mode != "REPLACE":
             raise ValueError(
                 f"Unknown refinement mode {mode}. Should be either 'ADD' or 'REPLACE'."
             )
         self._refine = mode
 
-    def get_refine_mode(self) -> str:
+    def get_refine_mode(self) -> RefineType:
         return self._refine
 
     def add_child(self, tile: Tile) -> None:
-        self._children.append(tile)
+        self.children.append(tile)
 
-    def has_children(self) -> bool:
-        return len(self._children) != 0
-
-    def get_direct_children(self) -> list[Tile]:
-        return self._children
-
-    def get_children(self) -> list[Tile]:
+    def get_all_children(self) -> list[Tile]:
         """
         :return: the recursive (across the children tree) list of the children
                  tiles
         """
         descendants = []
-        for child in self._children:
+        for child in self.children:
             # Add the child...
             descendants.append(child)
             # and if (and only if) they are grand-children then recurse
-            if child.has_children():
-                descendants += child.get_children()
+            if child.children:
+                descendants += child.get_all_children()
         return descendants
 
     def sync_bounding_volume_with_children(self) -> None:
@@ -92,7 +116,7 @@ class Tile(Extendable):
         # We consider that whatever information is present it is the
         # proper one (in other terms: when they are no sub-tiles this tile
         # is a leaf-tile and thus is has no synchronization to do)
-        for child in self.get_direct_children():
+        for child in self.children:
             child.sync_bounding_volume_with_children()
 
         # The information that depends on (is defined by) the children
@@ -144,12 +168,12 @@ class Tile(Extendable):
             "refine": refine,  # type: ignore
         }
 
-        if self._children:
+        if self.children:
             # The children list exists indeed (for technical reasons) yet it
             # happens to be still empty. This would pollute the json output
             # by adding a "children" entry followed by an empty list. In such
             # case just remove that attributes entry:
-            dict_data["children"] = [child.to_dict() for child in self._children]
+            dict_data["children"] = [child.to_dict() for child in self.children]
 
         if self._content is not None:
             # Refer to children related above comment (mutatis mutandis):
