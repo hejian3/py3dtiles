@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
 from .gltf import GlTF
@@ -119,24 +120,18 @@ class B3dmHeader(TileContentHeader):
             self.bt_json_byte_length = len(bth_arr)
 
     @staticmethod
-    def from_array(array) -> B3dmHeader:
-        """
-        Parameters
-        ----------
-        array : numpy.array
-        """
-
+    def from_array(array: npt.NDArray[np.uint8]) -> B3dmHeader:
         h = B3dmHeader()
 
         if len(array) != B3dmHeader.BYTE_LENGTH:
             raise RuntimeError("Invalid header length")
 
-        h.version = struct.unpack("i", array[4:8])[0]
-        h.tile_byte_length = struct.unpack("i", array[8:12])[0]
-        h.ft_json_byte_length = struct.unpack("i", array[12:16])[0]
-        h.ft_bin_byte_length = struct.unpack("i", array[16:20])[0]
-        h.bt_json_byte_length = struct.unpack("i", array[20:24])[0]
-        h.bt_bin_byte_length = struct.unpack("i", array[24:28])[0]
+        h.version = struct.unpack("i", array[4:8].tobytes())[0]
+        h.tile_byte_length = struct.unpack("i", array[8:12].tobytes())[0]
+        h.ft_json_byte_length = struct.unpack("i", array[12:16].tobytes())[0]
+        h.ft_bin_byte_length = struct.unpack("i", array[16:20].tobytes())[0]
+        h.bt_json_byte_length = struct.unpack("i", array[20:24].tobytes())[0]
+        h.bt_bin_byte_length = struct.unpack("i", array[24:28].tobytes())[0]
 
         return h
 
@@ -174,30 +169,26 @@ class B3dmBody(TileContentBody):
         return b
 
     @staticmethod
-    def from_array(th, array) -> B3dmBody:
-        """
-        Parameters
-        ----------
-        th : TileContentHeader
-
-        array : numpy.array
-        """
-
+    def from_array(b3dm_header: B3dmHeader, array: npt.NDArray[np.uint8]) -> B3dmBody:
         # build feature table
-        ft_len = th.ft_json_byte_length + th.ft_bin_byte_length
+        ft_len = b3dm_header.ft_json_byte_length + b3dm_header.ft_bin_byte_length
 
         # build batch table
-        bt_len = th.bt_json_byte_length + th.bt_bin_byte_length
+        bt_len = b3dm_header.bt_json_byte_length + b3dm_header.bt_bin_byte_length
 
         # build glTF
-        glTF_len = th.tile_byte_length - ft_len - bt_len - B3dmHeader.BYTE_LENGTH
+        glTF_len = (
+            b3dm_header.tile_byte_length - ft_len - bt_len - B3dmHeader.BYTE_LENGTH
+        )
         glTF_arr = array[ft_len + bt_len : ft_len + bt_len + glTF_len]
         glTF = GlTF.from_array(glTF_arr)
 
         # build tile body with batch table
         b = B3dmBody()
         b.glTF = glTF
-        if th.bt_json_byte_length > 0:
-            b.batch_table = BatchTable.from_array(th, array[0 : th.bt_json_byte_length])
+        if b3dm_header.bt_json_byte_length > 0:
+            b.batch_table = BatchTable.from_array(
+                b3dm_header, array[0 : b3dm_header.bt_json_byte_length]
+            )
 
         return b

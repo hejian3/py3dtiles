@@ -101,7 +101,7 @@ class Grid:
             "cells_classification": list(self.cells_classification),
         }
 
-    def __setstate__(self, state: dict):
+    def __setstate__(self, state: dict) -> None:
         self.cell_count = state["cell_count"]
         self.spacing = state["spacing"]
         self.cells_xyz = List(state["cells_xyz"])

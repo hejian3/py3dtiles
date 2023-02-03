@@ -64,7 +64,7 @@ class TileContentHeader(ABC):
         ...
 
     @abstractmethod
-    def sync(self, body) -> None:
+    def sync(self, body) -> None:  # type: ignore
         ...
 
 

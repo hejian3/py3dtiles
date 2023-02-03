@@ -11,7 +11,7 @@ import struct
 import sys
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import psutil
@@ -35,6 +35,7 @@ from py3dtiles.tilers.node import SharedNodeStore
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.tile_content_reader import read_file
+from py3dtiles.typing import PortionsType
 from py3dtiles.utils import (
     CommandType,
     compute_spacing,
@@ -71,15 +72,15 @@ class Worker(Process):
 
     def __init__(
         self,
-        activity_graph,
-        transformer,
-        octree_metadata,
+        activity_graph: bool,
+        transformer: Transformer,
+        octree_metadata: OctreeMetadata,
         folder: Path,
-        write_rgb,
-        write_classification,
-        verbosity,
-        uri,
-    ):
+        write_rgb: bool,
+        write_classification: bool,
+        verbosity: int,
+        uri: str,
+    ) -> None:
         super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
@@ -300,7 +301,9 @@ def can_pnts_be_written(node_name, finished_node, input_nodes, active_nodes):
 
 
 class State:
-    def __init__(self, pointcloud_file_portions, max_reading_jobs: int):
+    def __init__(
+        self, pointcloud_file_portions: PortionsType, max_reading_jobs: int
+    ) -> None:
         self.processed_points = 0
         self.max_point_in_progress = 60_000_000
         self.points_in_progress = 0
@@ -489,8 +492,11 @@ class _Convert:
         self.state = State(self.file_info["portions"], max(1, self.jobs // 2))
 
     def get_file_info(
-        self, color_scale, crs_in: Optional[CRS], force_crs_in: bool = False
-    ) -> dict:
+        self,
+        color_scale: float | None,
+        crs_in: Optional[CRS],
+        force_crs_in: bool = False,
+    ) -> Dict[str, Any]:
 
         pointcloud_file_portions = []
         aabb = None

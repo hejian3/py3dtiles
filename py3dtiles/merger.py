@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.content import TileContent
@@ -100,7 +101,7 @@ def init(tilset_paths: List[Path]) -> dict:
     }
 
 
-def quadtree_split(aabb):
+def quadtree_split(aabb: npt.NDArray) -> List[npt.NDArray]:
     return [
         split_aabb(aabb, 0, True),
         split_aabb(aabb, 2, True),
@@ -161,8 +162,12 @@ def _aabb_from_3dtiles_bounding_volume(volume, transform=None):
 
 
 def build_tileset_quadtree(
-    out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name
-) -> Optional[TileDictType]:
+    out_folder: Path,
+    aabb: npt.NDArray,
+    tilesets: List[Dict[str, Any]],
+    inv_base_transform: npt.NDArray,
+    name: str,
+) -> TileDictType | None:
     insides = [tileset for tileset in tilesets if is_tileset_inside(tileset, aabb)]
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])
@@ -192,7 +197,6 @@ def build_tileset_quadtree(
                 out_folder,
                 quarter,
                 insides,
-                base_transform,
                 inv_base_transform,
                 name + str(sub),
             )
@@ -311,7 +315,7 @@ def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -
     print("------------------------")
     # build hierarchical structure
     result = build_tileset_quadtree(
-        folder, aabb, infos["tilesets"], base_transform, inv_base_transform, ""
+        folder, aabb, infos["tilesets"], inv_base_transform, ""
     )
 
     if result is None:

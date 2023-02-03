@@ -104,7 +104,7 @@ class Node:
         rgb: npt.NDArray,
         classification: npt.NDArray,
         make_empty_node: bool = False,
-    ):
+    ) -> None:
         if make_empty_node:
             self.children = []
             self.pending_xyz += [xyz]
@@ -121,7 +121,7 @@ class Node:
                 self._split(node_catalog, scale)
             self.dirty = True
 
-            return True
+            return
 
         # grid based insertion
         (
@@ -482,7 +482,7 @@ class Node:
         return tileset
 
 
-def split_tileset(tileset: TileDictType, split_name: str, folder: Path):
+def split_tileset(tileset: TileDictType, split_name: str, folder: Path) -> TileDictType:
     tile_root = {
         "asset": {
             "version": "1.0",
