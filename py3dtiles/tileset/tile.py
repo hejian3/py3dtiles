@@ -46,7 +46,10 @@ class Tile(Extendable):
         if "box" in tile_dict["boundingVolume"]:
             bounding_volume = BoundingVolumeBox()
             bounding_volume.set_from_list(tile_dict["boundingVolume"]["box"])  # type: ignore
-        elif tile_dict["boundingVolume"] in ("region", "sphere"):
+        elif (
+            "region" in tile_dict["boundingVolume"]
+            or "sphere" in tile_dict["boundingVolume"]
+        ):
             raise NotImplementedError(
                 "The support of bounding volume region and sphere is not implemented yet"
             )

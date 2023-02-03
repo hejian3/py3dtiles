@@ -73,7 +73,7 @@ typing-check:
   before_script:
     - pip install .[dev]
   script:
-    - mypy setup.py py3dtiles/ tests/ --ignore-missing-imports
+    - mypy py3dtiles/ tests/ --ignore-missing-imports --warn-unused-configs --warn-redundant-casts --disallow-subclassing-any --disallow-untyped-decorators --warn-redundant-casts --strict-equality --strict-concatenate
   only:
     refs:
       - merge_requests
