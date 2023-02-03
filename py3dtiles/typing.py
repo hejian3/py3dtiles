@@ -1,6 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, TYPE_CHECKING, TypedDict, Union
+from typing import (
+    Any,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+    TypedDict,
+    Union,
+)
+
+import numpy as np
+import numpy.typing as npt
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
@@ -68,3 +82,24 @@ class TilesetDictType(ThreeDDictBase):
     root: TileDictType
     properties: NotRequired[PropertyType]
     extensionsUsed: NotRequired[list[str]]
+
+
+PortionType = Tuple[int, ...]
+PortionsType = Sequence[Tuple[str, PortionType]]
+
+
+class MetadataReaderType(TypedDict):
+    portions: PortionsType
+    aabb: npt.NDArray[np.double]
+    color_scale: float | None
+    srs_in: str | None
+    point_count: int
+    avg_min: npt.NDArray[np.double]
+
+
+OffsetScaleType = Tuple[
+    npt.NDArray[np.double],
+    npt.NDArray[np.double],
+    Optional[npt.NDArray[np.double]],
+    Optional[float],
+]

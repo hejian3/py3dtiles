@@ -4,14 +4,20 @@ from pathlib import Path
 import pickle
 import struct
 import subprocess
+from typing import Optional
 
 import laspy
 import numpy as np
+from pyproj import Transformer
+from zmq import Socket
 
+from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 from py3dtiles.utils import ResponseType
 
 
-def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
+def get_metadata(
+    path: Path, color_scale: Optional[float] = None, fraction: int = 100
+) -> MetadataReaderType:
     pointcloud_file_portions = []
     srs_in = None
 
@@ -50,7 +56,13 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
     }
 
 
-def run(filename: str, offset_scale, portion, queue, transformer):
+def run(
+    filename: str,
+    offset_scale: OffsetScaleType,
+    portion: PortionType,
+    queue: Socket,
+    transformer: Optional[Transformer],
+) -> None:
     """
     Reads points from a las file
     """

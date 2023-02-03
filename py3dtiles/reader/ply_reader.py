@@ -2,15 +2,20 @@ import math
 from pathlib import Path
 import pickle
 import struct
-from typing import Any, Dict
+from typing import Optional
 
 import numpy as np
 from plyfile import PlyData, PlyElement
+from pyproj import Transformer
+from zmq import Socket
 
+from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 from py3dtiles.utils import ResponseType
 
 
-def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str, Any]:
+def get_metadata(
+    path: Path, color_scale: Optional[float] = None, fraction: int = 100
+) -> MetadataReaderType:
     """Get metadata in case of a input ply file."""
     ply_point_cloud = PlyData.read(path)
     if "vertex" not in [e.name for e in ply_point_cloud.elements]:
@@ -24,12 +29,13 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
         raise KeyError(
             "At least one of the basic coordinate feature (x, y, z) is missing in the input file."
         )
+
     data = np.array(
         [ply_vertices["x"], ply_vertices["y"], ply_vertices["z"]]
     ).transpose()
-    aabb = np.min(data, axis=0), np.max(data, axis=0)
+    aabb = np.array((np.min(data, axis=0), np.max(data, axis=0)))
 
-    pointcloud_file_portions = [(str(path), (0, point_count, point_count))]
+    pointcloud_file_portions = [(str(path), (0, point_count))]
 
     return {
         "portions": pointcloud_file_portions,
@@ -41,7 +47,13 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
     }
 
 
-def run(filename: str, offset_scale, portion, queue, transformer):
+def run(
+    filename: str,
+    offset_scale: OffsetScaleType,
+    portion: PortionType,
+    queue: Socket,
+    transformer: Optional[Transformer],
+) -> None:
     """
     Reads points from a ply file.
     """

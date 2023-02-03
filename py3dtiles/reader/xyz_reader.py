@@ -2,14 +2,19 @@ import math
 from pathlib import Path
 import pickle
 import struct
-from typing import List
+from typing import List, Optional
 
 import numpy as np
+from pyproj import Transformer
+from zmq import Socket
 
+from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 from py3dtiles.utils import ResponseType
 
 
-def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
+def get_metadata(
+    path: Path, color_scale: Optional[float] = None, fraction: int = 100
+) -> MetadataReaderType:
     aabb = None
     count = 0
     seek_values = []
@@ -44,7 +49,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
                 aabb[1] = np.maximum(aabb[1], batch_aabb[1])
 
         # We need an exact point count
-        point_count = count * fraction / 100
+        point_count = count * fraction // 100
 
         _1M = min(count, 1_000_000)
         steps = math.ceil(count / _1M)
@@ -72,7 +77,13 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
     }
 
 
-def run(filename: str, offset_scale, portion, queue, transformer):
+def run(
+    filename: str,
+    offset_scale: OffsetScaleType,
+    portion: PortionType,
+    queue: Socket,
+    transformer: Optional[Transformer],
+) -> None:
     """
     Reads points from a xyz file
 
