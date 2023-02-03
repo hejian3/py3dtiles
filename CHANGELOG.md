@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## v5.0.0 (2023-02-02)
+
+### BREAKING CHANGE
+
+- The function convert_to_ecef has been removed
+- Many imports have been changed, please update them accordingly:
+`from py3dtiles import B3dm` becomes `from py3dtiles.tileset.content import B3dm`
+`from py3dtiles import GlTF` becomes `from py3dtiles.tileset.content import GlTF`
+`from py3dtiles import Pnts` becomes `from py3dtiles.tileset.content import Pnts`
+`from py3dtiles import BatchTable` becomes `from py3dtiles.tileset.batch_table import BatchTable`
+`from py3dtiles import BoundingVolumeBox` becomes `from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox`
+`from py3dtiles import Extendable` becomes `from py3dtiles.tileset.extendable import Extendable`
+`from py3dtiles import Extension` becomes `from py3dtiles.tileset.extension import BaseExtension`
+`from py3dtiles import Tile` becomes `from py3dtiles.tileset.tile import Tile`
+`from py3dtiles import TileContent` becomes `from py3dtiles.tileset.tile_content import TileContent`
+`from py3dtiles import TileSet` becomes `from py3dtiles.tileset.tileset import TileSet`
+`from py3dtiles import TileContentReader` becomes `from py3dtiles.tileset.utils import TileContentReader`
+`from py3dtiles import TriangleSoup` becomes `from py3dtiles.tilers.b3dm.wkb_utils import TriangleSoup`
+`from py3dtiles import Feature` becomes `from py3dtiles.tileset.feature_table import Feature`
+
+### Features
+
+- **convert.py**: add parameter to ignore CRS mixin in input files
+- add the import and export of batch table from pnts (only json)
+- **reader/ply_reader.py**: support .ply files
+- **typing.py**: create the tileset json structure with typing annotations
+
+
+### Fixes
+
+- add and update typing annotations to fix all mypy issues
+- check magic value as bytes not str
+- exclude B028 flake8 rule
+- **node.py**: delete tile children when the tile root is moved in a sub tileset
+
+### Refactor
+
+- remove all asserts in source code
+- select only used fonctions from transformation file and update the code
+- **LICENSE**: remove Mapbox third party license
+- remove copied earcut code and use mapbox library
+- change file hierarchy
+
+
 ## v4.0.0 (2023-01-09)
 
 ### BREAKING CHANGE
