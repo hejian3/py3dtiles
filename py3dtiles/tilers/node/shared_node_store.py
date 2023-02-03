@@ -81,11 +81,12 @@ class SharedNodeStore:
                 raise FileNotFoundError(f"{node_path} should exist")
         else:
             self.memory_size["content"] -= getsizeof(meta)
-            if self.data[meta[1]] is None:
+            content = self.data[meta[1]]
+            if content is None:
                 raise ValueError(
                     f"{name!r} is present in self.metadata but not in self.data."
                 )
-            self.memory_size["content"] -= len(self.data[meta[1]])  # type: ignore
+            self.memory_size["content"] -= len(content)
             self.memory_size["container"] = getsizeof(self.data) + getsizeof(
                 self.metadata
             )

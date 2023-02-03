@@ -224,7 +224,7 @@ class ZmqManager:
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            Worker(*process_args, self.uri)  # type: ignore
+            Worker(*process_args, self.uri)  # type: ignore [call-arg]
             for _ in range(number_of_jobs)
         ]
         for p in self.processes:
@@ -954,7 +954,7 @@ class _Convert:
             # And children with the "ADD" refine mode
             # No need to set this property in their children, they will take the parent value if it is not present
             for child in root_tileset["children"]:
-                child["refine"] = "ADD"  # type: ignore
+                child["refine"] = "ADD"
 
         geometric_error = (
             np.linalg.norm(self.root_aabb[1] - self.root_aabb[0]) / self.root_scale[0]
@@ -981,7 +981,7 @@ class _Convert:
         print(f"  - scale: {self.root_scale}")
 
     def draw_graph(self):
-        import pygal  # type: ignore
+        import pygal
 
         dateline = pygal.XY(x_label_rotation=25, secondary_range=(0, 100))
         for pid in self.zmq_manager.activities:

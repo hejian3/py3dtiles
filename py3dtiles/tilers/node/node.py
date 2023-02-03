@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 import json
 from pathlib import Path
 import pickle
-from typing import Generator, Iterator, TYPE_CHECKING
+from typing import Any, Generator, Iterator, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -79,12 +79,12 @@ class Node:
         self.dirty = False
 
     def save_to_bytes(self) -> bytes:
-        sub_pickle = {}
+        sub_pickle: dict[str, Any] = {}
         if self.children is not None:
-            sub_pickle["children"] = self.children  # type: ignore # TODO fix
-            sub_pickle["grid"] = self.grid  # type: ignore # TODO fix
+            sub_pickle["children"] = self.children
+            sub_pickle["grid"] = self.grid
         else:
-            sub_pickle["points"] = self.points  # type: ignore # TODO fix
+            sub_pickle["points"] = self.points
 
         return pickle.dumps(sub_pickle)
 
@@ -422,13 +422,15 @@ class Node:
                     raise RuntimeError("child_tileset_part should be a dict.")
 
                 bounding_box = child_tileset_part["boundingVolume"].get("box")
+                if not isinstance(bounding_box, list):
+                    raise ValueError("bounding_box must be a list")
                 if bounding_box is None:
                     raise NotImplementedError(
                         "bounding_box can only be a bounding volume box"
                     )
 
-                center = np.array(bounding_box[:3])  # type: ignore
-                half_size = np.array(bounding_box[3::4])  # type: ignore
+                center = np.array(bounding_box[:3])
+                half_size = np.array(bounding_box[3::4])
 
                 child_aabb = np.array([center + half_size, center - half_size])
 
