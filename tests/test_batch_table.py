@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from py3dtiles.tileset.batch_table import BatchTable, BatchTableBody, BatchTableHeader
+from py3dtiles.tileset.content import PntsHeader
 
 
 class TestBatchTableHeader(unittest.TestCase):
@@ -40,20 +41,29 @@ class TestBatchTableBody(unittest.TestCase):
             np.concatenate((np.arange(1, 10, dtype=np.uint8), np.array([32] * 7, dtype=np.uint8)))
         )
 
-    # def test_wrong_offset(self):
-    #     btb = BatchTableBody({'property_1': {'data': np.array([1, 2, 3], np.ubyte),
-    #                                          'componentType': 'UNSIGNED_BYTE',
-    #                                          'byteOffset': 0},
-    #                           'property_2': {'data': np.array([4, 5, 6], np.ubyte),
-    #                                          'componentType': 'UNSIGNED_BYTE',
-    #                                          'byteOffset': 2},
-    #                           'property_3': {'data': np.array([7, 8, 9], np.ubyte),
-    #                                          'componentType': 'UNSIGNED_BYTE',
-    #                                          'byteOffset': 6}})
-    #     with self.assertRaises(AssertionError):
-    #         btb.to_array()
-
 class TestBatchTable(unittest.TestCase):
+    @staticmethod
+    def get_batch_table_header_dict_only_binary():
+        return {
+            "binProperty1": {
+                "byteOffset": 0,
+                "componentType": "UNSIGNED_BYTE",
+                "type": "SCALAR"
+
+            },
+            "binProperty2": {
+                "byteOffset": 4 * 1 * 1,
+                "componentType": "INT",
+                "type": "VEC2"
+
+            },
+        }
+    @staticmethod
+    def get_batch_table_header_dict_only_json():
+        return {
+            "property1": [1, 2, 3, 4],
+            "property2": [['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b']]
+        }
 
     def test_add_property_as_json(self):
         bt = BatchTable()
@@ -101,3 +111,112 @@ class TestBatchTable(unittest.TestCase):
                                           'UNSIGNED_BYTE',
                                           'SCALAR')
         self.assertTrue(np.array_equal(bt.to_array(), np.concatenate((bt.header.to_array(), bt.body.to_array()))))
+
+    def test_from_array_only_json(self):
+        # build a minimal batch table
+        batch_table_dict = self.get_batch_table_header_dict_only_json()
+        batch_table_header = BatchTableHeader(batch_table_dict)
+        batch_table_json = batch_table_header.to_array()
+
+        # and tile content
+        pnts_header = PntsHeader()
+        pnts_header.bt_json_byte_length = len(batch_table_json)
+
+        # import the array
+        batch_table = BatchTable.from_array(pnts_header, batch_table_json)
+
+        self.assertListEqual(batch_table.body.data, [])
+        self.assertDictEqual(batch_table.header.data, batch_table_dict)
+
+    def test_from_array_only_binary(self):
+        # build a minimal batch table
+        # json part
+        batch_table_header_dict = self.get_batch_table_header_dict_only_binary()
+        batch_table_header = BatchTableHeader(batch_table_header_dict)
+        batch_table_json = batch_table_header.to_array()
+
+        # binary part
+        batch_table_body_binary = [
+            np.array([1, 2, 3, 4], dtype=np.ubyte), np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc)
+        ]
+        batch_table_body = BatchTableBody(batch_table_body_binary)
+
+        # merge the 2 parts
+        batch_table_array = np.concatenate((batch_table_json,  batch_table_body.to_array()))
+
+        # and tile content
+        pnts_header = PntsHeader()
+        pnts_header.bt_json_byte_length = len(batch_table_json)
+
+        batch_table = BatchTable.from_array(pnts_header, batch_table_array, 4)
+
+        # import the array
+        self.assertDictEqual(batch_table.header.data, batch_table_header_dict)
+
+        self.assertEqual(len(batch_table.body.data), 2)
+        np.testing.assert_equal(batch_table_body_binary[0], batch_table.body.data[0])
+        np.testing.assert_equal(batch_table_body_binary[1], batch_table.body.data[1])
+
+    def test_from_array_mix_of_json_and_binary(self):
+        # build a minimal batch table
+        # json part
+        batch_table_header_dict = {
+            **self.get_batch_table_header_dict_only_json(),
+            **self.get_batch_table_header_dict_only_binary()
+        }
+        batch_table_header = BatchTableHeader(batch_table_header_dict)
+
+        # binary part
+        batch_table_body_binary = [
+            np.array([1, 2, 3, 4], dtype=np.ubyte), np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc)
+        ]
+        batch_table_body = BatchTableBody(batch_table_body_binary)
+        batch_table_json = batch_table_header.to_array()
+
+        batch_table_array = np.concatenate((batch_table_json,  batch_table_body.to_array()))
+
+        # and tile content
+        pnts_header = PntsHeader()
+        pnts_header.bt_json_byte_length = len(batch_table_json)
+
+        # import the array
+        batch_table = BatchTable.from_array(pnts_header, batch_table_array, 4)
+
+        self.assertDictEqual(batch_table.header.data, batch_table_header_dict)
+
+        self.assertEqual(len(batch_table.body.data), 2)
+        np.testing.assert_equal(batch_table_body_binary[0], batch_table.body.data[0])
+        np.testing.assert_equal(batch_table_body_binary[1], batch_table.body.data[1])
+
+
+    def test_from_array_with_wrong_offset(self):
+        # build a minimal batch table
+        # json part
+        batch_table_header_dict = self.get_batch_table_header_dict_only_binary()
+        batch_table_header = BatchTableHeader(batch_table_header_dict)
+        batch_table_json = batch_table_header.to_array()
+
+        # binary part
+        batch_table_body_binary = [
+            np.array([1, 2, 3, 4], dtype=np.ubyte), np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc)
+        ]
+        batch_table_body = BatchTableBody(batch_table_body_binary)
+
+        # merge the 2 parts
+        batch_table_array = np.concatenate((batch_table_json,  batch_table_body.to_array()))
+
+        # and tile content
+        pnts_header = PntsHeader()
+        pnts_header.bt_json_byte_length = len(batch_table_json)
+
+        # import the array (wrong batch_len)
+        with self.assertRaisesRegex(ValueError, "The byte offset is 4 but the byte offset computed is 3"):
+            BatchTable.from_array(pnts_header, batch_table_array, 3)
+
+        # import the array (wrong byteOffset)
+        batch_table_header.data["binProperty2"]["byteOffset"] = 6
+        batch_table_json = batch_table_header.to_array()
+        batch_table_array = np.concatenate((batch_table_json,  batch_table_body.to_array()))
+
+        with self.assertRaisesRegex(ValueError, "The byte offset is 6 but the byte offset computed is 4"):
+            BatchTable.from_array(pnts_header, batch_table_array, 4)
