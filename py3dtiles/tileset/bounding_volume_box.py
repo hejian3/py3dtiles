@@ -124,30 +124,24 @@ class BoundingVolumeBox(BoundingVolume):
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
-        center = self._box[0:3:1]
-        x_half_axis = self._box[3:6:1]
-        y_half_axis = self._box[6:9:1]
-        z_half_axis = self._box[9:12:1]
+        center, x_half_axis, y_half_axis, z_half_axis = self._box.reshape([-1, 3])
 
         x_axis = x_half_axis * 2
         y_axis = y_half_axis * 2
         z_axis = z_half_axis * 2
 
         # The eight cornering points of the box
-        tmp = np.subtract(center, x_half_axis)
-        tmp = np.subtract(tmp, y_half_axis)
+        origin = center - x_half_axis - y_half_axis - z_half_axis
 
-        o = np.subtract(tmp, z_half_axis)
-        ox = np.add(o, x_axis)
-        oy = np.add(o, y_axis)
-        oxy = np.add(o, np.add(x_axis, y_axis))
+        ox = origin + x_axis
+        oy = origin + y_axis
+        oz = origin + z_axis
+        oxy = ox + y_axis
+        oxz = ox + z_axis
+        oyz = oy + z_axis
+        oxyz = oxy + z_axis
 
-        oz = np.add(o, z_axis)
-        oxz = np.add(oz, x_axis)
-        oyz = np.add(oz, y_axis)
-        oxyz = np.add(oz, np.add(x_axis, y_axis))
-
-        return [o, ox, oy, oxy, oz, oxz, oyz, oxyz]
+        return [origin, ox, oy, oxy, oz, oxz, oyz, oxyz]
 
     def get_canonical_as_array(self) -> npt.NDArray[np.float64]:
         """
