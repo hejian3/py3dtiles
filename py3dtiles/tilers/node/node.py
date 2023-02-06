@@ -97,19 +97,19 @@ class Node:
             return True
 
         # grid based insertion
-        reminder_xyz, reminder_rgb, reminder_classification, needs_balance = self.grid.insert(
+        remainder_xyz, remainder_rgb, remainder_classification, needs_balance = self.grid.insert(
             self.aabb[0], self.inv_aabb_size, xyz, rgb, classification)
 
         if needs_balance:
             self.grid.balance(self.aabb_size, self.aabb[0], self.inv_aabb_size)
             self.dirty = True
 
-        self.dirty = self.dirty or (len(reminder_xyz) != len(xyz))
+        self.dirty = self.dirty or (len(remainder_xyz) != len(xyz))
 
-        if len(reminder_xyz) > 0:
-            self.pending_xyz += [reminder_xyz]
-            self.pending_rgb += [reminder_rgb]
-            self.pending_classification += [reminder_classification]
+        if len(remainder_xyz) > 0:
+            self.pending_xyz += [remainder_xyz]
+            self.pending_rgb += [remainder_rgb]
+            self.pending_classification += [remainder_classification]
 
     def needs_balance(self) -> bool:
         if self.children is not None:
