@@ -946,7 +946,7 @@ def init_parser(subparser):
         help="Don't export rgb attributes", action='store_true')
     parser.add_argument(
         '--classification',
-        help="Export classification attributes", action='store_true', default=False)
+        help="Export classification attributes", action='store_true')
     parser.add_argument(
         '--graph',
         help='Produce debug graphes (requires pygal)', action='store_true')

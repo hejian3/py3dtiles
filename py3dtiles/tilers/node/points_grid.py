@@ -131,22 +131,12 @@ class Grid:
         classification = []
         for i in range(len(self.cells_xyz)):
             xyz.append(self.cells_xyz[i].view(np.uint8).ravel())
-            rgb.append(self.cells_rgb[i].ravel())
-            classification.append(self.cells_classification[i].ravel())
+            if include_rgb:
+                rgb.append(self.cells_rgb[i].ravel())
+            if include_classification:
+                classification.append(self.cells_classification[i].ravel())
 
-        if include_rgb:
-            if include_classification:
-                res = np.concatenate((np.concatenate(xyz), np.concatenate(rgb), np.concatenate(classification)))
-                return res
-            else:
-                res = np.concatenate((np.concatenate(xyz), np.concatenate(rgb)))
-                return res
-        else:
-            if include_classification:
-                res = np.concatenate((np.concatenate(xyz), np.concatenate(classification)))
-                return res
-            else:
-                return np.concatenate(xyz)
+        return np.concatenate((*xyz, *rgb, *classification))
 
     def get_point_count(self) -> int:
         pt = 0

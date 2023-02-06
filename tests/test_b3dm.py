@@ -33,7 +33,8 @@ class TestTileContentReader(unittest.TestCase):
         self.assertEqual(tile_content.header.ft_bin_byte_length, 0)
         self.assertEqual(tile_content.header.bt_json_byte_length, 64)
         self.assertEqual(tile_content.header.bt_bin_byte_length, 0)
-        self.assertEqual(json.loads(tile_content.body.batch_table.header.to_array().tobytes().decode('utf-8')), {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]})
+        self.assertDictEqual(tile_content.body.batch_table.header.data,
+                             {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]})
         self.assertEqual(len(tile_content.body.glTF.to_array()), 6084)
         self.assertEqual(tile_content.body.glTF.header['asset']['version'], '2.0')
 

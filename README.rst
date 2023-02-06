@@ -1,4 +1,4 @@
-    .. image:: https://travis-ci.org/Oslandia/py3dtiles.svg?branch=master
+.. image:: https://travis-ci.org/Oslandia/py3dtiles.svg?branch=master
     :target: https://travis-ci.org/Oslandia/py3dtiles
 
 .. image:: https://badge.fury.io/py/py3dtiles.svg

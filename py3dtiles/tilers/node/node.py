@@ -200,12 +200,12 @@ class Node:
             if include_rgb:
                 rgb = np.concatenate(tuple([rgb for xyz, rgb, classification in points])).ravel()
             else:
-                rgb = []
+                rgb = np.array([], dtype=np.uint8)
 
             if include_classification:
                 classification = np.concatenate(tuple([classification for xyz, rgb, classification in points])).ravel()
             else:
-                classification = []
+                classification = np.array([], dtype=np.uint8)
 
             return np.concatenate((xyz, rgb, classification))
         else:
@@ -218,13 +218,13 @@ class Node:
                    parent_spacing: float,
                    folder: Path,
                    scale: np.ndarray,
-                   prune: bool = False) -> dict:
+                   prune: bool = True) -> dict:
         node = node_from_name(name, parent_aabb, parent_spacing)
         aabb = node.aabb
         tile_path = node_name_to_path(folder, name, '.pnts')
-        xyz = np.array(0)
-        rgb = np.array(0)
-        classification = np.array(0)
+        xyz = np.array([], dtype=np.uint8)
+        rgb = np.array([], dtype=np.uint8)
+        classification = np.array([], dtype=np.uint8)
 
         # Read tile's pnts file, if existing, we'll need it for:
         #   - computing the real AABB (instead of the one based on the octree)
@@ -309,17 +309,7 @@ class Node:
         # the pnts file needs to be rewritten.
         if tile_needs_rewrite:
             tile_path.unlink()
-            if rgb is not None:
-                if classification is not None:
-                    count, filename = points_to_pnts(name, np.concatenate((xyz, rgb, classification)), folder, rgb is not None, classification is not None)
-                else:
-                    count, filename = points_to_pnts(name, np.concatenate((xyz, rgb)), folder, rgb is not None, classification is not None)
-            else:
-                if classification is not None:
-                    count, filename = points_to_pnts(name, np.concatenate((xyz, classification)), folder, rgb is not None, classification is not None)
-                else:
-                    count, filename = points_to_pnts(name, xyz, folder, rgb is not None, classification is not None)
-
+            count, filename = points_to_pnts(name, np.concatenate((xyz, rgb, classification)), folder, rgb is not None, classification is not None)
 
         center = ((aabb[0] + aabb[1]) * 0.5).tolist()
         half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
