@@ -6,15 +6,14 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
-from py3dtiles.tileset.content import TileContent
-from py3dtiles.tileset.feature_table import SemanticPoint
+from py3dtiles.tileset.content import B3dm, Pnts
 from py3dtiles.tileset.tile_content_reader import read_file
 from py3dtiles.tileset.tileset import TileSet
 from py3dtiles.typing import TileDictType
 from py3dtiles.utils import split_aabb
 
 
-def _get_root_tile(tileset: dict, root_tile_path: Path) -> TileContent:
+def _get_root_tile(tileset: dict, root_tile_path: Path) -> Pnts | B3dm:
     pnts_path = root_tile_path.parent / tileset["root"]["content"]["uri"]
     return read_file(pnts_path)
 
@@ -30,31 +29,6 @@ def _get_root_transform(tileset: dict) -> np.ndarray:
         )
 
     return transform
-
-
-def _get_tile_points(tile, tile_transform, out_transform):
-    fth = tile.body.feature_table.header
-
-    xyz = tile.body.feature_table.body.positions_arr.view(np.float32).reshape(
-        (fth.points_length, 3)
-    )
-    if fth.colors == SemanticPoint.RGB:
-        rgb = tile.body.feature_table.body.colors_arr.reshape(
-            (fth.points_length, 3)
-        ).astype(np.uint8)
-    else:
-        rgb = None
-
-    x = xyz[:, 0]
-    y = xyz[:, 1]
-    z = xyz[:, 2]
-    w = np.ones(x.shape[0])
-
-    transform = np.dot(out_transform, tile_transform)
-
-    xyzw = np.dot(np.vstack((x, y, z, w)).transpose(), transform.T)
-
-    return xyzw[:, 0:3].astype(np.float32), rgb
 
 
 def init(tilset_paths: List[Path]) -> dict:
@@ -221,10 +195,12 @@ def build_tileset_quadtree(
         ratio = min(0.5, max_point_count / point_count)
 
         for tileset in insides:
-            root_tile = _get_root_tile(tileset, Path(tileset["filename"]))
-            _xyz, _rgb = _get_tile_points(
-                root_tile, _get_root_transform(tileset), inv_base_transform
-            )
+            root_tile_content = _get_root_tile(tileset, Path(tileset["filename"]))
+            if isinstance(root_tile_content, B3dm):
+                raise ValueError("This tool can only merge pnts files.")
+
+            transform = np.dot(inv_base_transform, _get_root_transform(tileset))
+            _xyz, _rgb = root_tile_content.body.get_points(transform)
             select = np.random.choice(_xyz.shape[0], int(_xyz.shape[0] * ratio))
             xyz = np.concatenate((xyz, _xyz[select]))
             if _rgb is not None:

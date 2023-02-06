@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.feature_table import Feature, FeatureTable
+from py3dtiles.tileset.feature_table import Feature, FeatureTable, SemanticPoint
 from .tile_content import (
     TileContent,
     TileContentBody,
@@ -149,6 +149,24 @@ class PntsBody(TileContentBody):
         feature_table_array = self.feature_table.to_array()
         batch_table_array = self.batch_table.to_array()
         return np.concatenate((feature_table_array, batch_table_array))
+
+    def get_points(
+        self, transform: npt.NDArray[np.number] | None
+    ) -> tuple[npt.NDArray, npt.NDArray | None]:
+        fth = self.feature_table.header
+
+        xyz = self.feature_table.body.positions_arr.view(np.float32).reshape((-1, 3))
+        if fth.colors == SemanticPoint.RGB:
+            rgb = self.feature_table.body.colors_arr.reshape((-1, 3))
+        else:
+            rgb = None
+
+        if transform is not None:
+            transform = transform.reshape((4, 4))
+            xyzw = np.vstack((xyz, np.ones(xyz.shape[0], dtype=xyz.dtype))).transpose()
+            xyz = np.dot(xyzw, transform.T)[:, :3]
+
+        return xyz, rgb
 
     @staticmethod
     def from_array(header: PntsHeader, array: npt.NDArray) -> PntsBody:
