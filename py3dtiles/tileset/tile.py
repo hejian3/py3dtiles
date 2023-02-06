@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -102,6 +101,33 @@ class Tile(Extendable):
         """
         return self.tile_content is not None
 
+    def delete_on_disk(
+        self, root_uri: Path, delete_tile_content_tileset: bool = False
+    ) -> None:
+        """
+        Deletes all files linked to the tile and its children. The uri of the tileset should be defined.
+
+        :param root_uri: The folder where tileset is
+        :param delete_tile_content_tileset: If True, all tilesets present as tile content will be removed as well as their content.
+        If False, the linked tilesets in tiles won't be removed.
+        """
+        if self.content_uri is None:
+            raise ValueError("tile.content_uri is None, cannot delete tile content")
+
+        if self.content_uri.is_absolute():
+            tile_content_path = self.content_uri
+        else:
+            tile_content_path = root_uri / self.content_uri
+
+        if tile_content_path.suffix == ".json":
+            if delete_tile_content_tileset:
+                self.get_or_fetch_content().delete_on_disk(tile_content_path)  # type: ignore
+        else:
+            tile_content_path.unlink()
+
+        for child in self.children:
+            child.delete_on_disk(root_uri, delete_tile_content_tileset)
+
     def set_refine_mode(self, mode: RefineType) -> None:
         if mode != "ADD" and mode != "REPLACE":
             raise ValueError(
@@ -167,7 +193,7 @@ class Tile(Extendable):
             )
 
         if self.content_uri is None:
-            raise ValueError("tile.content_uri is null, cannot write tile content")
+            raise ValueError("tile.content_uri is None, cannot write tile content")
 
         if self.content_uri.is_absolute():
             content_path = self.content_uri
@@ -240,8 +266,6 @@ class Tile(Extendable):
             uri = root_uri / self.content_uri
 
         if uri.suffix == ".json":
-            with uri.open() as f:
-                data = json.load(f)
-                self.tile_content = TileSet.from_dict(data, uri.parent)
+            self.tile_content = TileSet.from_file(uri)
         else:
             self.tile_content = read_file(uri)

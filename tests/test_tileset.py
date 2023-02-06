@@ -85,7 +85,8 @@ class TestTileSet(unittest.TestCase):
         with (tmp_dir / "tileset.json").open() as f:
             tileset_dict = json.load(f)
 
-        tileset = TileSet.from_dict(tileset_dict, tmp_dir)
+        tileset = TileSet.from_dict(tileset_dict)
+        tileset.root_uri = tmp_dir
 
         self.assertDictEqual(tileset.to_dict(), tileset_dict)
 

@@ -21,12 +21,20 @@ class TileSet(Extendable):
         self.root_uri = root_uri
 
     @classmethod
-    def from_dict(cls, tileset_dict: TilesetDictType, root_uri: Path) -> TileSet:
+    def from_file(cls, tileset_uri: Path) -> TileSet:
+        with tileset_uri.open() as f:
+            tileset_dict = json.load(f)
+
+        tileset = TileSet.from_dict(tileset_dict)
+        tileset.root_uri = tileset_uri
+        return tileset
+
+    @classmethod
+    def from_dict(cls, tileset_dict: TilesetDictType) -> TileSet:
         tileset = cls(geometric_error=tileset_dict["geometricError"])
 
         tileset._asset = tileset_dict["asset"]
         tileset.root_tile = Tile.from_dict(tileset_dict["root"])
-        tileset.root_uri = root_uri
 
         return tileset
 
@@ -40,6 +48,18 @@ class TileSet(Extendable):
             "title": "Extras",
             "description": comment,
         }
+
+    def delete_on_disk(
+        self, tileset_path: Path, delete_tile_content_tileset: bool = False
+    ) -> None:
+        """
+        Deletes all files linked to the tileset. The uri of the tileset should be defined.
+
+        :param delete_tile_content_tileset: If True, all tilesets present as tile content will be removed as well as their content.
+        If False, the linked tilesets in tiles won't be removed.
+        """
+        tileset_path.unlink()
+        self.root_tile.delete_on_disk(tileset_path.parent, delete_tile_content_tileset)
 
     def write_to_directory(self, directory: Path) -> None:
         """
