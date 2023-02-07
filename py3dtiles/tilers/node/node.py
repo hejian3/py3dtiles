@@ -484,19 +484,21 @@ class Node:
         return tileset
 
 
-def split_tileset(tileset: TileDictType, split_name: str, folder: Path) -> TileDictType:
-    tile_root = {
+def split_tileset(
+    tile_dict: TileDictType, split_name: str, folder: Path
+) -> TileDictType:
+    tileset = {
         "asset": {
             "version": "1.0",
         },
         "refine": "ADD",
-        "geometricError": tileset["geometricError"],
-        "root": tileset,
+        "geometricError": tile_dict["geometricError"],
+        "root": tile_dict,
     }
     tileset_name = f"tileset.{split_name}.json"
     with (folder / tileset_name).open("w") as f:
-        f.write(json.dumps(tile_root))
-    tileset["content"] = {"uri": tileset_name}
-    del tileset["children"]
+        f.write(json.dumps(tileset))
+    tile_dict["content"] = {"uri": tileset_name}
+    del tile_dict["children"]
 
-    return tileset
+    return tile_dict
