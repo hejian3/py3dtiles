@@ -27,7 +27,7 @@ from py3dtiles.tilers.node import SharedNodeStore
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.utils import TileContentReader
-from py3dtiles.utils import CommandType, compute_spacing, node_name_to_path, ResponseType, str_to_CRS
+from py3dtiles.utils import CommandType, compute_spacing, node_from_name, node_name_to_path, ResponseType, str_to_CRS
 
 TOTAL_MEMORY_MB = int(psutil.virtual_memory().total / (1024 * 1024))
 DEFAULT_CACHE_SIZE = int(TOTAL_MEMORY_MB / 10)
@@ -794,10 +794,11 @@ class _Convert:
 
         pnts_writer.node_to_pnts(b'', root_node, self.out_folder, self.rgb, self.classification)
 
-        executor = concurrent.futures.ProcessPoolExecutor()
-        root_tileset = Node.to_tileset(executor, b'', self.root_aabb, self.root_spacing,
-                                       self.out_folder, self.root_scale, prune=False)
-        executor.shutdown()
+        pool_executor = concurrent.futures.ProcessPoolExecutor()
+        root_tileset = node_from_name(b'', self.root_aabb, self.root_spacing).to_tileset(
+            self.out_folder, self.root_scale, None, 0, pool_executor
+        )
+        pool_executor.shutdown()
 
         root_tileset['transform'] = transform.T.reshape(16).tolist()
         root_tileset['refine'] = 'REPLACE'  # The root tile is in the "REPLACE" refine mode

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor
 import json
 from pathlib import Path
 import pickle
-from typing import Any, Iterator, TYPE_CHECKING
+from typing import Generator, Iterator, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -13,6 +13,7 @@ from py3dtiles.tilers.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.feature_table import SemanticPoint
 from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.typing import BoundingVolumeBoxDictType, ContentType, TileDictType
 from py3dtiles.utils import aabb_size_to_subdivision_type, node_from_name, node_name_to_path, SubdivisionType
 from .distance import xyz_to_child_index
 from .points_grid import Grid
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 
 def node_to_tileset(args):
-    return Node.to_tileset(None, args[0], args[1], args[2], args[3], args[4])
+    return args[0].to_tileset(args[1], args[2], args[3], args[4], None)
 
 
 class DummyNode:
@@ -211,139 +212,192 @@ class Node:
         else:
             return data.grid.get_points(include_rgb, include_classification)
 
-    @staticmethod
-    def to_tileset(executor: concurrent.futures.ProcessPoolExecutor | None,
-                   name: bytes,
-                   parent_aabb: np.ndarray,
-                   parent_spacing: float,
-                   folder: Path,
-                   scale: np.ndarray,
-                   prune: bool = True) -> dict:
-        node = node_from_name(name, parent_aabb, parent_spacing)
-        aabb = node.aabb
-        tile_path = node_name_to_path(folder, name, '.pnts')
-        xyz = np.array([], dtype=np.uint8)
-        rgb = np.array([], dtype=np.uint8)
-        classification = np.array([], dtype=np.uint8)
+    def get_child_names(self) -> Generator[bytes, None, None]:
+        for number_child in range(8):
+            yield f"{self.name.decode('ascii')}{number_child}".encode('ascii')
 
-        # Read tile's pnts file, if existing, we'll need it for:
-        #   - computing the real AABB (instead of the one based on the octree)
-        #   - merging this tile's small (<100 points) children
-        if tile_path.exists():
-            tile = TileContentReader.read_file(tile_path)
+    def to_tileset(self, folder: Path, scale: npt.NDArray[np.number],
+                   parent_node: Node | None = None, depth: int = 0,
+                   pool_executor: ProcessPoolExecutor | None = None) -> TileDictType | None:
+        # create child tileset parts
+        # if their size is below of 100 points, they will be merged in this node.
+        children_tileset_parts: list[TileDictType] = []
+        parameter_to_compute: list[tuple[Node, Path, npt.NDArray[np.number], Node, int]] = []
+        for child_name in self.get_child_names():
+            child_node = node_from_name(child_name, self.aabb, self.spacing)
+            child_pnts_path = node_name_to_path(folder, child_name, '.pnts')
 
-            fth = tile.body.feature_table.header
-            xyz = tile.body.feature_table.body.positions_arr
-            if fth.colors != SemanticPoint.NONE:
-                rgb = tile.body.feature_table.body.colors_arr
+            if child_pnts_path.exists():
+                # multi thread is only allowed on nodes where there are no prune
+                # a simple rule is: only is there is not a parent node
+                if pool_executor and parent_node is None:
+                    parameter_to_compute.append((child_node, folder, scale, self, depth+1))
+                else:
+                    children_tileset_part = child_node.to_tileset(folder, scale, self, depth+1)
+                    if children_tileset_part is not None:  # return None if the child has been merged
+                        children_tileset_parts.append(children_tileset_part)
 
-            if 'Classification' in tile.body.batch_table.header.data.keys():
-                classification = tile.body.batch_table.get_binary_property('Classification')
+        if pool_executor and parent_node is None:
+            children_tileset_parts = [
+                t for t in pool_executor.map(node_to_tileset, parameter_to_compute) if t is not None
+            ]
+
+        pnts_path = node_name_to_path(folder, self.name, '.pnts')
+        tile = TileContentReader.read_file(pnts_path)
+        fth = tile.body.feature_table.header
+        xyz = tile.body.feature_table.body.positions_arr
+
+        # check if this node should be merged in the parent.
+        prune = False  # prune only if the node is a leaf
+        if parent_node is not None and depth > 1:
+
+            # If this child is small enough, merge in the current tile
+            if fth.points_length < 100:
+                parent_pnts_path = node_name_to_path(folder, parent_node.name, '.pnts')
+                parent_tile = TileContentReader.read_file(parent_pnts_path)
+                parent_fth = parent_tile.body.feature_table.header
+
+                parent_xyz = parent_tile.body.feature_table.body.positions_arr
+
+                if parent_fth.colors != SemanticPoint.NONE:
+                    parent_rgb = parent_tile.body.feature_table.body.colors_arr
+                else:
+                    parent_rgb = np.array([], dtype=np.uint8)
+
+                if 'Classification' in parent_tile.body.batch_table.header.data.keys():
+                    parent_classification = parent_tile.body.batch_table.get_binary_property('Classification')
+                else:
+                    parent_classification = np.array([], dtype=np.uint8)
+
+                parent_xyz_float = parent_xyz.view(np.float32).reshape((parent_fth.points_length, 3))
+                # update aabb based on real values
+                parent_aabb = np.array([
+                    np.amin(parent_xyz_float, axis=0),
+                    np.amax(parent_xyz_float, axis=0)])
+
+                parent_xyz = np.concatenate(
+                    (parent_xyz,
+                     xyz))
+
+                if fth.colors != SemanticPoint.NONE:
+                    parent_rgb = np.concatenate(
+                        (parent_rgb,
+                         tile.body.feature_table.body.colors_arr))
+
+                if 'Classification' in tile.body.batch_table.header.data.keys():
+                    parent_classification = np.concatenate((
+                        parent_classification,
+                        tile.body.batch_table.get_binary_property('Classification')
+                    ))
+
+                # update aabb
+                xyz_float = xyz.view(
+                    np.float32).reshape((fth.points_length, 3))
+
+                parent_aabb[0] = np.amin(
+                    [parent_aabb[0], np.min(xyz_float, axis=0)], axis=0)
+                parent_aabb[1] = np.amax(
+                    [parent_aabb[1], np.max(xyz_float, axis=0)], axis=0)
+
+                parent_pnts_path.unlink()
+                points_to_pnts(parent_node.name, np.concatenate((parent_xyz, parent_rgb, parent_classification)), folder, parent_rgb is not None, parent_classification is not None)
+                pnts_path.unlink()
+                prune = True
+
+        content: ContentType | None = None
+        if not prune:
+            content = {'uri': str(pnts_path.relative_to(folder))}
             xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
+
             # update aabb based on real values
             aabb = np.array([
                 np.amin(xyz_float, axis=0),
                 np.amax(xyz_float, axis=0)])
 
-        # geometricError is in meters, so we divide it by the scale
-        tileset = {'geometricError': 10 * node.spacing / scale[0]}
+            center = ((aabb[0] + aabb[1]) * 0.5).tolist()
+            half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
+            bounding_volume: BoundingVolumeBoxDictType = {
+                'box': [
+                    center[0], center[1], center[2],
+                    half_size[0], 0, 0,
+                    0, half_size[1], 0,
+                    0, 0, half_size[2]]
+            }
+        else:
+            # if it is a leaf that should be pruned
+            if not children_tileset_parts:
+                return None
 
-        children: list[Any] = [] # todo at the next refacto, fix it
-        tile_needs_rewrite = False
-        if tile_path.exists():
-            tileset['content'] = {'uri': str(tile_path.relative_to(folder))}
-        for child in ['0', '1', '2', '3', '4', '5', '6', '7']:
-            child_name = '{}{}'.format(
-                name.decode('ascii'),
-                child
-            ).encode('ascii')
-            child_tile_path = node_name_to_path(folder, child_name, '.pnts')
+            # recompute the aabb in function of children
+            aabb = None
+            for child_tileset_part in children_tileset_parts:
+                if not isinstance(child_tileset_part, dict):
+                    raise RuntimeError("child_tileset_part should be a dict.")
 
-            if child_tile_path.exists():
-                # See if we should merge this child in tile
-                if len(xyz):
-                    # Read pnts content
-                    tile = TileContentReader.read_file(child_tile_path)
+                bounding_box = child_tileset_part["boundingVolume"].get("box")
+                if bounding_box is None:
+                    raise NotImplementedError("bounding_box can only be a bounding volume box")
 
-                    fth = tile.body.feature_table.header
+                center = np.array(bounding_box[:3]) # type: ignore
+                half_size = np.array(bounding_box[3::4]) # type: ignore
 
-                    # If this child is small enough, merge in the current tile.
-                    # prune should be set at False is the refine mode is REPLACE.
-                    # In some cases, we cannot know which point in the parent tile should be deleted
-                    # (for example when 2 points are at the same location)
-                    if prune and fth.points_length < 100:
-                        xyz = np.concatenate(
-                            (xyz,
-                             tile.body.feature_table.body.positions_arr))
+                child_aabb = np.array([
+                    center + half_size,
+                    center - half_size
+                ])
 
-                        if fth.colors != SemanticPoint.NONE:
-                            rgb = np.concatenate(
-                                (rgb,
-                                 tile.body.feature_table.body.colors_arr))
-
-                        if 'Classification' in tile.body.batch_table.header.data.keys():
-                            classification = np.concatenate(
-                                (classification,
-                                 tile.body.batch_table.get_binary_property('Classification')))
-
-                        # update aabb
-                        xyz_float = tile.body.feature_table.body.positions_arr.view(
-                            np.float32).reshape((fth.points_length, 3))
-
-                        aabb[0] = np.amin(
-                            [aabb[0], np.min(xyz_float, axis=0)], axis=0)
-                        aabb[1] = np.amax(
-                            [aabb[1], np.max(xyz_float, axis=0)], axis=0)
-
-                        tile_needs_rewrite = True
-                        child_tile_path.unlink()
-                        continue
-
-                # Add child to the to-be-processed list if it hasn't been merged
-                if executor is not None:
-                    children += [(child_name, node.aabb, node.spacing, folder, scale)]
+                if aabb is None:
+                    aabb = child_aabb
                 else:
-                    children += [Node.to_tileset(None, child_name, node.aabb, node.spacing, folder, scale)]
+                    aabb[0] = np.amin(
+                        [aabb[0], child_aabb[0]], axis=0)
+                    aabb[1] = np.amax(
+                        [aabb[1], child_aabb[1]], axis=0)
 
-        # If we merged at least one child tile in the current tile
-        # the pnts file needs to be rewritten.
-        if tile_needs_rewrite:
-            tile_path.unlink()
-            count, filename = points_to_pnts(name, np.concatenate((xyz, rgb, classification)), folder, rgb is not None, classification is not None)
+            if aabb is None:
+                raise RuntimeError("aabb shouldn't be None")
 
-        center = ((aabb[0] + aabb[1]) * 0.5).tolist()
-        half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
-        tileset['boundingVolume'] = {
-            'box': [
-                center[0], center[1], center[2],
-                half_size[0], 0, 0,
-                0, half_size[1], 0,
-                0, 0, half_size[2]]
+            center = ((aabb[0] + aabb[1]) * 0.5).tolist()
+            half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()
+            bounding_volume = {
+                'box': [
+                    center[0], center[1], center[2],
+                    half_size[0], 0, 0,
+                    0, half_size[1], 0,
+                    0, 0, half_size[2]]
+            }
+
+        tileset: TileDictType = {
+            'boundingVolume': bounding_volume,
+            'geometricError': 10 * self.spacing / scale[0],
         }
+        if content is not None:
+            tileset["content"] = content
 
-        if executor is not None:
-            children = [t for t in executor.map(node_to_tileset, children)]
 
-        if children:
-            tileset['children'] = children
+        if children_tileset_parts:
+            tileset['children'] = children_tileset_parts
         else:
             tileset['geometricError'] = 0.0
 
-        if len(name) > 0 and children:
-            if len(json.dumps(tileset)) > 100000:
-                tile_root = {
-                    'asset': {
-                        'version': '1.0',
-                    },
-                    'refine': 'ADD',
-                    'geometricError': tileset['geometricError'],
-                    'root': tileset
-                }
-                tileset_name = f"tileset.{name.decode('ascii')}.json"
-                tileset_path = folder / tileset_name
-                with tileset_path.open('w') as f:
-                    json.dump(tile_root, f)
-                tileset['content'] = {'uri': tileset_name}
-                del tileset['children']
+        if len(self.name) > 0 and children_tileset_parts and len(json.dumps(tileset)) > 100000:
+            tileset = split_tileset(tileset, self.name.decode(), folder)
 
         return tileset
+
+def split_tileset(tileset: TileDictType, split_name: str, folder: Path):
+    tile_root = {
+        'asset': {
+            'version': '1.0',
+        },
+        'refine': 'ADD',
+        'geometricError': tileset['geometricError'],
+        'root': tileset
+    }
+    tileset_name = f'tileset.{split_name}.json'
+    with (folder / tileset_name).open('w') as f:
+        f.write(json.dumps(tile_root))
+    tileset['content'] = {'uri': tileset_name}
+    del tileset['children']
+
+    return tileset
