@@ -108,7 +108,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
                 len(tasks), time.time() - begin), file=log_file, flush=True)
 
         # insert points in node (no children handling here)
-        node.insert(node_catalog, octree_metadata.scale, data['xyz'], data['rgb'], halt_at_depth == 0)
+        node.insert(node_catalog, octree_metadata.scale, data['xyz'], data['rgb'], data['classification'], halt_at_depth == 0)
 
         total += point_count
 

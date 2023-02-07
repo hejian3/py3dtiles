@@ -270,16 +270,18 @@ class FeatureTableHeader:
 class FeatureTableBody:
 
     def __init__(self):
-        self.positions_arr = []
+        self.positions_arr = np.array([], dtype=np.uint8)
         self.positions_itemsize = 0
 
-        self.colors_arr = []
+        self.colors_arr = np.array([], dtype=np.uint8)
         self.colors_itemsize = 0
 
     def to_array(self):
         arr = self.positions_arr
         if len(self.colors_arr):
             arr = np.concatenate((self.positions_arr, self.colors_arr))
+
+        arr = arr.view(np.uint8)
 
         if len(arr) % 8 != 0:
             padding_str = ' ' * (8 - len(arr) % 8)

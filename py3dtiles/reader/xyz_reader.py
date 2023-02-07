@@ -134,11 +134,12 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 # Read colors: 3 last columns of the point cloud
                 colors = points[:, -3:].astype(np.uint8)
 
+                classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
                 queue.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
                         b"",
-                        pickle.dumps({"xyz": coords, "rgb": colors}),
+                        pickle.dumps({"xyz": coords, "rgb": colors, "classification": classification}),
                         struct.pack(">I", len(coords)),
                     ],
                     copy=False,
