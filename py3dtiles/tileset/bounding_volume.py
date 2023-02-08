@@ -17,6 +17,7 @@ class BoundingVolume(ABC, Extendable):
     """
     Abstract class used as interface for box, region and sphere
     """
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -30,13 +31,17 @@ class BoundingVolume(ABC, Extendable):
         return False
 
     @abstractmethod
-    def to_dict(self) -> BoundingVolumeDictType: ...
+    def to_dict(self) -> BoundingVolumeDictType:
+        ...
 
     @abstractmethod
-    def sync_with_children(self, owner: Tile) -> None: ...
+    def sync_with_children(self, owner: Tile) -> None:
+        ...
 
     @abstractmethod
-    def transform(self, transform: npt.NDArray[np.float64]) -> None: ...
+    def transform(self, transform: npt.NDArray[np.float64]) -> None:
+        ...
 
     @abstractmethod
-    def add(self, other: BoundingVolume) -> None: ...
+    def add(self, other: BoundingVolume) -> None:
+        ...

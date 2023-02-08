@@ -13,19 +13,19 @@ from py3dtiles.utils import split_aabb
 
 
 def _get_root_tile(tileset: dict, root_tile_path: Path) -> TileContent:
-    pnts_path = root_tile_path.parent / tileset['root']['content']['uri']
+    pnts_path = root_tile_path.parent / tileset["root"]["content"]["uri"]
     return TileContentReader.read_file(pnts_path)
 
 
 def _get_root_transform(tileset: dict) -> np.ndarray:
     transform = np.identity(4)
-    if 'transform' in tileset:
-        transform = np.array(tileset['transform']).reshape(4, 4).transpose()
+    if "transform" in tileset:
+        transform = np.array(tileset["transform"]).reshape(4, 4).transpose()
 
-    if 'transform' in tileset['root']:
+    if "transform" in tileset["root"]:
         transform = np.dot(
-            transform,
-            np.array(tileset['root']['transform']).reshape(4, 4).transpose())
+            transform, np.array(tileset["root"]["transform"]).reshape(4, 4).transpose()
+        )
 
     return transform
 
@@ -33,11 +33,13 @@ def _get_root_transform(tileset: dict) -> np.ndarray:
 def _get_tile_points(tile, tile_transform, out_transform):
     fth = tile.body.feature_table.header
 
-    xyz = tile.body.feature_table.body.positions_arr.view(
-        np.float32).reshape((fth.points_length, 3))
+    xyz = tile.body.feature_table.body.positions_arr.view(np.float32).reshape(
+        (fth.points_length, 3)
+    )
     if fth.colors == SemanticPoint.RGB:
         rgb = tile.body.feature_table.body.colors_arr.reshape(
-            (fth.points_length, 3)).astype(np.uint8)
+            (fth.points_length, 3)
+        ).astype(np.uint8)
     else:
         rgb = None
 
@@ -70,8 +72,8 @@ def init(tilset_paths: List[Path]) -> dict:
             # apply transformation
             transform = _get_root_transform(tileset)
             bbox = _aabb_from_3dtiles_bounding_volume(
-                tileset['root']['boundingVolume'],
-                transform)
+                tileset["root"]["boundingVolume"], transform
+            )
 
             if aabb is None:
                 aabb = bbox
@@ -81,9 +83,9 @@ def init(tilset_paths: List[Path]) -> dict:
 
             total_point_count += fth.points_length
 
-            tileset['id'] = idx
-            tileset['filename'] = str(tileset_path)
-            tileset['center'] = ((bbox[0] + bbox[1]) * 0.5)
+            tileset["id"] = idx
+            tileset["filename"] = str(tileset_path)
+            tileset["center"] = (bbox[0] + bbox[1]) * 0.5
             tilesets += [tileset]
 
             transforms += [transform]
@@ -91,10 +93,10 @@ def init(tilset_paths: List[Path]) -> dict:
             idx += 1
 
     return {
-        'tilesets': tilesets,
-        'aabb': aabb,
-        'point_count': total_point_count,
-        'transforms': transforms
+        "tilesets": tilesets,
+        "aabb": aabb,
+        "point_count": total_point_count,
+        "transforms": transforms,
     }
 
 
@@ -108,7 +110,7 @@ def quadtree_split(aabb):
 
 
 def is_tileset_inside(tileset, aabb):
-    return np.all(aabb[0] <= tileset['center']) and np.all(tileset['center'] <= aabb[1])
+    return np.all(aabb[0] <= tileset["center"]) and np.all(tileset["center"] <= aabb[1])
 
 
 def _3dtiles_bounding_box_from_aabb(aabb, transform=None):
@@ -120,23 +122,31 @@ def _3dtiles_bounding_box_from_aabb(aabb, transform=None):
     half_size = (ab_max - ab_min) * 0.5
 
     return {
-        'box': [
-            center[0], center[1], center[2],
-            half_size[0], 0, 0,
-            0, half_size[1], 0,
-            0, 0, half_size[2]
+        "box": [
+            center[0],
+            center[1],
+            center[2],
+            half_size[0],
+            0,
+            0,
+            0,
+            half_size[1],
+            0,
+            0,
+            0,
+            half_size[2],
         ]
     }
 
 
 def _aabb_from_3dtiles_bounding_volume(volume, transform=None):
-    center = np.array(volume['box'][0:3])
-    h_x_axis = np.array(volume['box'][3:6])
-    h_y_axis = np.array(volume['box'][6:9])
-    h_z_axis = np.array(volume['box'][9:12])
+    center = np.array(volume["box"][0:3])
+    h_x_axis = np.array(volume["box"][3:6])
+    h_y_axis = np.array(volume["box"][6:9])
+    h_z_axis = np.array(volume["box"][9:12])
 
-    amin = (center - h_x_axis - h_y_axis - h_z_axis)
-    amax = (center + h_x_axis + h_y_axis + h_z_axis)
+    amin = center - h_x_axis - h_y_axis - h_z_axis
+    amax = center + h_x_axis + h_y_axis + h_z_axis
     amin.resize((4,))
     amax.resize((4,))
     amin[3] = 1
@@ -150,7 +160,9 @@ def _aabb_from_3dtiles_bounding_volume(volume, transform=None):
     return aabb
 
 
-def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name) -> Union[TileDictType, None]:
+def build_tileset_quadtree(
+    out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name
+) -> Union[TileDictType, None]:
     insides = [tileset for tileset in tilesets if is_tileset_inside(tileset, aabb)]
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])
@@ -160,16 +172,16 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
     elif len(insides) == 1 or quadtree_diag < 1:
         # apply transform to boundingVolume
         box = _aabb_from_3dtiles_bounding_volume(
-            insides[0]['root']['boundingVolume'],
-            _get_root_transform(insides[0]))
+            insides[0]["root"]["boundingVolume"], _get_root_transform(insides[0])
+        )
 
         return {
-            'transform': inv_base_transform.T.reshape(16).tolist(),
-            'geometricError': insides[0]['root']['geometricError'],
-            'boundingVolume': _3dtiles_bounding_box_from_aabb(box),
-            'content': {
-                'uri': str(Path(insides[0]['filename']).relative_to(out_folder))
-            }
+            "transform": inv_base_transform.T.reshape(16).tolist(),
+            "geometricError": insides[0]["root"]["geometricError"],
+            "boundingVolume": _3dtiles_bounding_box_from_aabb(box),
+            "content": {
+                "uri": str(Path(insides[0]["filename"]).relative_to(out_folder))
+            },
         }
     else:
         children: List[TileDictType] = []
@@ -182,15 +194,15 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
                 insides,
                 base_transform,
                 inv_base_transform,
-                name + str(sub)
+                name + str(sub),
             )
             sub += 1
             if r is not None:
                 children.append(r)
 
         union_aabb = _aabb_from_3dtiles_bounding_volume(
-            insides[0]['root']['boundingVolume'],
-            _get_root_transform(insides[0]))
+            insides[0]["root"]["boundingVolume"], _get_root_transform(insides[0])
+        )
         # take half points from our children
         xyz = np.zeros((0, 3), dtype=np.float32)
         rgb = np.zeros((0, 3), dtype=np.uint8)
@@ -198,38 +210,45 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
         max_point_count = 50000
         point_count = 0
         for tileset in insides:
-            root_tile = _get_root_tile(tileset, Path(tileset['filename']))
+            root_tile = _get_root_tile(tileset, Path(tileset["filename"]))
             point_count += root_tile.body.feature_table.header.points_length
 
         ratio = min(0.5, max_point_count / point_count)
 
         for tileset in insides:
-            root_tile = _get_root_tile(tileset, Path(tileset['filename']))
-            _xyz, _rgb = _get_tile_points(root_tile, _get_root_transform(tileset), inv_base_transform)
+            root_tile = _get_root_tile(tileset, Path(tileset["filename"]))
+            _xyz, _rgb = _get_tile_points(
+                root_tile, _get_root_transform(tileset), inv_base_transform
+            )
             select = np.random.choice(_xyz.shape[0], int(_xyz.shape[0] * ratio))
             xyz = np.concatenate((xyz, _xyz[select]))
             if _rgb is not None:
                 rgb = np.concatenate((rgb, _rgb[select]))
 
             ab = _aabb_from_3dtiles_bounding_volume(
-                tileset['root']['boundingVolume'],
-                _get_root_transform(tileset))
+                tileset["root"]["boundingVolume"], _get_root_transform(tileset)
+            )
             union_aabb[0] = np.minimum(union_aabb[0], ab[0])
             union_aabb[1] = np.maximum(union_aabb[1], ab[1])
 
         _, pnts_path = points_to_pnts(
-            name.encode('ascii'),
+            name.encode("ascii"),
             np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
             out_folder,
             rgb.shape[0] > 0,
-            False  # TODO: Handle classification in the merging process
+            False,  # TODO: Handle classification in the merging process
         )
 
         result: TileDictType = {
-            'children': children,
-            'content': {'uri': str(pnts_path.relative_to(out_folder)) if pnts_path else ""},
-            'geometricError': max([t['root']['geometricError'] for t in insides]) / ratio,
-            'boundingVolume': _3dtiles_bounding_box_from_aabb(union_aabb, inv_base_transform)
+            "children": children,
+            "content": {
+                "uri": str(pnts_path.relative_to(out_folder)) if pnts_path else ""
+            },
+            "geometricError": max([t["root"]["geometricError"] for t in insides])
+            / ratio,
+            "boundingVolume": _3dtiles_bounding_box_from_aabb(
+                union_aabb, inv_base_transform
+            ),
         }
 
         return result
@@ -238,13 +257,13 @@ def build_tileset_quadtree(out_folder: Path, aabb, tilesets, base_transform, inv
 def extract_content_uris(tileset):
     contents = []
     for key in tileset:
-        if key == 'content':
-            contents.append(Path(tileset[key]['uri']))
-        elif key == 'children':
-            for child in tileset['children']:
+        if key == "content":
+            contents.append(Path(tileset[key]["uri"]))
+        elif key == "children":
+            for child in tileset["children"]:
                 contents += extract_content_uris(child)
-        elif key == 'root':
-            contents += extract_content_uris(tileset['root'])
+        elif key == "root":
+            contents += extract_content_uris(tileset["root"])
 
     return contents
 
@@ -254,76 +273,77 @@ def remove_tileset(tilset_path: Path) -> None:
         tileset = json.load(f)
 
     contents = [
-        tilset_path.parent / content
-        for content in extract_content_uris(tileset)
+        tilset_path.parent / content for content in extract_content_uris(tileset)
     ]
 
     for content in contents:
-        if content.suffix == '.pnts':
+        if content.suffix == ".pnts":
             content.unlink()
-        elif content.suffix != '.json':
-            raise ValueError(f'unknown extension {content.suffix}')
+        elif content.suffix != ".json":
+            raise ValueError(f"unknown extension {content.suffix}")
 
     tilset_path.unlink()
 
 
 def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -> None:
     folder = Path(folder)
-    merger_tileset_path = folder / 'tileset.json'
+    merger_tileset_path = folder / "tileset.json"
     if merger_tileset_path.exists():
         if overwrite:
             remove_tileset(merger_tileset_path)
         else:
-            raise FileExistsError(f'Destination tileset {merger_tileset_path} already exists.')
+            raise FileExistsError(
+                f"Destination tileset {merger_tileset_path} already exists."
+            )
 
-    tilesets = [
-        tileset for tileset in folder.glob('**/tileset.json')
-    ]
+    tilesets = [tileset for tileset in folder.glob("**/tileset.json")]
 
     if verbose >= 1:
-        print(f'Found {len(tilesets)} tilesets to merge')
+        print(f"Found {len(tilesets)} tilesets to merge")
     if verbose >= 2:
-        print(f'Tilesets: {tilesets}')
+        print(f"Tilesets: {tilesets}")
 
     infos = init(tilesets)
 
-    aabb = infos['aabb']
+    aabb = infos["aabb"]
 
-    base_transform = infos['transforms'][0]
+    base_transform = infos["transforms"][0]
 
     inv_base_transform = np.linalg.inv(base_transform)
-    print('------------------------')
+    print("------------------------")
     # build hierarchical structure
-    result = build_tileset_quadtree(folder, aabb, infos['tilesets'], base_transform, inv_base_transform, '')
+    result = build_tileset_quadtree(
+        folder, aabb, infos["tilesets"], base_transform, inv_base_transform, ""
+    )
 
     if result is None:
         raise ValueError("result is None")  # todo better message
 
-    result['transform'] = base_transform.T.reshape(16).tolist()
+    result["transform"] = base_transform.T.reshape(16).tolist()
     tileset = {
-        'asset': {
-            'version': '1.0'
-        },
-        'refine': 'REPLACE',
-        'geometricError': np.linalg.norm((aabb[1] - aabb[0])[0:3]),
-        'root': result
+        "asset": {"version": "1.0"},
+        "refine": "REPLACE",
+        "geometricError": np.linalg.norm((aabb[1] - aabb[0])[0:3]),
+        "root": result,
     }
 
     output_tileset_path = folder / "tileset.json"
-    with output_tileset_path.open('w') as f:
+    with output_tileset_path.open("w") as f:
         json.dump(tileset, f)
 
 
 def init_parser(subparser):
-    parser = subparser.add_parser('merge', help='Merge several pointcloud tilesets in 1 tileset')
-    parser.add_argument(
-        'folder',
-        help='Folder that contains tileset folders inside (the merged tileset will be inside folder)'
+    parser = subparser.add_parser(
+        "merge", help="Merge several pointcloud tilesets in 1 tileset"
     )
     parser.add_argument(
-        '--overwrite',
+        "folder",
+        help="Folder that contains tileset folders inside (the merged tileset will be inside folder)",
+    )
+    parser.add_argument(
+        "--overwrite",
         action="store_true",
-        help='Overwrite the output folder if it already exists.'
+        help="Overwrite the output folder if it already exists.",
     )
 
     return parser

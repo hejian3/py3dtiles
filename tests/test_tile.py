@@ -9,7 +9,6 @@ from py3dtiles.tileset.tile_content import TileContent
 
 
 class TestTile(unittest.TestCase):
-
     def test_constructor(self):
         tile = Tile()
         self.assertIsNone(tile.bounding_volume)
@@ -32,24 +31,51 @@ class TestTile(unittest.TestCase):
     def test_transform(self):
         tile = Tile()
 
-        assert_array_equal(
-            tile.transform,
-            np.identity(4).reshape(-1)
+        assert_array_equal(tile.transform, np.identity(4).reshape(-1))
+
+        tile.transform = np.array(
+            [
+                1.0001,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.001,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.01,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.1,
+            ]
         )
 
-        tile.transform = np.array([
-            1.0001, 0.0, 0.0, 0.0,
-            0.0, 1.001, 0.0, 0.0,
-            0.0, 0.0, 1.01, 0.0,
-            0.0, 0.0, 0.0, 1.1
-        ])
-
         assert_array_equal(
             tile.transform,
-            np.array([1.0001, 0.0, 0.0, 0.0,
-             0.0, 1.001, 0.0, 0.0,
-             0.0, 0.0, 1.01, 0.0,
-             0.0, 0.0, 0.0, 1.1])
+            np.array(
+                [
+                    1.0001,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.001,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.01,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.1,
+                ]
+            ),
         )
 
     def test_content(self):
@@ -129,10 +155,25 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {
+                    "box": [
+                        1.0,
+                        2.0,
+                        3.0,
+                        4.0,
+                        5.0,
+                        6.0,
+                        7.0,
+                        8.0,
+                        9.0,
+                        10.0,
+                        11.0,
+                        12.0,
+                    ]
+                },
                 "geometricError": 500,
                 "refine": "ADD",
-            }
+            },
         )
 
         tile.geometric_error = 3.14159
@@ -149,18 +190,47 @@ class TestTile(unittest.TestCase):
         self.assertDictEqual(
             tile.to_dict(),
             {
-                "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                "boundingVolume": {
+                    "box": [
+                        1.0,
+                        2.0,
+                        3.0,
+                        4.0,
+                        5.0,
+                        6.0,
+                        7.0,
+                        8.0,
+                        9.0,
+                        10.0,
+                        11.0,
+                        12.0,
+                    ]
+                },
                 "geometricError": 3.14159,
                 "refine": "ADD",
                 "children": [
                     {
                         "boundingVolume": {
-                            "box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                            "box": [
+                                1.0,
+                                2.0,
+                                3.0,
+                                4.0,
+                                5.0,
+                                6.0,
+                                7.0,
+                                8.0,
+                                9.0,
+                                10.0,
+                                11.0,
+                                12.0,
+                            ]
+                        },
                         "geometricError": 21,
                         "refine": "ADD",
                     }
-                ]
-            }
+                ],
+            },
         )
 
 

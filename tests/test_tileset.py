@@ -7,7 +7,6 @@ from py3dtiles.tileset.tileset import TileSet
 
 
 class Test_TileSet(unittest.TestCase):
-
     @classmethod
     def build_sample(cls):
         """
@@ -23,10 +22,10 @@ class Test_TileSet(unittest.TestCase):
         # Setting the mode to the default mode does not really change things.
         # The following line is thus just here ot test the "callability" of
         # set_refine_mode():
-        root_tile.set_refine_mode('ADD')
+        root_tile.set_refine_mode("ADD")
         tile_set.root_tile = root_tile
 
-        extension = BaseExtension('Test')
+        extension = BaseExtension("Test")
         tile_set.add_extension(extension)
 
         return tile_set
@@ -43,14 +42,29 @@ class Test_TileSet(unittest.TestCase):
             self.build_sample().to_dict(),
             {
                 "root": {
-                    "boundingVolume": {"box": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]},
+                    "boundingVolume": {
+                        "box": [
+                            1.0,
+                            2.0,
+                            3.0,
+                            4.0,
+                            5.0,
+                            6.0,
+                            7.0,
+                            8.0,
+                            9.0,
+                            10.0,
+                            11.0,
+                            12.0,
+                        ]
+                    },
                     "geometricError": 3.14159,
                     "refine": "ADD",
                 },
-                "extensions": {
-                    'Test': {}},
-                "geometricError": 500.0, "asset": {"version": "1.0"},
-            }
+                "extensions": {"Test": {}},
+                "geometricError": 500.0,
+                "asset": {"version": "1.0"},
+            },
         )
 
 

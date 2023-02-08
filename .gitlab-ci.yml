@@ -31,7 +31,7 @@ flake8:
   extends: .pre-commit-check
   stage: 🐍 lint
   script:
-    - pre-commit run --show-diff-on-failure --all-files flake8
+    - pre-commit run --show-diff-on-failure --all-files black
   only:
     changes:
       - "**/*.py"

@@ -7,7 +7,6 @@ from .tile import Tile
 
 
 class TileSet(Extendable):
-
     def __init__(self, geometric_error: float = 500) -> None:
         super().__init__()
         self._asset: AssetDictType = {"version": "1.0"}
@@ -22,7 +21,7 @@ class TileSet(Extendable):
         self._asset["extras"] = {
             "$schema": "https://json-schema.org/draft-04/schema",
             "title": "Extras",
-            "description": comment
+            "description": comment,
         }
 
     def write_to_directory(self, directory: Path) -> None:
@@ -35,7 +34,7 @@ class TileSet(Extendable):
         """
         # Create the output directory
         target_dir = directory.expanduser()
-        tiles_dir = target_dir / 'tiles'
+        tiles_dir = target_dir / "tiles"
         tiles_dir.mkdir(parents=True, exist_ok=True)
 
         # Prior to writing the TileSet, the future location of the enclosed
@@ -43,7 +42,7 @@ class TileSet(Extendable):
         # specified:
         all_tiles = self.root_tile.get_children()
         for index, tile in enumerate(all_tiles):
-            tile.set_content_uri('tiles/' + f'{index}.b3dm')
+            tile.set_content_uri("tiles/" + f"{index}.b3dm")
 
         # Proceed with the writing of the TileSet per se:
         self.write_as_json(target_dir)
@@ -60,8 +59,8 @@ class TileSet(Extendable):
         # Make sure the TileSet is aligned with its children Tiles.
         self.root_tile.sync_bounding_volume_with_children()
 
-        tileset_path = directory / 'tileset.json'
-        with tileset_path.open('w') as f:
+        tileset_path = directory / "tileset.json"
+        with tileset_path.open("w") as f:
             f.write(self.to_json())
 
     def to_dict(self) -> TilesetDictType:
@@ -70,9 +69,9 @@ class TileSet(Extendable):
         """
 
         dict_data: TilesetDictType = {
-            'root': self.root_tile.to_dict(),
-            'asset': self._asset,
-            'geometricError': self.geometric_error
+            "root": self.root_tile.to_dict(),
+            "asset": self._asset,
+            "geometricError": self.geometric_error,
         }
 
         if self._extensions:
@@ -80,9 +79,9 @@ class TileSet(Extendable):
             for name, extension in self._extensions.items():
                 dict_extensions[name] = extension.to_dict()
 
-            dict_data['extensions'] = dict_extensions
+            dict_data["extensions"] = dict_extensions
 
         return dict_data
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict(), separators=(',', ':'))
+        return json.dumps(self.to_dict(), separators=(",", ":"))

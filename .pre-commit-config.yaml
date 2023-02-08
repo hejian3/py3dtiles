@@ -19,6 +19,12 @@ repos:
     hooks:
       - id: autoflake
 
+  - repo: https://github.com/ambv/black
+    rev: 22.12.0
+    hooks:
+      - id: black
+        args: [--target-version=py38]
+
   - repo: https://github.com/pycqa/flake8
     rev: 6.0.0
     hooks:

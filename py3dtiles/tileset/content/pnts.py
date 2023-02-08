@@ -7,13 +7,19 @@ import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
 from py3dtiles.tileset.feature_table import Feature, FeatureTable
-from py3dtiles.tileset.tile_content import TileContent, TileContentBody, TileContentHeader, TileContentType
+from py3dtiles.tileset.tile_content import (
+    TileContent,
+    TileContentBody,
+    TileContentHeader,
+    TileContentType,
+)
 
 
 class Pnts(TileContent):
-
     @staticmethod
-    def from_features(pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]) -> Pnts:
+    def from_features(
+        pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]
+    ) -> Pnts:
         """
         Creates a Pnts from features defined by pd_type and cd_type.
         """
@@ -38,15 +44,22 @@ class Pnts(TileContent):
         """
 
         # build tile header
-        h_arr = array[0:PntsHeader.BYTE_LENGTH]
+        h_arr = array[0 : PntsHeader.BYTE_LENGTH]
         h = PntsHeader.from_array(h_arr)
 
         if h.tile_byte_length != len(array):
-            raise RuntimeError(f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {h.tile_byte_length}")
+            raise RuntimeError(
+                f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {h.tile_byte_length}"
+            )
 
         # build tile body
-        b_len = h.ft_json_byte_length + h.ft_bin_byte_length + h.bt_json_byte_length + h.bt_bin_byte_length
-        b_arr = array[PntsHeader.BYTE_LENGTH:PntsHeader.BYTE_LENGTH + b_len]
+        b_len = (
+            h.ft_json_byte_length
+            + h.ft_bin_byte_length
+            + h.bt_json_byte_length
+            + h.bt_bin_byte_length
+        )
+        b_arr = array[PntsHeader.BYTE_LENGTH : PntsHeader.BYTE_LENGTH + b_len]
         b = PntsBody.from_array(h, b_arr)
 
         # build TileContent with header and body
@@ -72,12 +85,17 @@ class PntsHeader(TileContentHeader):
         """
         header_arr = np.frombuffer(self.magic_value, np.uint8)
 
-        header_arr2 = np.array([self.version,
-                                self.tile_byte_length,
-                                self.ft_json_byte_length,
-                                self.ft_bin_byte_length,
-                                self.bt_json_byte_length,
-                                self.bt_bin_byte_length], dtype=np.uint32)
+        header_arr2 = np.array(
+            [
+                self.version,
+                self.tile_byte_length,
+                self.ft_json_byte_length,
+                self.ft_bin_byte_length,
+                self.bt_json_byte_length,
+                self.bt_bin_byte_length,
+            ],
+            dtype=np.uint32,
+        )
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
 
@@ -94,8 +112,10 @@ class PntsHeader(TileContentHeader):
 
         # sync the tile header with feature table contents
         self.tile_byte_length = (
-            len(feature_table_header_array) + len(feature_table_body_array)
-            + len(batch_table_header_array) + len(batch_table_body_array)
+            len(feature_table_header_array)
+            + len(feature_table_body_array)
+            + len(batch_table_header_array)
+            + len(batch_table_body_array)
             + PntsHeader.BYTE_LENGTH
         )
         self.ft_json_byte_length = len(feature_table_header_array)
@@ -150,8 +170,12 @@ class PntsBody(TileContentBody):
 
         # build batch table
         batch_table_size = header.bt_json_byte_length + header.bt_bin_byte_length
-        batch_table_array = array[feature_table_size:feature_table_size + batch_table_size]
-        batch_table = BatchTable.from_array(header, batch_table_array, feature_table.nb_points())
+        batch_table_array = array[
+            feature_table_size : feature_table_size + batch_table_size
+        ]
+        batch_table = BatchTable.from_array(
+            header, batch_table_array, feature_table.nb_points()
+        )
 
         # build tile body with feature table
         body = PntsBody()

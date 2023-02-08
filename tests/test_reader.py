@@ -7,17 +7,13 @@ The example that is run in the test (`simple.ply`) comes from the [CGAL reposito
 from pathlib import Path
 
 import numpy as np
-import numpy.typing as npt
 import plyfile
 from pytest import fixture, raises
-import zmq
 
-from py3dtiles.convert import URI
 from py3dtiles.reader import ply_reader
-from py3dtiles.utils import compute_spacing
 
 
-DATA_DIRECTORY = Path(__file__).parent / 'fixtures'
+DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
 @fixture
@@ -33,7 +29,7 @@ def buggy_ply_filepath():
 @fixture(params=["wrongname", "vertex"])
 def buggy_ply_data(request):
     """This ply data does not contain any 'vertex' element!"""
-    types = [('x', np.float32, (5,)), ('y', np.float32, (5,)), ('z', np.float32, (5,))]
+    types = [("x", np.float32, (5,)), ("y", np.float32, (5,)), ("z", np.float32, (5,))]
     data = [(np.random.sample(5), np.random.sample(5), np.random.sample(5))]
     arr = np.array(
         data if request.param == "wrongname" else [data[0][:2]],
@@ -43,7 +39,7 @@ def buggy_ply_data(request):
     ply_data = plyfile.PlyData(elements=[ply_item])
     yield {
         "data": ply_data,
-        "msg": "vertex" if request.param == "wrongname" else "x, y, z"
+        "msg": "vertex" if request.param == "wrongname" else "x, y, z",
     }
 
 
@@ -51,11 +47,16 @@ def test_ply_get_metadata(ply_filepath):
     ply_metadata = ply_reader.get_metadata(path=ply_filepath)
     expected_point_count = 22300
     expected_aabb = (
-        np.array([5.966480625e+05, 2.43620015625e+05, 7.350153350830078e+01]),
-        np.array([5.967389375e+05, 2.43731984375e+05, 9.718580627441406e+01]),
+        np.array([5.966480625e05, 2.43620015625e05, 7.350153350830078e01]),
+        np.array([5.967389375e05, 2.43731984375e05, 9.718580627441406e01]),
     )
     assert list(ply_metadata.keys()) == [
-        "portions", "aabb", "color_scale", "srs_in", "point_count", "avg_min"
+        "portions",
+        "aabb",
+        "color_scale",
+        "srs_in",
+        "point_count",
+        "avg_min",
     ]
     assert ply_metadata["portions"] == [
         (str(ply_filepath), (0, expected_point_count, expected_point_count))

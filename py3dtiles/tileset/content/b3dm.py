@@ -3,12 +3,16 @@ import struct
 import numpy as np
 
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.tile_content import TileContent, TileContentBody, TileContentHeader, TileContentType
+from py3dtiles.tileset.tile_content import (
+    TileContent,
+    TileContentBody,
+    TileContentHeader,
+    TileContentType,
+)
 from .gltf import GlTF
 
 
 class B3dm(TileContent):
-
     @staticmethod
     def from_glTF(gltf, bt=None):
         """
@@ -51,14 +55,14 @@ class B3dm(TileContent):
         """
 
         # build tile header
-        h_arr = array[0:B3dmHeader.BYTE_LENGTH]
+        h_arr = array[0 : B3dmHeader.BYTE_LENGTH]
         h = B3dmHeader.from_array(h_arr)
 
         if h.tile_byte_length != len(array):
             raise RuntimeError("Invalid byte length in header")
 
         # build tile body
-        b_arr = array[B3dmHeader.BYTE_LENGTH:h.tile_byte_length]
+        b_arr = array[B3dmHeader.BYTE_LENGTH : h.tile_byte_length]
         b = B3dmBody.from_array(h, b_arr)
 
         # build TileContent with header and body
@@ -81,12 +85,17 @@ class B3dmHeader(TileContentHeader):
     def to_array(self):
         header_arr = np.frombuffer(self.magic_value, np.uint8)
 
-        header_arr2 = np.array([self.version,
-                                self.tile_byte_length,
-                                self.ft_json_byte_length,
-                                self.ft_bin_byte_length,
-                                self.bt_json_byte_length,
-                                self.bt_bin_byte_length], dtype=np.uint32)
+        header_arr2 = np.array(
+            [
+                self.version,
+                self.tile_byte_length,
+                self.ft_json_byte_length,
+                self.ft_bin_byte_length,
+                self.bt_json_byte_length,
+                self.bt_bin_byte_length,
+            ],
+            dtype=np.uint32,
+        )
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
 
@@ -191,15 +200,14 @@ class B3dmBody(TileContentBody):
         bt_len = th.bt_json_byte_length + th.bt_bin_byte_length
 
         # build glTF
-        glTF_len = (th.tile_byte_length - ft_len - bt_len
-                    - B3dmHeader.BYTE_LENGTH)
-        glTF_arr = array[ft_len + bt_len:ft_len + bt_len + glTF_len]
+        glTF_len = th.tile_byte_length - ft_len - bt_len - B3dmHeader.BYTE_LENGTH
+        glTF_arr = array[ft_len + bt_len : ft_len + bt_len + glTF_len]
         glTF = GlTF.from_array(glTF_arr)
 
         # build tile body with batch table
         b = B3dmBody()
         b.glTF = glTF
         if th.bt_json_byte_length > 0:
-            b.batch_table = BatchTable.from_array(th, array[0:th.bt_json_byte_length])
+            b.batch_table = BatchTable.from_array(th, array[0 : th.bt_json_byte_length])
 
         return b

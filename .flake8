@@ -1,5 +1,5 @@
 [flake8]
-ignore = E501,W503,B028
+ignore = E203,E501,W503,B028
 exclude =
     build/,
     *venv/,

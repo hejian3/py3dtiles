@@ -13,9 +13,14 @@ from .tile_content import TileContent
 DEFAULT_TRANSFORMATION = np.identity(4, dtype=np.float64).reshape(-1)
 DEFAULT_TRANSFORMATION.setflags(write=False)
 
-class Tile(Extendable):
 
-    def __init__(self, geometric_error: float = 500, bounding_volume: BoundingVolume | None = None, refine_mode: RefineType = "ADD") -> None:
+class Tile(Extendable):
+    def __init__(
+        self,
+        geometric_error: float = 500,
+        bounding_volume: BoundingVolume | None = None,
+        refine_mode: RefineType = "ADD",
+    ) -> None:
         super().__init__()
         self.bounding_volume = bounding_volume
         self.geometric_error = geometric_error
@@ -36,18 +41,20 @@ class Tile(Extendable):
 
     def set_content_uri(self, uri: str) -> None:
         if self._content is None:
-            raise AttributeError('Tile with unset content.')
+            raise AttributeError("Tile with unset content.")
         # self._content.set_uri(uri) # TODO add set_uri in TileContent
 
     def get_content_uri(self) -> str:
         if self._content is None:
-            raise AttributeError('Tile with unset content.')
+            raise AttributeError("Tile with unset content.")
         # return self._content.get_uri() # TODO add get_uri in TileContent
         return ""
 
     def set_refine_mode(self, mode: str) -> None:
-        if mode != 'ADD' and mode != 'REPLACE':
-            raise ValueError(f"Unknown refinement mode {mode}. Should be either 'ADD' or 'REPLACE'.")
+        if mode != "ADD" and mode != "REPLACE":
+            raise ValueError(
+                f"Unknown refinement mode {mode}. Should be either 'ADD' or 'REPLACE'."
+            )
         self._refine = mode
 
     def get_refine_mode(self) -> str:
@@ -78,7 +85,7 @@ class Tile(Extendable):
 
     def sync_bounding_volume_with_children(self) -> None:
         if self.bounding_volume is None:
-            raise AttributeError('This Tile has no bounding volume: exiting.')
+            raise AttributeError("This Tile has no bounding volume: exiting.")
         if not self.bounding_volume.is_box():
             raise NotImplementedError("Don't know how to sync non box bounding volume.")
 
@@ -115,24 +122,26 @@ class Tile(Extendable):
         path_name.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the tile content of this tile:
-        with path_name.open('wb') as f:
+        with path_name.open("wb") as f:
             f.write(self._content.to_array().tobytes())
 
     def to_dict(self) -> TileDictType:
         if self.bounding_volume is not None:
             bounding_volume = self.bounding_volume
         else:
-            raise AttributeError('Bounding volume is not set')
+            raise AttributeError("Bounding volume is not set")
         bounding_volume_dict = bounding_volume.to_dict()
 
         refine = self._refine.upper()
-        if refine not in ['ADD', 'REPLACE']:
-            raise ValueError(f"refine should be either ADD or REPLACE, currently {refine}.")
+        if refine not in ["ADD", "REPLACE"]:
+            raise ValueError(
+                f"refine should be either ADD or REPLACE, currently {refine}."
+            )
 
         dict_data: TileDictType = {
-            'boundingVolume': bounding_volume_dict,
-            'geometricError': self.geometric_error,
-            'refine': refine # type: ignore
+            "boundingVolume": bounding_volume_dict,
+            "geometricError": self.geometric_error,
+            "refine": refine,  # type: ignore
         }
 
         if self._children:
@@ -140,12 +149,10 @@ class Tile(Extendable):
             # happens to be still empty. This would pollute the json output
             # by adding a "children" entry followed by an empty list. In such
             # case just remove that attributes entry:
-            dict_data['children'] = [child.to_dict() for child in self._children]
+            dict_data["children"] = [child.to_dict() for child in self._children]
 
         if self._content is not None:
             # Refer to children related above comment (mutatis mutandis):
-            dict_data['content'] = {
-                'uri': self.get_content_uri()
-            }
+            dict_data["content"] = {"uri": self.get_content_uri()}
 
         return dict_data

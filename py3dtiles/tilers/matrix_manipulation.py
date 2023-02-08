@@ -27,9 +27,11 @@ def make_rotation_matrix(z1: np.ndarray, z2: np.ndarray) -> np.ndarray:
 
     return final_rotation_matrix
 
+
 def make_scale_matrix(factor: float) -> np.ndarray:
     scale_matrix = np.diag([factor, factor, factor, 1.0])
     return scale_matrix
+
 
 def make_translation_matrix(direction: np.ndarray) -> np.ndarray:
     translation_matrix = np.identity(4)

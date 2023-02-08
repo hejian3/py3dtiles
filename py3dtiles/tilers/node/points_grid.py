@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numba import njit # type: ignore
+from numba import njit  # type: ignore
 from numba.typed import List
 import numpy as np
 
@@ -14,7 +14,20 @@ if TYPE_CHECKING:
 
 
 @njit(fastmath=True, cache=True)
-def _insert(cells_xyz, cells_rgb, cells_classification, aabmin, inv_aabb_size, cell_count, xyz, rgb, classification, spacing, shift, force=False):
+def _insert(
+    cells_xyz,
+    cells_rgb,
+    cells_classification,
+    aabmin,
+    inv_aabb_size,
+    cell_count,
+    xyz,
+    rgb,
+    classification,
+    spacing,
+    shift,
+    force=False,
+):
     keys = xyz_to_key(xyz, cell_count, aabmin, inv_aabb_size, shift)
 
     if force:
@@ -23,33 +36,52 @@ def _insert(cells_xyz, cells_rgb, cells_classification, aabmin, inv_aabb_size, c
             idx = np.where(keys - k == 0)
             cells_xyz[k] = np.concatenate((cells_xyz[k], xyz[idx]))
             cells_rgb[k] = np.concatenate((cells_rgb[k], rgb[idx]))
-            cells_classification[k] = np.concatenate((cells_classification[k], classification[idx]))
+            cells_classification[k] = np.concatenate(
+                (cells_classification[k], classification[idx])
+            )
     else:
         notinserted = np.full(len(xyz), False)
         needs_balance = False
 
         for i in range(len(xyz)):
             k = keys[i]
-            if cells_xyz[k].shape[0] == 0 or is_point_far_enough(cells_xyz[k], xyz[i], spacing):
+            if cells_xyz[k].shape[0] == 0 or is_point_far_enough(
+                cells_xyz[k], xyz[i], spacing
+            ):
                 cells_xyz[k] = np.concatenate((cells_xyz[k], xyz[i].reshape(1, 3)))
                 cells_rgb[k] = np.concatenate((cells_rgb[k], rgb[i].reshape(1, 3)))
 
-                cells_classification[k] = np.concatenate((cells_classification[k], classification[i].reshape(1, 1)))
+                cells_classification[k] = np.concatenate(
+                    (cells_classification[k], classification[i].reshape(1, 1))
+                )
                 if cell_count[0] < 8:
                     needs_balance = needs_balance or cells_xyz[k].shape[0] > 200000
             else:
                 notinserted[i] = True
 
-        return xyz[notinserted], rgb[notinserted], classification[notinserted], needs_balance
+        return (
+            xyz[notinserted],
+            rgb[notinserted],
+            classification[notinserted],
+            needs_balance,
+        )
 
 
 class Grid:
     """docstring for Grid"""
 
-    __slots__ = ('cell_count', 'cells_xyz', 'cells_rgb', 'cells_classification', 'spacing')
+    __slots__ = (
+        "cell_count",
+        "cells_xyz",
+        "cells_rgb",
+        "cells_classification",
+        "spacing",
+    )
 
     def __init__(self, node: Node, initial_count: int = 3) -> None:
-        self.cell_count = np.array([initial_count, initial_count, initial_count], dtype=np.int32)
+        self.cell_count = np.array(
+            [initial_count, initial_count, initial_count], dtype=np.int32
+        )
         self.spacing = node.spacing * node.spacing
 
         self.cells_xyz = List()
@@ -70,17 +102,28 @@ class Grid:
         }
 
     def __setstate__(self, state: dict):
-        self.cell_count = state['cell_count']
-        self.spacing = state['spacing']
-        self.cells_xyz = List(state['cells_xyz'])
-        self.cells_rgb = List(state['cells_rgb'])
-        self.cells_classification = List(state['cells_classification'])
+        self.cell_count = state["cell_count"]
+        self.spacing = state["spacing"]
+        self.cells_xyz = List(state["cells_xyz"])
+        self.cells_rgb = List(state["cells_rgb"])
+        self.cells_classification = List(state["cells_classification"])
 
     @property
     def max_key_value(self) -> int:
-        return 1 << (2 * int(self.cell_count[0]).bit_length() + int(self.cell_count[2]).bit_length())
+        return 1 << (
+            2 * int(self.cell_count[0]).bit_length()
+            + int(self.cell_count[2]).bit_length()
+        )
 
-    def insert(self, aabmin: np.ndarray, inv_aabb_size: np.ndarray, xyz: np.ndarray, rgb: np.ndarray, classification: np.ndarray, force: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+    def insert(
+        self,
+        aabmin: np.ndarray,
+        inv_aabb_size: np.ndarray,
+        xyz: np.ndarray,
+        rgb: np.ndarray,
+        classification: np.ndarray,
+        force: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
         return _insert(
             self.cells_xyz,
             self.cells_rgb,
@@ -92,7 +135,9 @@ class Grid:
             rgb,
             classification,
             self.spacing,
-            int(self.cell_count[0] - 1).bit_length(), force)
+            int(self.cell_count[0] - 1).bit_length(),
+            force,
+        )
 
     def needs_balance(self) -> bool:
         if self.cell_count[0] < 8:
@@ -101,15 +146,19 @@ class Grid:
                     return True
         return False
 
-    def balance(self, aabb_size: np.ndarray, aabmin: np.ndarray, inv_aabb_size: np.ndarray) -> None:
+    def balance(
+        self, aabb_size: np.ndarray, aabmin: np.ndarray, inv_aabb_size: np.ndarray
+    ) -> None:
         t = aabb_size_to_subdivision_type(aabb_size)
         self.cell_count[0] += 1
         self.cell_count[1] += 1
         if t != SubdivisionType.QUADTREE:
             self.cell_count[2] += 1
         if self.cell_count[0] > 8:
-            raise ValueError(f'The first value of the attribute cell count should be lower or equal to 8,'
-                             f'actual it is {self.cell_count[0]}')
+            raise ValueError(
+                f"The first value of the attribute cell count should be lower or equal to 8,"
+                f"actual it is {self.cell_count[0]}"
+            )
 
         old_cells_xyz = self.cells_xyz
         old_cells_rgb = self.cells_rgb
@@ -122,8 +171,12 @@ class Grid:
             self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
             self.cells_classification.append(np.zeros((0, 1), dtype=np.uint8))
 
-        for cellxyz, cellrgb, cellclassification in zip(old_cells_xyz, old_cells_rgb, old_cells_classification):
-            self.insert(aabmin, inv_aabb_size, cellxyz, cellrgb, cellclassification, True)
+        for cellxyz, cellrgb, cellclassification in zip(
+            old_cells_xyz, old_cells_rgb, old_cells_classification
+        ):
+            self.insert(
+                aabmin, inv_aabb_size, cellxyz, cellrgb, cellclassification, True
+            )
 
     def get_points(self, include_rgb: bool, include_classification: bool) -> np.ndarray:
         xyz = []

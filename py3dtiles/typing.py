@@ -9,7 +9,7 @@ ExtensionDictType = Dict[str, Any]
 ExtraDictType = Dict[str, Any]
 GeometricErrorType = float
 PropertyType = Dict[str, Any]
-RefineType = Literal['ADD', 'REPLACE']
+RefineType = Literal["ADD", "REPLACE"]
 TransformDictType = List[float]
 
 
@@ -21,17 +21,26 @@ class ThreeDDictBase(TypedDict):
 class BoundingVolumeBoxDictType(ThreeDDictBase):
     box: list[float]
 
+
 class BoundingVolumeRegionDictType(ThreeDDictBase):
     region: list[float]
+
 
 class BoundingVolumeSphereDictType(ThreeDDictBase):
     sphere: list[float]
 
-BoundingVolumeDictType = Union[BoundingVolumeBoxDictType, BoundingVolumeRegionDictType, BoundingVolumeSphereDictType]
+
+BoundingVolumeDictType = Union[
+    BoundingVolumeBoxDictType,
+    BoundingVolumeRegionDictType,
+    BoundingVolumeSphereDictType,
+]
+
 
 class ContentType(ThreeDDictBase):
     boundingVolume: NotRequired[BoundingVolumeDictType]
     uri: str
+
 
 class PropertyDictType(ThreeDDictBase):
     maximum: float

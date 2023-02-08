@@ -4,7 +4,6 @@ from py3dtiles.tileset.extension import BaseExtension
 
 
 class TestExtension(unittest.TestCase):
-
     def test_constructor(self):
         name = "name"
         extension = BaseExtension(name)

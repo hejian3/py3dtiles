@@ -81,8 +81,10 @@ def main(args):
 
 def init_parser(subparser):
     # arg parse
-    parser = subparser.add_parser('info', help='Extract information from a 3DTiles file')
+    parser = subparser.add_parser(
+        "info", help="Extract information from a 3DTiles file"
+    )
 
-    parser.add_argument('file', type=Path)
+    parser.add_argument("file", type=Path)
 
     return parser

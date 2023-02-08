@@ -30,7 +30,7 @@ class Extendable:
 
     def get_extension(self, extension_name: str) -> BaseExtension:
         if not self.has_extensions():
-            raise AttributeError('No extension present.')
+            raise AttributeError("No extension present.")
         if extension_name not in self._extensions:
-            raise ValueError(f'No extension with name {extension_name}.')
+            raise ValueError(f"No extension with name {extension_name}.")
         return self._extensions[extension_name]

@@ -18,26 +18,26 @@ def str_to_CRS(srs: str | CRS | None) -> CRS | None:
         return None
 
     try:
-        return CRS.from_epsg(int(srs)) # type: ignore
+        return CRS.from_epsg(int(srs))  # type: ignore
     except ValueError:
         return CRS(srs)
 
 
 class CommandType(Enum):
-    READ_FILE = b'read_file'
-    WRITE_PNTS = b'write_pnts'
-    PROCESS_JOBS = b'process_jobs'
-    SHUTDOWN = b'shutdown'
+    READ_FILE = b"read_file"
+    WRITE_PNTS = b"write_pnts"
+    PROCESS_JOBS = b"process_jobs"
+    SHUTDOWN = b"shutdown"
 
 
 class ResponseType(Enum):
-    IDLE = b'idle'
-    HALTED = b'halted'
-    READ = b'read'
-    PROCESSED = b'processed'
-    PNTS_WRITTEN = b'pnts_written'
-    NEW_TASK = b'new_task'
-    ERROR = b'error'
+    IDLE = b"idle"
+    HALTED = b"halted"
+    READ = b"read"
+    PROCESSED = b"processed"
+    PNTS_WRITTEN = b"pnts_written"
+    NEW_TASK = b"new_task"
+    ERROR = b"error"
 
 
 def profile(func: Callable) -> Callable:
@@ -51,6 +51,7 @@ def profile(func: Callable) -> Callable:
         lp.print_stats(stream=s)
         print(s.getvalue())
         return res
+
     return wrapper
 
 
@@ -58,17 +59,22 @@ class SubdivisionType(Enum):
     OCTREE = 1
     QUADTREE = 2
 
-def node_name_to_path(working_dir: Path, name: bytes, suffix: str = '', split_len: int = 8) -> Path:
+
+def node_name_to_path(
+    working_dir: Path, name: bytes, suffix: str = "", split_len: int = 8
+) -> Path:
     """
     Get the path of a tile from its name and the working directory.
     If the name is '222262175' with the suffix '.pnts', the result is 'working_dir/22226217/r5.pnts'
     """
-    str_name = name.decode('ascii')
+    str_name = name.decode("ascii")
     if len(str_name) <= split_len:
         filename = PurePath("r" + str_name + suffix)
     else:
         # the name is split on every 'split_len' char to avoid to have too many tiles on the same folder.
-        sub_folders = [str_name[i:i + split_len] for i in range(0, len(str_name), split_len)]
+        sub_folders = [
+            str_name[i : i + split_len] for i in range(0, len(str_name), split_len)
+        ]
         working_dir = working_dir.joinpath(*sub_folders[:-1])
         filename = PurePath("r" + sub_folders[-1] + suffix)
 
@@ -89,7 +95,9 @@ def aabb_size_to_subdivision_type(size: np.ndarray) -> SubdivisionType:
         return SubdivisionType.OCTREE
 
 
-def split_aabb(aabb: np.ndarray, index: int, force_quadtree: bool = False) -> np.ndarray:
+def split_aabb(
+    aabb: np.ndarray, index: int, force_quadtree: bool = False
+) -> np.ndarray:
     half = (aabb[1] - aabb[0]) * 0.5
     t = aabb_size_to_subdivision_type(half)
 
@@ -120,6 +128,7 @@ def make_aabb_cubic(aabb):
 
 def node_from_name(name, parent_aabb, parent_spacing):
     from py3dtiles.tilers.node import Node
+
     spacing = parent_spacing * 0.5
     aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
     #  let's build a new Node
