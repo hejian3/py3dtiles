@@ -51,7 +51,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
 
         point_count = portion[1] - portion[0]
         step = min(point_count, max(point_count // 10, 100_000))
-        indices = [i for i in range(math.ceil(point_count / step))]
+        indices = list(range(math.ceil(point_count / step)))
         color_scale = offset_scale[3]
 
         for index in indices:

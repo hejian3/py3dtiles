@@ -104,7 +104,7 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
     print("Creating tileset...")
     max_tile_size = 2000
     features_per_tile = 20
-    indices = [i for i in range(len(positions))]
+    indices = list(range(len(positions)))
 
     # glTF is Y-up, so to get the bounding boxes in the 3D tiles
     # coordinate system, we have to apply a Y-to-Z transform to the

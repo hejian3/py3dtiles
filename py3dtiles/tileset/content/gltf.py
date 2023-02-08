@@ -332,7 +332,7 @@ def compute_header(
     header = {
         "asset": {"generator": "py3dtiles", "version": "2.0"},
         "scene": 0,
-        "scenes": [{"nodes": [i for i in range(0, len(nodes))]}],
+        "scenes": [{"nodes": list(range(len(nodes)))}],
         "nodes": nodes,
         "meshes": meshes,
         "materials": materials,
