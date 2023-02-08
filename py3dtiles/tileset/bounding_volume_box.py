@@ -256,8 +256,8 @@ class BoundingVolumeBox(BoundingVolume):
     def is_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
         if box is None:
             return False, "Bounding Volume Box is not defined."
-        if not box.ndim == 1:
+        if box.ndim != 1:
             return False, "Bounding Volume Box has wrong dimensions."
-        if not box.shape[0] == 12:
+        if box.shape[0] != 12:
             return False, "Warning: Bounding Volume Box must have 12 elements."
         return True, ""

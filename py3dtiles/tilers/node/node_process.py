@@ -104,9 +104,8 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
         halt_at_depth = 1
 
     total = 0
-    index = 0
 
-    for task in tasks:
+    for index, task in enumerate(tasks):
         if log_enabled:
             print(
                 f"  -> read source [{time.time() - begin}]", file=log_file, flush=True
@@ -151,8 +150,6 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
             log_file,
         )
         total -= written
-
-        index += 1
 
     _balance(node_catalog, node, halt_at_depth - 1)
 

@@ -286,10 +286,9 @@ def is_ancestor(node_name, ancestor):
 
 
 def is_ancestor_in_list(node_name, ancestors):
-    for ancestor in ancestors:
-        if not ancestor or is_ancestor(node_name, ancestor):
-            return True
-    return False
+    return any(
+        not ancestor or is_ancestor(node_name, ancestor) for ancestor in ancestors
+    )
 
 
 def can_pnts_be_written(node_name, finished_node, input_nodes, active_nodes):
@@ -434,7 +433,7 @@ class _Convert:
         self.classification = classification
 
         # allow str directly if only one input
-        files = [files] if isinstance(files, str) or isinstance(files, Path) else files
+        files = [files] if isinstance(files, (str, Path)) else files
         self.files = [Path(file) for file in files]
 
         self.verbose = verbose
@@ -541,7 +540,7 @@ class _Convert:
             "avg_min": avg_min,
         }
 
-    def get_transformer(self, crs_out: Optional[CRS]) -> Union[Transformer, None]:
+    def get_transformer(self, crs_out: Optional[CRS]) -> Optional[Transformer]:
         if crs_out:
             if self.file_info["crs_in"] is None:
                 raise SrsInMissingException(

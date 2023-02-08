@@ -317,76 +317,73 @@ class Node:
 
         # check if this node should be merged in the parent.
         prune = False  # prune only if the node is a leaf
-        if parent_node is not None and depth > 1:
 
-            # If this child is small enough, merge in the current tile
-            if fth.points_length < 100:
-                parent_pnts_path = node_name_to_path(folder, parent_node.name, ".pnts")
-                parent_tile = TileContentReader.read_file(parent_pnts_path)
-                parent_fth = parent_tile.body.feature_table.header
+        # If this child is small enough, merge in the current tile
+        if parent_node is not None and depth > 1 and fth.points_length < 100:
+            parent_pnts_path = node_name_to_path(folder, parent_node.name, ".pnts")
+            parent_tile = TileContentReader.read_file(parent_pnts_path)
+            parent_fth = parent_tile.body.feature_table.header
 
-                parent_xyz = parent_tile.body.feature_table.body.positions_arr
+            parent_xyz = parent_tile.body.feature_table.body.positions_arr
 
-                if parent_fth.colors != SemanticPoint.NONE:
-                    parent_rgb = parent_tile.body.feature_table.body.colors_arr
-                else:
-                    parent_rgb = np.array([], dtype=np.uint8)
+            if parent_fth.colors != SemanticPoint.NONE:
+                parent_rgb = parent_tile.body.feature_table.body.colors_arr
+            else:
+                parent_rgb = np.array([], dtype=np.uint8)
 
-                if "Classification" in parent_tile.body.batch_table.header.data.keys():
-                    parent_classification = (
-                        parent_tile.body.batch_table.get_binary_property(
-                            "Classification"
-                        )
+            if "Classification" in parent_tile.body.batch_table.header.data:
+                parent_classification = (
+                    parent_tile.body.batch_table.get_binary_property("Classification")
+                )
+            else:
+                parent_classification = np.array([], dtype=np.uint8)
+
+            parent_xyz_float = parent_xyz.view(np.float32).reshape(
+                (parent_fth.points_length, 3)
+            )
+            # update aabb based on real values
+            parent_aabb = np.array(
+                [
+                    np.amin(parent_xyz_float, axis=0),
+                    np.amax(parent_xyz_float, axis=0),
+                ]
+            )
+
+            parent_xyz = np.concatenate((parent_xyz, xyz))
+
+            if fth.colors != SemanticPoint.NONE:
+                parent_rgb = np.concatenate(
+                    (parent_rgb, tile.body.feature_table.body.colors_arr)
+                )
+
+            if "Classification" in tile.body.batch_table.header.data:
+                parent_classification = np.concatenate(
+                    (
+                        parent_classification,
+                        tile.body.batch_table.get_binary_property("Classification"),
                     )
-                else:
-                    parent_classification = np.array([], dtype=np.uint8)
-
-                parent_xyz_float = parent_xyz.view(np.float32).reshape(
-                    (parent_fth.points_length, 3)
-                )
-                # update aabb based on real values
-                parent_aabb = np.array(
-                    [
-                        np.amin(parent_xyz_float, axis=0),
-                        np.amax(parent_xyz_float, axis=0),
-                    ]
                 )
 
-                parent_xyz = np.concatenate((parent_xyz, xyz))
+            # update aabb
+            xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
 
-                if fth.colors != SemanticPoint.NONE:
-                    parent_rgb = np.concatenate(
-                        (parent_rgb, tile.body.feature_table.body.colors_arr)
-                    )
+            parent_aabb[0] = np.amin(
+                [parent_aabb[0], np.min(xyz_float, axis=0)], axis=0
+            )
+            parent_aabb[1] = np.amax(
+                [parent_aabb[1], np.max(xyz_float, axis=0)], axis=0
+            )
 
-                if "Classification" in tile.body.batch_table.header.data.keys():
-                    parent_classification = np.concatenate(
-                        (
-                            parent_classification,
-                            tile.body.batch_table.get_binary_property("Classification"),
-                        )
-                    )
-
-                # update aabb
-                xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
-
-                parent_aabb[0] = np.amin(
-                    [parent_aabb[0], np.min(xyz_float, axis=0)], axis=0
-                )
-                parent_aabb[1] = np.amax(
-                    [parent_aabb[1], np.max(xyz_float, axis=0)], axis=0
-                )
-
-                parent_pnts_path.unlink()
-                points_to_pnts(
-                    parent_node.name,
-                    np.concatenate((parent_xyz, parent_rgb, parent_classification)),
-                    folder,
-                    parent_rgb is not None,
-                    parent_classification is not None,
-                )
-                pnts_path.unlink()
-                prune = True
+            parent_pnts_path.unlink()
+            points_to_pnts(
+                parent_node.name,
+                np.concatenate((parent_xyz, parent_rgb, parent_classification)),
+                folder,
+                parent_rgb is not None,
+                parent_classification is not None,
+            )
+            pnts_path.unlink()
+            prune = True
 
         content: ContentType | None = None
         if not prune:

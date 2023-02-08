@@ -230,31 +230,29 @@ def test_convert_mix_input_crs(tmp_dir):
 
 
 def test_convert_xyz_exception_in_run(tmp_dir):
-    with patch("py3dtiles.reader.xyz_reader.run") as mock_run:
-        with raises(
-            Exception, match="An exception occurred in a worker: Exception in run"
-        ):
-            mock_run.side_effect = Exception("Exception in run")
-            convert(
-                DATA_DIRECTORY / "simple.xyz",
-                outfolder=tmp_dir,
-                crs_in=CRS.from_epsg(3857),
-                crs_out=CRS.from_epsg(4978),
-            )
+    with patch("py3dtiles.reader.xyz_reader.run") as mock_run, raises(
+        Exception, match="An exception occurred in a worker: Exception in run"
+    ):
+        mock_run.side_effect = Exception("Exception in run")
+        convert(
+            DATA_DIRECTORY / "simple.xyz",
+            outfolder=tmp_dir,
+            crs_in=CRS.from_epsg(3857),
+            crs_out=CRS.from_epsg(4978),
+        )
 
 
 def test_convert_las_exception_in_run(tmp_dir):
-    with patch("py3dtiles.reader.las_reader.run") as mock_run:
-        with raises(
-            Exception, match="An exception occurred in a worker: Exception in run"
-        ):
-            mock_run.side_effect = Exception("Exception in run")
-            convert(
-                DATA_DIRECTORY / "with_srs_3857.las",
-                outfolder=tmp_dir,
-                crs_in=CRS.from_epsg(3857),
-                crs_out=CRS.from_epsg(4978),
-            )
+    with patch("py3dtiles.reader.las_reader.run") as mock_run, raises(
+        Exception, match="An exception occurred in a worker: Exception in run"
+    ):
+        mock_run.side_effect = Exception("Exception in run")
+        convert(
+            DATA_DIRECTORY / "with_srs_3857.las",
+            outfolder=tmp_dir,
+            crs_in=CRS.from_epsg(3857),
+            crs_out=CRS.from_epsg(4978),
+        )
 
 
 def test_convert_export_folder_already_exists(tmp_dir):
@@ -295,4 +293,4 @@ def test_convert_many_point_same_location(tmp_dir):
     convert(xyz_path, outfolder=tmp_dir / "tiles")
 
     tileset_path = tmp_dir / "tiles" / "tileset.json"
-    assert 30000 == number_of_points_in_tileset(tileset_path)
+    assert number_of_points_in_tileset(tileset_path) == 30000

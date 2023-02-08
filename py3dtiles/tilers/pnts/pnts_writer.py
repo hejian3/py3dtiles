@@ -1,7 +1,7 @@
 from pathlib import Path
 import pickle
 import struct
-from typing import Tuple, Union
+from typing import Optional, Tuple
 
 import lz4.frame as gzip
 import numpy as np
@@ -20,7 +20,7 @@ from py3dtiles.utils import node_name_to_path, ResponseType
 
 def points_to_pnts(
     name, points, out_folder: Path, include_rgb, include_classification
-) -> Tuple[int, Union[Path, None]]:
+) -> Tuple[int, Optional[Path]]:
     count = int(
         len(points)
         / (3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0))

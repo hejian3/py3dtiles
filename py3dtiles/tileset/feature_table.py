@@ -124,12 +124,10 @@ class FeatureTableHeader:
         return np.frombuffer(json_str.encode("utf-8"), dtype=np.uint8)
 
     def to_json(self):
-        jsond = {}
-
         # length
-        jsond["POINTS_LENGTH"] = self.points_length
+        jsond = {"POINTS_LENGTH": self.points_length}
 
-        # rtc
+        # RTC (Relative To Center)
         if self.rtc:
             jsond["RTC_CENTER"] = self.rtc
 
@@ -265,10 +263,7 @@ class FeatureTableHeader:
             fth.points_length = jsond["POINTS_LENGTH"]
 
         # RTC (Relative To Center)
-        if "RTC_CENTER" in jsond:
-            fth.rtc = jsond["RTC_CENTER"]
-        else:
-            fth.rtc = None
+        fth.rtc = jsond.get("RTC_CENTER", None)
 
         return fth
 

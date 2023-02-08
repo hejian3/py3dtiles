@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -162,7 +162,7 @@ def _aabb_from_3dtiles_bounding_volume(volume, transform=None):
 
 def build_tileset_quadtree(
     out_folder: Path, aabb, tilesets, base_transform, inv_base_transform, name
-) -> Union[TileDictType, None]:
+) -> Optional[TileDictType]:
     insides = [tileset for tileset in tilesets if is_tileset_inside(tileset, aabb)]
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])

@@ -21,8 +21,8 @@ class TestBatchTableHeader(unittest.TestCase):
         bth = BatchTableHeader(input_data)
 
         if (
-            not json.loads(bth.to_array().tobytes().decode("utf-8")).items()
-            == input_data.items()
+            json.loads(bth.to_array().tobytes().decode("utf-8")).items()
+            != input_data.items()
         ):
             self.fail()
 

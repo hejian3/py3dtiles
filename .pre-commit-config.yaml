@@ -33,6 +33,7 @@ repos:
           - flake8-import-order==0.18.2
           - flake8-bugbear==23.1.20
           - flake8-comprehensions==3.10.1
+          - flake8-simplify==0.19.3
 
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v2.40.0
