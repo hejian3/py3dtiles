@@ -86,8 +86,7 @@ class Node:
         else:
             sub_pickle["points"] = self.points  # type: ignore # TODO fix
 
-        d = pickle.dumps(sub_pickle)
-        return d
+        return pickle.dumps(sub_pickle)
 
     def load_from_bytes(self, byt: bytes) -> None:
         sub_pickle = pickle.loads(byt)

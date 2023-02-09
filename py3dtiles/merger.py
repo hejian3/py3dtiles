@@ -239,7 +239,7 @@ def build_tileset_quadtree(
             False,  # TODO: Handle classification in the merging process
         )
 
-        result: TileDictType = {
+        return {
             "children": children,
             "content": {
                 "uri": str(pnts_path.relative_to(out_folder)) if pnts_path else ""
@@ -250,8 +250,6 @@ def build_tileset_quadtree(
                 union_aabb, inv_base_transform
             ),
         }
-
-        return result
 
 
 def extract_content_uris(tileset):

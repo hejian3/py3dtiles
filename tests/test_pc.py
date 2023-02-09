@@ -35,7 +35,7 @@ class TestTileBuilder(unittest.TestCase):
 
         # create features
         features = []
-        for i in range(0, tread.body.feature_table.header.points_length):
+        for i in range(tread.body.feature_table.header.points_length):
             f = tread.body.feature_table.feature(i)
             p = f.positions
             pos = np.array([(p["X"], p["Y"], p["Z"])], dtype=pdt).view("uint8")
@@ -75,7 +75,7 @@ class TestTileBuilder(unittest.TestCase):
 
         # create features
         features = []
-        for i in range(0, tread.body.feature_table.header.points_length):
+        for i in range(tread.body.feature_table.header.points_length):
             f = tread.body.feature_table.feature(i)
             p = f.positions
             c = f.colors

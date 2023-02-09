@@ -19,7 +19,7 @@ class GlTF:
         scene += " " * ((4 - len(scene) % 4) % 4)
 
         padding = np.array(
-            [0 for i in range(0, (4 - len(self.body) % 4) % 4)], dtype=np.uint8
+            [0 for i in range((4 - len(self.body) % 4) % 4)], dtype=np.uint8
         )
 
         length = GlTF.HEADER_LENGTH + (2 * GlTF.CHUNK_HEADER_LENGTH)
@@ -194,7 +194,7 @@ def compute_header(
     # Buffer
     mesh_nb = len(bin_vertices)
     size_vce = []
-    for i in range(0, mesh_nb):
+    for i in range(mesh_nb):
         size_vce.append(len(bin_vertices[i]))
 
     byte_length = 2 * sum(size_vce)
@@ -240,7 +240,7 @@ def compute_header(
 
     # Accessor
     accessors = []
-    for i in range(0, mesh_nb):
+    for i in range(mesh_nb):
         # vertices
         accessors.append(
             {
@@ -293,7 +293,7 @@ def compute_header(
     # Meshes
     meshes = []
     n_attributes = 3 if textured else 2
-    for i in range(0, mesh_nb):
+    for i in range(mesh_nb):
         meshes.append(
             {
                 "primitives": [
@@ -317,7 +317,7 @@ def compute_header(
 
     # Nodes
     nodes = []
-    for i in range(0, mesh_nb):
+    for i in range(mesh_nb):
         nodes.append({"matrix": [float(e) for e in transform], "mesh": i})
 
     # Materials

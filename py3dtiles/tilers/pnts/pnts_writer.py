@@ -78,7 +78,7 @@ def node_to_pnts(name, node, out_folder: Path, include_rgb, include_classificati
 
 def run(sender, data, node_name, folder: Path, write_rgb, write_classification):
     # we can safely write the .pnts file
-    if len(data):
+    if len(data) > 0:
         root = pickle.loads(gzip.decompress(data))
         # print('write ', node_name.decode('ascii'))
         total = 0

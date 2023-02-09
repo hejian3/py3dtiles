@@ -34,7 +34,7 @@ class TriangleSoup:
             multipolygons.append(parse(bytes(additional_wkb)))
 
         triangles_array = [[] for _ in range(len(multipolygons))]
-        for i in range(0, len(multipolygons[0])):
+        for i in range(len(multipolygons[0])):
             polygon = multipolygons[0][i]
             additional_polygons = [mp[i] for mp in multipolygons[1:]]
             triangles = triangulate(polygon, additional_polygons)
@@ -143,17 +143,17 @@ def parse(wkb):
     # print(struct.unpack('I', wkb[14:18])[0])   # num lines
     # print(struct.unpack('I', wkb[18:22])[0])   # num points
     offset = 9
-    for _ in range(0, geom_nb):
+    for _ in range(geom_nb):
         offset += 5  # struct.unpack('bI', wkb[offset:offset + 5])[0]
         # 1 (byteorder), 1003 (Polygon)
         line_nb = struct.unpack(bo + "I", wkb[offset : offset + 4])[0]
         offset += 4
         polygon = []
-        for _ in range(0, line_nb):
+        for _ in range(line_nb):
             point_nb = struct.unpack(bo + "I", wkb[offset : offset + 4])[0]
             offset += 4
             line = []
-            for _ in range(0, point_nb - 1):
+            for _ in range(point_nb - 1):
                 pt = np.array(
                     struct.unpack(bo + pnt_unpack, wkb[offset : offset + pnt_offset]),
                     dtype=np.float32,
@@ -266,7 +266,7 @@ def triangulate(polygon, additional_polygons=None):
 
 
 def unflatten(array, lengths, index):
-    for i in reversed(range(0, len(lengths))):
+    for i in reversed(range(len(lengths))):
         lgth = lengths[i]
         if index >= lgth:
             return array[i + 1][index - lgth]

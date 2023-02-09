@@ -70,7 +70,7 @@ class Node:
 
     def to_tileset_r(self, error):
         (c1, c2) = (self.box.min, self.box.max)
-        center = [(c1[i] + c2[i]) / 2 for i in range(0, 3)]
+        center = [(c1[i] + c2[i]) / 2 for i in range(3)]
         x_axis = [(c2[0] - c1[0]) / 2, 0, 0]
         y_axis = [0, (c2[1] - c1[1]) / 2, 0]
         z_axis = [0, 0, (c2[2] - c1[2]) / 2]
@@ -132,8 +132,8 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
 
     # Create quadtree
     tree = Node()
-    for i in range(0, int(math.ceil(extent_x / max_tile_size))):
-        for j in range(0, int(math.ceil(extent_y / max_tile_size))):
+    for i in range(int(math.ceil(extent_x / max_tile_size))):
+        for j in range(int(math.ceil(extent_y / max_tile_size))):
             tile = tile_extent(extent, max_tile_size, i, j)
 
             geoms = []
@@ -202,8 +202,8 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
 def divide(
     extent, geometries, x_offset, y_offset, tile_size, features_per_tile, parent
 ):
-    for i in range(0, 2):
-        for j in range(0, 2):
+    for i in range(2):
+        for j in range(2):
             tile = tile_extent(extent, tile_size, i, j)
 
             geoms = []

@@ -99,7 +99,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             for _ in range(0, point_count, step):
                 points = np.zeros((step, feature_nb), dtype=np.float32)
 
-                for j in range(0, step):
+                for j in range(step):
                     line = f.readline()
                     if not line:
                         points = np.resize(points, (j, feature_nb))

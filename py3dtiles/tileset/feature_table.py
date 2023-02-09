@@ -18,7 +18,7 @@ class Feature:
             [(self.positions["X"], self.positions["Y"], self.positions["Z"])]
         ).view(np.uint8)[0]
 
-        if len(self.colors):
+        if len(self.colors) > 0:
             col_arr = np.array(
                 [(self.colors["Red"], self.colors["Green"], self.colors["Blue"])]
             ).view(np.uint8)[0]
@@ -278,7 +278,7 @@ class FeatureTableBody:
 
     def to_array(self):
         arr = self.positions_arr
-        if len(self.colors_arr):
+        if len(self.colors_arr) > 0:
             arr = np.concatenate((self.positions_arr, self.colors_arr))
 
         arr = arr.view(np.uint8)
@@ -356,7 +356,7 @@ class FeatureTableBody:
         return self.positions_arr[n * itemsize : (n + 1) * itemsize]
 
     def colors(self, n):
-        if len(self.colors_arr):
+        if len(self.colors_arr) > 0:
             itemsize = self.colors_itemsize
             return self.colors_arr[n * itemsize : (n + 1) * itemsize]
         return []
