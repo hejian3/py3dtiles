@@ -97,8 +97,13 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             colors = np.vstack((red, green, blue)).transpose()
             colors = colors[start_offset : (start_offset + num)]
 
-            # TODO: handle classification in ply
-            classification = np.zeros((len(coords), 1), dtype=np.uint8)
+            if "classification" in ply_vertices:
+                classification = np.array(
+                    ply_vertices["classification"].reshape(-1, 1), dtype=np.uint8
+                )
+            else:
+                classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
+
             queue.send_multipart(
                 [
                     ResponseType.NEW_TASK.value,
