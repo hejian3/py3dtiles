@@ -20,7 +20,9 @@ class NodeCatalog:
     in nodes, instead of storing a full recursive structure.
     """
 
-    def __init__(self, nodes: bytes, name: bytes, octree_metadata: OctreeMetadata) -> None:
+    def __init__(
+        self, nodes: bytes, name: bytes, octree_metadata: OctreeMetadata
+    ) -> None:
         self.nodes: dict[bytes, Node] = {}
         self.root_aabb = octree_metadata.aabb
         self.root_spacing = octree_metadata.spacing

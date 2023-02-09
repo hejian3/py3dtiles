@@ -5,13 +5,12 @@ import numpy as np
 
 from py3dtiles.tileset.content import Pnts
 from py3dtiles.tileset.feature_table import Feature
-from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.tileset.tile_content_reader import read_file
 
 
 class TestTileContentReader(unittest.TestCase):
-
     def test_read(self):
-        tile = TileContentReader().read_file(Path('tests/fixtures/pointCloudRGB.pnts'))
+        tile = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 15176)
@@ -22,25 +21,24 @@ class TestTileContentReader(unittest.TestCase):
 
         feature_table = tile.body.feature_table
         feature = feature_table.feature(0)
-        dcol_res = {'Red': 44, 'Blue': 209, 'Green': 243}
+        dcol_res = {"Red": 44, "Blue": 209, "Green": 243}
         self.assertDictEqual(dcol_res, feature.colors)
 
 
 class TestTileBuilder(unittest.TestCase):
-
     def test_build_without_colors(self):
-        tread = TileContentReader().read_file(Path('tests/fixtures/pointCloudRGB.pnts'))
+        tread = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
         f0_ref = tread.body.feature_table.feature(0).positions
 
         # numpy dtype for positions and colors
-        pdt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])
+        pdt = np.dtype([("X", "<f4"), ("Y", "<f4"), ("Z", "<f4")])
 
         # create features
         features = []
-        for i in range(0, tread.body.feature_table.header.points_length):
+        for i in range(tread.body.feature_table.header.points_length):
             f = tread.body.feature_table.feature(i)
             p = f.positions
-            pos = np.array([(p['X'], p['Y'], p['Z'])], dtype=pdt).view('uint8')
+            pos = np.array([(p["X"], p["Y"], p["Z"])], dtype=pdt).view("uint8")
             newf = Feature.from_array(pdt, pos)
             features.append(newf)
 
@@ -64,26 +62,25 @@ class TestTileBuilder(unittest.TestCase):
         feature_table = t.body.feature_table
         f0 = feature_table.feature(0).positions
 
-        self.assertAlmostEqual(f0_ref['X'], f0['X'])
-        self.assertAlmostEqual(f0_ref['Y'], f0['Y'])
-        self.assertAlmostEqual(f0_ref['Z'], f0['Z'])
+        self.assertAlmostEqual(f0_ref["X"], f0["X"])
+        self.assertAlmostEqual(f0_ref["Y"], f0["Y"])
+        self.assertAlmostEqual(f0_ref["Z"], f0["Z"])
 
     def test_build(self):
-        tread = TileContentReader().read_file(Path('tests/fixtures/pointCloudRGB.pnts'))
+        tread = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
 
         # numpy dtype for positions and colors
-        pdt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])
-        cdt = np.dtype([('Red', 'u1'), ('Green', 'u1'), ('Blue', 'u1')])
+        pdt = np.dtype([("X", "<f4"), ("Y", "<f4"), ("Z", "<f4")])
+        cdt = np.dtype([("Red", "u1"), ("Green", "u1"), ("Blue", "u1")])
 
         # create features
         features = []
-        for i in range(0, tread.body.feature_table.header.points_length):
+        for i in range(tread.body.feature_table.header.points_length):
             f = tread.body.feature_table.feature(i)
             p = f.positions
             c = f.colors
-            pos = np.array([(p['X'], p['Y'], p['Z'])], dtype=pdt).view('uint8')
-            col = np.array([(c['Red'], c['Green'], c['Blue'])],
-                           dtype=cdt).view('uint8')
+            pos = np.array([(p["X"], p["Y"], p["Z"])], dtype=pdt).view("uint8")
+            col = np.array([(c["Red"], c["Green"], c["Blue"])], dtype=cdt).view("uint8")
             newf = Feature.from_array(pdt, pos, cdt, col)
             features.append(newf)
 
@@ -106,7 +103,7 @@ class TestTileBuilder(unittest.TestCase):
 
         feature_table = t.body.feature_table
         feature = feature_table.feature(0)
-        dcol_res = {'Red': 44, 'Blue': 209, 'Green': 243}
+        dcol_res = {"Red": 44, "Blue": 209, "Green": 243}
         self.assertDictEqual(dcol_res, feature.colors)
 
         # t2.save_as("/tmp/py3dtiles_test_build_1.pnts")

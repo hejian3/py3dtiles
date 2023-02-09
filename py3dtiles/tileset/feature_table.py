@@ -14,12 +14,14 @@ class Feature:
         self.colors = {}
 
     def to_array(self):
-        pos_arr = np.array([(self.positions['X'], self.positions['Y'],
-                             self.positions['Z'])]).view(np.uint8)[0]
+        pos_arr = np.array(
+            [(self.positions["X"], self.positions["Y"], self.positions["Z"])]
+        ).view(np.uint8)[0]
 
-        if len(self.colors):
-            col_arr = np.array([(self.colors['Red'], self.colors['Green'],
-                                 self.colors['Blue'])]).view(np.uint8)[0]
+        if len(self.colors) > 0:
+            col_arr = np.array(
+                [(self.colors["Red"], self.colors["Green"], self.colors["Blue"])]
+            ).view(np.uint8)[0]
         else:
             col_arr = np.array([])
 
@@ -29,10 +31,10 @@ class Feature:
     def from_values(x, y, z, red=None, green=None, blue=None):
         f = Feature()
 
-        f.positions = {'X': x, 'Y': y, 'Z': z}
+        f.positions = {"X": x, "Y": y, "Z": z}
 
         if red or green or blue:
-            f.colors = {'Red': red, 'Green': green, 'Blue': blue}
+            f.colors = {"Red": red, "Green": green, "Blue": blue}
         else:
             f.colors = {}
 
@@ -65,7 +67,7 @@ class Feature:
         off = 0
         for d in positions_dtype.names:
             dt = positions_dtype[d]
-            data = np.array(positions[off:off + dt.itemsize]).view(dt)[0]
+            data = np.array(positions[off : off + dt.itemsize]).view(dt)[0]
             off += dt.itemsize
             f.positions[d] = data
 
@@ -75,7 +77,7 @@ class Feature:
             off = 0
             for d in colors_dtype.names:
                 dt = colors_dtype[d]
-                data = np.array(colors[off:off + dt.itemsize]).view(dt)[0]
+                data = np.array(colors[off : off + dt.itemsize]).view(dt)[0]
                 off += dt.itemsize
                 f.colors[d] = data
 
@@ -95,7 +97,6 @@ class SemanticPoint(Enum):
 
 
 class FeatureTableHeader:
-
     def __init__(self):
         # point semantics
         self.positions = SemanticPoint.POSITION
@@ -119,30 +120,28 @@ class FeatureTableHeader:
         json_str = json.dumps(jsond).replace(" ", "")
         n = len(json_str) + 28
         if n % 8 != 0:
-            json_str += ' ' * (8 - n % 8)
-        return np.frombuffer(json_str.encode('utf-8'), dtype=np.uint8)
+            json_str += " " * (8 - n % 8)
+        return np.frombuffer(json_str.encode("utf-8"), dtype=np.uint8)
 
     def to_json(self):
-        jsond = {}
-
         # length
-        jsond['POINTS_LENGTH'] = self.points_length
+        jsond = {"POINTS_LENGTH": self.points_length}
 
-        # rtc
+        # RTC (Relative To Center)
         if self.rtc:
-            jsond['RTC_CENTER'] = self.rtc
+            jsond["RTC_CENTER"] = self.rtc
 
         # positions
-        offset = {'byteOffset': self.positions_offset}
+        offset = {"byteOffset": self.positions_offset}
         if self.positions == SemanticPoint.POSITION:
-            jsond['POSITION'] = offset
+            jsond["POSITION"] = offset
         elif self.positions == SemanticPoint.POSITION_QUANTIZED:
-            jsond['POSITION_QUANTIZED'] = offset
+            jsond["POSITION_QUANTIZED"] = offset
 
         # colors
-        offset = {'byteOffset': self.colors_offset}
+        offset = {"byteOffset": self.colors_offset}
         if self.colors == SemanticPoint.RGB:
-            jsond['RGB'] = offset
+            jsond["RGB"] = offset
 
         return jsond
 
@@ -167,40 +166,45 @@ class FeatureTableHeader:
 
         # search positions
         names = positions_dtype.names
-        if ('X' in names) and ('Y' in names) and ('Z' in names):
-            dtx = positions_dtype['X']
-            dty = positions_dtype['Y']
-            dtz = positions_dtype['Z']
+        if ("X" in names) and ("Y" in names) and ("Z" in names):
+            dtx = positions_dtype["X"]
+            dty = positions_dtype["Y"]
+            dtz = positions_dtype["Z"]
             fth.positions_offset = 0
             if dtx == np.float32 and dty == np.float32 and dtz == np.float32:
                 fth.positions = SemanticPoint.POSITION
-                fth.positions_dtype = np.dtype([('X', np.float32),
-                                                ('Y', np.float32),
-                                                ('Z', np.float32)])
+                fth.positions_dtype = np.dtype(
+                    [("X", np.float32), ("Y", np.float32), ("Z", np.float32)]
+                )
             elif dtx == np.uint16 and dty == np.uint16 and dtz == np.uint16:
                 fth.positions = SemanticPoint.POSITION_QUANTIZED
-                fth.positions_dtype = np.dtype([('X', np.uint16),
-                                                ('Y', np.uint16),
-                                                ('Z', np.uint16)])
+                fth.positions_dtype = np.dtype(
+                    [("X", np.uint16), ("Y", np.uint16), ("Z", np.uint16)]
+                )
 
         # search colors
         if colors_dtype is not None and fth.positions_dtype:
             names = colors_dtype.names
-            if ('Red' in names) and ('Green' in names) and ('Blue' in names):
-                if 'Alpha' in names:
+            if ("Red" in names) and ("Green" in names) and ("Blue" in names):
+                if "Alpha" in names:
                     fth.colors = SemanticPoint.RGBA
-                    fth.colors_dtype = np.dtype([('Red', np.uint8),
-                                                 ('Green', np.uint8),
-                                                 ('Blue', np.uint8),
-                                                 ('Alpha', np.uint8)])
+                    fth.colors_dtype = np.dtype(
+                        [
+                            ("Red", np.uint8),
+                            ("Green", np.uint8),
+                            ("Blue", np.uint8),
+                            ("Alpha", np.uint8),
+                        ]
+                    )
                 else:
                     fth.colors = SemanticPoint.RGB
-                    fth.colors_dtype = np.dtype([('Red', np.uint8),
-                                                 ('Green', np.uint8),
-                                                 ('Blue', np.uint8)])
+                    fth.colors_dtype = np.dtype(
+                        [("Red", np.uint8), ("Green", np.uint8), ("Blue", np.uint8)]
+                    )
 
-                fth.colors_offset = (fth.positions_offset
-                                     + nb_points * fth.positions_dtype.itemsize)
+                fth.colors_offset = (
+                    fth.positions_offset + nb_points * fth.positions_dtype.itemsize
+                )
         else:
             fth.colors = SemanticPoint.NONE
             fth.colors_dtype = None
@@ -221,22 +225,22 @@ class FeatureTableHeader:
         fth : FeatureTableHeader
         """
 
-        jsond = json.loads(array.tobytes().decode('utf-8'))
+        jsond = json.loads(array.tobytes().decode("utf-8"))
         fth = FeatureTableHeader()
 
         # search position
         if "POSITION" in jsond:
             fth.positions = SemanticPoint.POSITION
-            fth.positions_offset = jsond['POSITION']['byteOffset']
-            fth.positions_dtype = np.dtype([('X', np.float32),
-                                            ('Y', np.float32),
-                                            ('Z', np.float32)])
+            fth.positions_offset = jsond["POSITION"]["byteOffset"]
+            fth.positions_dtype = np.dtype(
+                [("X", np.float32), ("Y", np.float32), ("Z", np.float32)]
+            )
         elif "POSITION_QUANTIZED" in jsond:
             fth.positions = SemanticPoint.POSITION_QUANTIZED
-            fth.positions_offset = jsond['POSITION_QUANTIZED']['byteOffset']
-            fth.positions_dtype = np.dtype([('X', np.uint16),
-                                            ('Y', np.uint16),
-                                            ('Z', np.uint16)])
+            fth.positions_offset = jsond["POSITION_QUANTIZED"]["byteOffset"]
+            fth.positions_dtype = np.dtype(
+                [("X", np.uint16), ("Y", np.uint16), ("Z", np.uint16)]
+            )
         else:
             fth.positions = SemanticPoint.NONE
             fth.positions_offset = 0
@@ -245,10 +249,10 @@ class FeatureTableHeader:
         # search colors
         if "RGB" in jsond:
             fth.colors = SemanticPoint.RGB
-            fth.colors_offset = jsond['RGB']['byteOffset']
-            fth.colors_dtype = np.dtype([('Red', np.uint8),
-                                         ('Green', np.uint8),
-                                         ('Blue', np.uint8)])
+            fth.colors_offset = jsond["RGB"]["byteOffset"]
+            fth.colors_dtype = np.dtype(
+                [("Red", np.uint8), ("Green", np.uint8), ("Blue", np.uint8)]
+            )
         else:
             fth.colors = SemanticPoint.NONE
             fth.colors_offset = 0
@@ -259,16 +263,12 @@ class FeatureTableHeader:
             fth.points_length = jsond["POINTS_LENGTH"]
 
         # RTC (Relative To Center)
-        if "RTC_CENTER" in jsond:
-            fth.rtc = jsond['RTC_CENTER']
-        else:
-            fth.rtc = None
+        fth.rtc = jsond.get("RTC_CENTER", None)
 
         return fth
 
 
 class FeatureTableBody:
-
     def __init__(self):
         self.positions_arr = np.array([], dtype=np.uint8)
         self.positions_itemsize = 0
@@ -278,28 +278,31 @@ class FeatureTableBody:
 
     def to_array(self):
         arr = self.positions_arr
-        if len(self.colors_arr):
+        if len(self.colors_arr) > 0:
             arr = np.concatenate((self.positions_arr, self.colors_arr))
 
         arr = arr.view(np.uint8)
 
         if len(arr) % 8 != 0:
-            padding_str = ' ' * (8 - len(arr) % 8)
-            arr = np.concatenate((
-                arr,
-                np.frombuffer(padding_str.encode('utf-8'), dtype=np.uint8)
-            ))
+            padding_str = " " * (8 - len(arr) % 8)
+            arr = np.concatenate(
+                (arr, np.frombuffer(padding_str.encode("utf-8"), dtype=np.uint8))
+            )
 
         return arr
 
     @staticmethod
-    def from_features(fth: FeatureTableHeader, features: List[Feature]) -> "FeatureTableBody":
+    def from_features(
+        fth: FeatureTableHeader, features: List[Feature]
+    ) -> "FeatureTableBody":
 
         b = FeatureTableBody()
 
         # extract positions
         if fth.positions_dtype is None:
-            raise ValueError("The FeatureTableHeader `fth` should have an initialized positions_dtype attribute.")
+            raise ValueError(
+                "The FeatureTableHeader `fth` should have an initialized positions_dtype attribute."
+            )
         b.positions_itemsize = fth.positions_dtype.itemsize
         b.positions_arr = np.array([], dtype=np.uint8)
 
@@ -336,31 +339,30 @@ class FeatureTableBody:
         # extract positions
         pos_size = fth.positions_dtype.itemsize
         pos_offset = fth.positions_offset
-        b.positions_arr = array[pos_offset:pos_offset + nb_points * pos_size]
+        b.positions_arr = array[pos_offset : pos_offset + nb_points * pos_size]
         b.positions_itemsize = pos_size
 
         # extract colors
         if fth.colors != SemanticPoint.NONE:
             col_size = fth.colors_dtype.itemsize
             col_offset = fth.colors_offset
-            b.colors_arr = array[col_offset:col_offset + col_size * nb_points]
+            b.colors_arr = array[col_offset : col_offset + col_size * nb_points]
             b.colors_itemsize = col_size
 
         return b
 
     def positions(self, n):
         itemsize = self.positions_itemsize
-        return self.positions_arr[n * itemsize:(n + 1) * itemsize]
+        return self.positions_arr[n * itemsize : (n + 1) * itemsize]
 
     def colors(self, n):
-        if len(self.colors_arr):
+        if len(self.colors_arr) > 0:
             itemsize = self.colors_itemsize
-            return self.colors_arr[n * itemsize:(n + 1) * itemsize]
+            return self.colors_arr[n * itemsize : (n + 1) * itemsize]
         return []
 
 
 class FeatureTable:
-
     def __init__(self):
         self.header = FeatureTableHeader()
         self.body = FeatureTableBody()
@@ -382,7 +384,7 @@ class FeatureTable:
 
         # build feature table body
         ftb_len = th.ft_bin_byte_length
-        ftb_arr = array[fth_len:fth_len + ftb_len]
+        ftb_arr = array[fth_len : fth_len + ftb_len]
         ftb = FeatureTableBody.from_array(fth, ftb_arr)
 
         # build feature table
@@ -393,7 +395,9 @@ class FeatureTable:
         return ft
 
     @staticmethod
-    def from_features(pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: List[Feature]) -> "FeatureTable":
+    def from_features(
+        pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: List[Feature]
+    ) -> "FeatureTable":
         """
         pdtype : Numpy description for positions.
         cdtype : Numpy description for colors.
@@ -411,5 +415,6 @@ class FeatureTable:
     def feature(self, n):
         pos = self.body.positions(n)
         col = self.body.colors(n)
-        return Feature.from_array(self.header.positions_dtype, pos,
-                                  self.header.colors_dtype, col)
+        return Feature.from_array(
+            self.header.positions_dtype, pos, self.header.colors_dtype, col
+        )

@@ -6,46 +6,42 @@ from setuptools import find_packages, setup
 here = os.path.abspath(os.path.dirname(__file__))
 
 requirements = (
-    'cython',
-    'earcut==1.1.5',
-    'laspy>=2.0,<3.0',
-    'lz4',
-    'numba',
-    'numpy>=1.20.0,<1.23',
-    'plyfile',
-    'psutil',
-    'psycopg2-binary',
-    'pyproj',
-    'pyzmq',
+    "cython",
+    "earcut==1.1.5",
+    "laspy>=2.0,<3.0",
+    "lz4",
+    "numba",
+    "numpy>=1.20.0,<1.23",
+    "plyfile",
+    "psutil",
+    "psycopg2-binary",
+    "pyproj",
+    "pyzmq",
 )
 
 dev_requirements = (
-    'commitizen',
-    'line_profiler',
-    'pre-commit',
-    'pytest',
-    'pytest-benchmark',
-    'pytest-cov',
-    'mypy',
-    'typing_extensions',
+    "commitizen",
+    "line_profiler",
+    "pre-commit",
+    "pytest",
+    "pytest-benchmark",
+    "pytest-cov",
+    "mypy",
+    "typing_extensions",
 )
 
 doc_requirements = (
-    'sphinx',
-    'sphinx-multiversion',
-    'sphinx_rtd_theme',
+    "sphinx",
+    "sphinx-multiversion",
+    "sphinx_rtd_theme",
 )
 
 packaging_requirements = sum(
     (
         dev_requirements,
-        (
-            'build',
-            'twine',
-            'wheel'
-        ),
+        ("build", "twine", "wheel"),
     ),
-    ()
+    (),
 )
 
 
@@ -63,39 +59,39 @@ def find_version(*file_paths):
 
     # The version line must have the form
     # __version__ = 'ver'
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if version_match:
         return version_match.group(1)
-    raise RuntimeError("Unable to find version string. "
-                       "Should be at the first line of __init__.py.")
+    raise RuntimeError(
+        "Unable to find version string. " "Should be at the first line of __init__.py."
+    )
 
 
 setup(
-    name='py3dtiles',
-    version=find_version('py3dtiles', '__init__.py'),
+    name="py3dtiles",
+    version=find_version("py3dtiles", "__init__.py"),
     description="Python module for 3D tiles format",
-    long_description=read('README.rst'),
-    url='https://gitlab.com/Oslandia/py3dtiles',
-    author='Oslandia',
-    author_email='contact@oslandia.com',
-    license='Apache License Version 2.0',
-    python_requires='>=3.8',
+    long_description=read("README.rst"),
+    url="https://gitlab.com/Oslandia/py3dtiles",
+    author="Oslandia",
+    author_email="contact@oslandia.com",
+    license="Apache License Version 2.0",
+    python_requires=">=3.8",
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.8',
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Programming Language :: Python :: 3.8",
     ],
     packages=find_packages(),
     install_requires=requirements,
     test_suite="tests",
     extras_require={
-        'dev': dev_requirements,
-        'doc': doc_requirements,
-        'pack': packaging_requirements,
+        "dev": dev_requirements,
+        "doc": doc_requirements,
+        "pack": packaging_requirements,
     },
     entry_points={
-        'console_scripts': ['py3dtiles=py3dtiles.command_line:main'],
+        "console_scripts": ["py3dtiles=py3dtiles.command_line:main"],
     },
-    zip_safe=False  # zip packaging conflicts with Numba cache (#25)
+    zip_safe=False,  # zip packaging conflicts with Numba cache (#25)
 )

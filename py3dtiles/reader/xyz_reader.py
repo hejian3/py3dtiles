@@ -8,7 +8,8 @@ import numpy as np
 
 from py3dtiles.utils import ResponseType
 
-def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
+
+def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> dict:
     aabb = None
     count = 0
     seek_values = []
@@ -33,9 +34,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
                 seek_values += [offset]
 
             count += points.shape[0]
-            batch_aabb = np.array([
-                np.min(points, axis=0), np.max(points, axis=0)
-            ])
+            batch_aabb = np.array([np.min(points, axis=0), np.max(points, axis=0)])
 
             # Update aabb
             if aabb is None:
@@ -50,15 +49,15 @@ def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
         _1M = min(count, 1_000_000)
         steps = math.ceil(count / _1M)
         if steps != len(seek_values):
-            raise ValueError("the size of seek_values should be equal to steps,"
-                             f"currently steps = {steps} and len(seek_values) = {len(seek_values)}")
+            raise ValueError(
+                "the size of seek_values should be equal to steps,"
+                f"currently steps = {steps} and len(seek_values) = {len(seek_values)}"
+            )
         portions = [
             (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
         ]
 
-        pointcloud_file_portions = [
-            (str(path), p) for p in portions
-        ]
+        pointcloud_file_portions = [(str(path), p) for p in portions]
 
     if aabb is None:
         raise ValueError(f"There is no point in the file {path}")
@@ -71,6 +70,7 @@ def get_metadata(path: Path, color_scale=None, fraction: int =100) -> dict:
         "point_count": point_count,
         "avg_min": aabb[0],
     }
+
 
 def run(filename: str, offset_scale, portion, queue, transformer):
     """
@@ -99,12 +99,14 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             for _ in range(0, point_count, step):
                 points = np.zeros((step, feature_nb), dtype=np.float32)
 
-                for j in range(0, step):
+                for j in range(step):
                     line = f.readline()
                     if not line:
                         points = np.resize(points, (j, feature_nb))
                         break
-                    line_features: List[float | None] = [float(s) for s in line.split(" ")]
+                    line_features: List[float | None] = [
+                        float(s) for s in line.split(" ")
+                    ]
                     if len(line_features) == 3:
                         line_features += [None] * 4  # Insert intensity and RGB
                     elif len(line_features) == 4:
@@ -139,7 +141,13 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                     [
                         ResponseType.NEW_TASK.value,
                         b"",
-                        pickle.dumps({"xyz": coords, "rgb": colors, "classification": classification}),
+                        pickle.dumps(
+                            {
+                                "xyz": coords,
+                                "rgb": colors,
+                                "classification": classification,
+                            }
+                        ),
                         struct.pack(">I", len(coords)),
                     ],
                     copy=False,

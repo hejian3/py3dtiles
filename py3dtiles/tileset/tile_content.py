@@ -25,7 +25,7 @@ class TileContent:
 
     def save_as(self, path: Path):
         tile_arr = self.to_array()
-        with path.open('bw') as f:
+        with path.open("bw") as f:
             f.write(bytes(tile_arr))
 
     def sync(self):
@@ -52,15 +52,19 @@ class TileContentHeader(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_array(array: npt.NDArray) -> TileContentHeader: ...
+    def from_array(array: npt.NDArray) -> TileContentHeader:
+        ...
 
     @abstractmethod
-    def to_array(self) -> npt.NDArray: ...
+    def to_array(self) -> npt.NDArray:
+        ...
 
     @abstractmethod
-    def sync(self, body) -> None: ...
+    def sync(self, body) -> None:
+        ...
 
 
 class TileContentBody(ABC):
     @abstractmethod
-    def to_array(self) -> npt.NDArray: ...
+    def to_array(self) -> npt.NDArray:
+        ...

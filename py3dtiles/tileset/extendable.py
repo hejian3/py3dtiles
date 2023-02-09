@@ -17,7 +17,7 @@ class Extendable:
 
     def add_extension(self, extension: BaseExtension) -> None:
         if not self.has_extensions():
-            self._extensions = dict()
+            self._extensions = {}
         self._extensions[extension.name] = extension
 
     def has_extensions(self) -> bool:
@@ -25,12 +25,12 @@ class Extendable:
 
     def get_extensions(self) -> list[BaseExtension]:
         if not self.has_extensions():
-            return list()
+            return []
         return list(self._extensions.values())
 
     def get_extension(self, extension_name: str) -> BaseExtension:
         if not self.has_extensions():
-            raise AttributeError('No extension present.')
+            raise AttributeError("No extension present.")
         if extension_name not in self._extensions:
-            raise ValueError(f'No extension with name {extension_name}.')
+            raise ValueError(f"No extension with name {extension_name}.")
         return self._extensions[extension_name]

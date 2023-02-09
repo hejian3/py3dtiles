@@ -11,8 +11,7 @@ from py3dtiles.utils import ResponseType
 
 
 def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str, Any]:
-    """Get metadata in case of a input ply file.
-    """
+    """Get metadata in case of a input ply file."""
     ply_point_cloud = PlyData.read(path)
     if "vertex" not in [e.name for e in ply_point_cloud.elements]:
         raise KeyError(
@@ -25,18 +24,20 @@ def get_metadata(path: Path, color_scale=None, fraction: int = 100) -> Dict[str,
         raise KeyError(
             "At least one of the basic coordinate feature (x, y, z) is missing in the input file."
         )
-    data = np.array([ply_vertices["x"], ply_vertices["y"], ply_vertices["z"]]).transpose()
+    data = np.array(
+        [ply_vertices["x"], ply_vertices["y"], ply_vertices["z"]]
+    ).transpose()
     aabb = np.min(data, axis=0), np.max(data, axis=0)
 
     pointcloud_file_portions = [(str(path), (0, point_count, point_count))]
 
     return {
-        'portions': pointcloud_file_portions,
-        'aabb': aabb,
-        'color_scale': color_scale,
-        'srs_in': None,
-        'point_count': point_count,
-        'avg_min': aabb[0],
+        "portions": pointcloud_file_portions,
+        "aabb": aabb,
+        "color_scale": color_scale,
+        "srs_in": None,
+        "point_count": point_count,
+        "avg_min": aabb[0],
     }
 
 
@@ -50,16 +51,16 @@ def run(filename: str, offset_scale, portion, queue, transformer):
 
         point_count = portion[1] - portion[0]
         step = min(point_count, max(point_count // 10, 100_000))
-        indices = [i for i in range(math.ceil(point_count / step))]
+        indices = list(range(math.ceil(point_count / step)))
         color_scale = offset_scale[3]
 
         for index in indices:
             start_offset = portion[0] + index * step
             num = min(step, portion[1] - start_offset)
 
-            x = ply_vertices["x"][start_offset:(start_offset + num)]
-            y = ply_vertices["y"][start_offset:(start_offset + num)]
-            z = ply_vertices["z"][start_offset:(start_offset + num)]
+            x = ply_vertices["x"][start_offset : (start_offset + num)]
+            y = ply_vertices["y"][start_offset : (start_offset + num)]
+            z = ply_vertices["z"][start_offset : (start_offset + num)]
             if transformer:
                 x, y, z = transformer.transform(x, y, z)
 
@@ -77,7 +78,7 @@ def run(filename: str, offset_scale, portion, queue, transformer):
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors
-            if 'red' in ply_vertices:
+            if "red" in ply_vertices:
                 red = ply_vertices["red"]
                 green = ply_vertices["green"]
                 blue = ply_vertices["blue"]
@@ -94,20 +95,24 @@ def run(filename: str, offset_scale, portion, queue, transformer):
                 blue = (blue * color_scale).astype(np.uint8)
 
             colors = np.vstack((red, green, blue)).transpose()
-            colors = colors[start_offset:(start_offset + num)]
+            colors = colors[start_offset : (start_offset + num)]
 
             # TODO: handle classification in ply
             classification = np.zeros((len(coords), 1), dtype=np.uint8)
             queue.send_multipart(
                 [
                     ResponseType.NEW_TASK.value,
-                    b'',
-                    pickle.dumps({'xyz': coords, 'rgb': colors, "classification": classification}),
-                    struct.pack('>I', len(coords))
-                ], copy=False)
+                    b"",
+                    pickle.dumps(
+                        {"xyz": coords, "rgb": colors, "classification": classification}
+                    ),
+                    struct.pack(">I", len(coords)),
+                ],
+                copy=False,
+            )
 
         queue.send_multipart([ResponseType.READ.value])
 
     except Exception as e:
-        print(f'Exception while reading points from ply file {filename}')
+        print(f"Exception while reading points from ply file {filename}")
         raise e

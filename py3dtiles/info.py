@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from py3dtiles.tileset.tile_content import TileContent
-from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.tileset.tile_content_reader import read_file
 
 
 def print_pnts_info(tile: TileContent):
@@ -64,7 +64,7 @@ def print_b3dm_info(tile: TileContent):
 
 def main(args):
     try:
-        tile = TileContentReader.read_file(args.file)
+        tile = read_file(args.file)
     except ValueError as e:
         print(f"Error when reading the file {args.file}")
         raise e
@@ -81,8 +81,10 @@ def main(args):
 
 def init_parser(subparser):
     # arg parse
-    parser = subparser.add_parser('info', help='Extract information from a 3DTiles file')
+    parser = subparser.add_parser(
+        "info", help="Extract information from a 3DTiles file"
+    )
 
-    parser.add_argument('file', type=Path)
+    parser.add_argument("file", type=Path)
 
     return parser
