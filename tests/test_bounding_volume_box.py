@@ -6,11 +6,20 @@ from numpy.testing import assert_array_equal
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
 
+# fmt: off
+DUMMY_MATRIX = [
+    1, 2, 3, 4,
+    5, 6, 7, 8,
+    9, 10, 11, 12,
+]
+# fmt: on
+
+
 class TestBoundingVolumeBox(unittest.TestCase):
     @classmethod
     def build_box_sample(cls):
         bounding_volume_box = BoundingVolumeBox()
-        bounding_volume_box.set_from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+        bounding_volume_box.set_from_list(DUMMY_MATRIX)
         return bounding_volume_box
 
     def test_constructor(self):
@@ -19,9 +28,8 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
     def test_set_from_list(self):
         bounding_volume_box = BoundingVolumeBox()
-        bounding_volume_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        bounding_volume_box.set_from_list(bounding_volume_list)
-        assert_array_equal(bounding_volume_box._box, np.array(bounding_volume_list))
+        bounding_volume_box.set_from_list(DUMMY_MATRIX)
+        assert_array_equal(bounding_volume_box._box, np.array(DUMMY_MATRIX))
 
     def test_set_from_invalid_list(self):
         bounding_volume_box = BoundingVolumeBox()
@@ -33,26 +41,22 @@ class TestBoundingVolumeBox(unittest.TestCase):
         self.assertIs(bounding_volume_box._box, None)
 
         # Too small list
-        bounding_volume_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_list(bounding_volume_list)
+            bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1])
         self.assertIs(bounding_volume_box._box, None)
 
         # Too long list
-        bounding_volume_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
         with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_list(bounding_volume_list)
+            bounding_volume_box.set_from_list(DUMMY_MATRIX + [13])
         self.assertIs(bounding_volume_box._box, None)
 
         # Not only number
-        bounding_volume_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, "a"]
         with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_list(bounding_volume_list)
+            bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1] + ["a"])
         self.assertIs(bounding_volume_box._box, None)
 
-        bounding_volume_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, [1]]
         with self.assertRaises(ValueError):
-            bounding_volume_box.set_from_list(bounding_volume_list)
+            bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1] + [[1]])
         self.assertIs(bounding_volume_box._box, None)
 
     def test_set_from_points(self):
@@ -86,37 +90,46 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
         bounding_volume_box.translate(np.array([-1, -2, -3]))
         # Should move only the center
-        assert_array_equal(
-            bounding_volume_box._box, [0, 0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        )
+        # fmt: off
+        expected_result = [
+            0, 0, 0, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+        ]
+        # fmt: on
+        assert_array_equal(bounding_volume_box._box, expected_result)
 
     def test_transform(self):
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()
 
         # Assert box hasn't change after transformation with identity matrix
-        bounding_volume_box.transform(
-            np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
-        )
-        assert_array_equal(
-            bounding_volume_box._box, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        )
+        transformer = np.identity(4).reshape(-1)
+        bounding_volume_box.transform(transformer)
+        assert_array_equal(bounding_volume_box._box, DUMMY_MATRIX)
 
         # Assert box is translated by [10, 10, 10] on X,Y, Z axis
-        bounding_volume_box.transform(
-            np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 10, 10, 1])
-        )
-        assert_array_equal(
-            bounding_volume_box._box, [11, 12, 13, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        )
+        transformer[12:15] = 10
+        bounding_volume_box.transform(transformer)
+        # fmt: off
+        expected_result = [
+            11, 12, 13, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+        ]
+        # fmt: on
+        assert_array_equal(bounding_volume_box._box, expected_result)
 
         # Assert box is reversed
-        bounding_volume_box.transform(
-            np.array([-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1])
-        )
-        assert_array_equal(
-            bounding_volume_box._box,
-            [-11, -12, -13, -4, -5, -6, -7, -8, -9, -10, -11, -12],
-        )
+        transformer = -np.identity(4).reshape(-1)
+        bounding_volume_box.transform(transformer)
+        # fmt: off
+        expected_result = [
+            -11, -12, -13, -4,
+            -5, -6, -7, -8,
+            -9, -10, -11, -12,
+        ]
+        # fmt: on
+        assert_array_equal(bounding_volume_box._box, expected_result)
 
     def test_get_corners(self):
         bounding_volume_box = BoundingVolumeBox()
@@ -148,7 +161,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
         self.assertDictEqual(
             TestBoundingVolumeBox.build_box_sample().to_dict(),
-            {"box": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]},
+            {"box": DUMMY_MATRIX},
         )
 
 
