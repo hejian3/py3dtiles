@@ -34,7 +34,7 @@ from py3dtiles.tilers.node import node_process
 from py3dtiles.tilers.node import SharedNodeStore
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
-from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.tileset.tile_content_reader import read_file
 from py3dtiles.utils import (
     CommandType,
     compute_spacing,
@@ -904,7 +904,7 @@ class _Convert:
                 self.out_folder, str(child).encode("ascii"), ".pnts"
             )
             if tile_path.exists():
-                tile_content = TileContentReader.read_file(tile_path)
+                tile_content = read_file(tile_path)
 
                 fth = tile_content.body.feature_table.header
                 xyz = tile_content.body.feature_table.body.positions_arr.view(

@@ -12,7 +12,7 @@ import numpy.typing as npt
 from py3dtiles.tilers.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.feature_table import SemanticPoint
-from py3dtiles.tileset.utils import TileContentReader
+from py3dtiles.tileset.tile_content_reader import read_file
 from py3dtiles.typing import BoundingVolumeBoxDictType, ContentType, TileDictType
 from py3dtiles.utils import (
     aabb_size_to_subdivision_type,
@@ -310,7 +310,7 @@ class Node:
             ]
 
         pnts_path = node_name_to_path(folder, self.name, ".pnts")
-        tile = TileContentReader.read_file(pnts_path)
+        tile = read_file(pnts_path)
         fth = tile.body.feature_table.header
         xyz = tile.body.feature_table.body.positions_arr
 
@@ -320,7 +320,7 @@ class Node:
         # If this child is small enough, merge in the current tile
         if parent_node is not None and depth > 1 and fth.points_length < 100:
             parent_pnts_path = node_name_to_path(folder, parent_node.name, ".pnts")
-            parent_tile = TileContentReader.read_file(parent_pnts_path)
+            parent_tile = read_file(parent_pnts_path)
             parent_fth = parent_tile.body.feature_table.header
 
             parent_xyz = parent_tile.body.feature_table.body.positions_arr
