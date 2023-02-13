@@ -72,6 +72,7 @@ setup(
     version=find_version("py3dtiles", "__init__.py"),
     description="Python module for 3D tiles format",
     long_description=read("README.rst"),
+    long_description_content_type="text/x-rst",
     url="https://gitlab.com/Oslandia/py3dtiles",
     author="Oslandia",
     author_email="contact@oslandia.com",
