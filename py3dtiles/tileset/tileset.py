@@ -78,6 +78,7 @@ class TileSet(Extendable):
         # Tile's content (set as their respective TileContent uri) must be
         # specified:
         all_tiles = self.root_tile.get_all_children()
+        all_tiles.append(self.root_tile)
         for index, tile in enumerate(all_tiles):
             tile.content_uri = Path("tiles") / f"{index}.b3dm"
 
@@ -88,15 +89,14 @@ class TileSet(Extendable):
         for tile in all_tiles:
             tile.write_content(directory)
 
-    def write_as_json(self, directory: Path) -> None:
+    def write_as_json(self, tileset_path: Path) -> None:
         """
         Write the tileset as a JSON file.
-        :param directory: the target directory name
+        :param tileset_path: the path where the tileset will be written
         """
         # Make sure the TileSet is aligned with its children Tiles.
         self.root_tile.sync_bounding_volume_with_children()
 
-        tileset_path = directory / "tileset.json"
         with tileset_path.open("w") as f:
             f.write(self.to_json())
 
