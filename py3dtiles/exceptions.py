@@ -22,3 +22,15 @@ class SrsInMixinException(Py3dtilesException):
     """
     This exception will be thrown when among all input files, there is a mix of input srs.
     """
+
+
+class BoundingVolumeMissingException(Py3dtilesException):
+    """
+    This exception will be thrown when a bounding volume is needed but not present.
+    """
+
+
+class NoTileContentException(Py3dtilesException):
+    """
+    This exception will be thrown when tile should have a content (TileContent or TileSet) but there isn't.
+    """
