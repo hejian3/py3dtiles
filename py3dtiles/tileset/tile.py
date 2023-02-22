@@ -26,6 +26,7 @@ class Tile(Extendable):
         self,
         geometric_error: float = 500,
         bounding_volume: BoundingVolume | None = None,
+        transform: npt.NDArray[np.float64] = DEFAULT_TRANSFORMATION,
         refine_mode: RefineType = "ADD",
         content_uri: Path | None = None,
     ) -> None:
@@ -38,7 +39,7 @@ class Tile(Extendable):
         self.content_uri: Path | None = content_uri
         self.children: list[Tile] = []
         # Some possible valid properties left un-delt with viewerRequestVolume
-        self.transform: npt.NDArray[np.float64] = DEFAULT_TRANSFORMATION
+        self.transform = transform
 
     @classmethod
     def from_dict(cls, tile_dict: TileDictType) -> Tile:
