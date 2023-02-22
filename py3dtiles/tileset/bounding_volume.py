@@ -31,11 +31,11 @@ class BoundingVolume(ABC, Extendable):
         return False
 
     @abstractmethod
-    def to_dict(self) -> BoundingVolumeDictType:
+    def get_center(self) -> npt.NDArray[np.float64]:
         ...
 
     @abstractmethod
-    def sync_with_children(self, owner: Tile) -> None:
+    def translate(self, offset: npt.NDArray[np.float64]) -> None:
         ...
 
     @abstractmethod
@@ -44,4 +44,12 @@ class BoundingVolume(ABC, Extendable):
 
     @abstractmethod
     def add(self, other: BoundingVolume) -> None:
+        ...
+
+    @abstractmethod
+    def sync_with_children(self, owner: Tile) -> None:
+        ...
+
+    @abstractmethod
+    def to_dict(self) -> BoundingVolumeDictType:
         ...
