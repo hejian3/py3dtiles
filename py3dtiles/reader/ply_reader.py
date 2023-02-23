@@ -5,7 +5,7 @@ import struct
 from typing import Any, Dict
 
 import numpy as np
-from plyfile import PlyData
+from plyfile import PlyData, PlyElement
 
 from py3dtiles.utils import ResponseType
 
@@ -121,3 +121,25 @@ def run(filename: str, offset_scale, portion, queue, transformer):
     except Exception as e:
         print(f"Exception while reading points from ply file {filename}")
         raise e
+
+
+def create_plydata_with_renamed_property(
+    plydata: PlyData, old_property_name: str, new_property_name: str
+) -> PlyData:
+    """Create a new plyfile.PlyData object on the model of the one provided as input, with a modified
+    feature name.
+
+    This function may be useful for handling classification feature name in .ply files, knowing
+    that this feature is not formalized.
+
+    """
+    ply_data = plydata["vertex"].data
+    copied_data = ply_data.copy()
+    ptype = np.dtype(
+        [
+            (new_property_name, t[1]) if t[0] == old_property_name else t
+            for t in ply_data.dtype.descr
+        ]
+    )
+    pelement = PlyElement.describe(data=copied_data.astype(ptype), name="vertex")
+    return PlyData(elements=[pelement])

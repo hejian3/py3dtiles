@@ -5,11 +5,14 @@ from unittest.mock import patch
 
 import laspy
 import numpy as np
+import plyfile
 from pyproj import CRS
 from pytest import fixture, raises
 
 from py3dtiles.convert import convert
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
+from py3dtiles.reader.ply_reader import create_plydata_with_renamed_property
+from py3dtiles.tileset import tile_content_reader
 from py3dtiles.tileset.utils import number_of_points_in_tileset
 
 DATA_DIRECTORY = Path(__file__).parent / "fixtures"
@@ -144,6 +147,61 @@ def test_convert_ply(tmp_dir):
     expecting_box = [4.5437, 5.5984, 1.2002, 4.5437, 0, 0, 0, 5.5984, 0, 0, 0, 1.1681]
     box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
     assert box == expecting_box
+
+
+def test_convert_ply_with_wrong_classification(tmp_dir):
+    # Buggy feature name, classification is lost.
+    convert(
+        DATA_DIRECTORY / "simple.ply",
+        outfolder=tmp_dir,
+        jobs=1,
+        classification=True,
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    for py3dt_file in tmp_dir.iterdir():
+        if py3dt_file.suffix != ".pnts":
+            continue
+        tile_content = tile_content_reader.read_file(py3dt_file)
+        assert "Classification" in tile_content.body.batch_table.header.data
+        assert np.array_equal(
+            np.unique(tile_content.body.batch_table.body.data[0]),
+            np.array([0], dtype=np.uint8),  # classification is lost
+        )
+
+
+def test_convert_ply_with_good_classification(tmp_dir):
+    EXPECTED_LABELS = np.array([0, 1, 2, -1], dtype=np.uint8)
+    # Change the classification property name in the tested .ply file
+    ply_data = plyfile.PlyData.read(DATA_DIRECTORY / "simple.ply")
+    ply_data = create_plydata_with_renamed_property(ply_data, "label", "classification")
+    modified_ply_filename = DATA_DIRECTORY / "modified.ply"
+    ply_data.write(modified_ply_filename)
+    # Valid feature name, classification is preserved.
+    convert(
+        modified_ply_filename,
+        outfolder=tmp_dir,
+        jobs=1,
+        classification=True,
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    tileset_labels = np.array((), dtype=np.uint8)
+    for py3dt_file in tmp_dir.iterdir():
+        if py3dt_file.suffix != ".pnts":
+            continue
+        tile_content = tile_content_reader.read_file(py3dt_file)
+        assert "Classification" in tile_content.body.batch_table.header.data
+        pnts_labels = np.unique(tile_content.body.batch_table.body.data[0])
+        # classification is OK for each pnts
+        assert np.all(labels in EXPECTED_LABELS for labels in pnts_labels)
+        tileset_labels = np.unique(np.append(tileset_labels, pnts_labels))
+    # Every label is encountered in the global tileset
+    assert np.array_equal(tileset_labels, EXPECTED_LABELS)
+    # Clean the test directory
+    modified_ply_filename.unlink()
 
 
 def test_convert_mix_las_xyz(tmp_dir):
