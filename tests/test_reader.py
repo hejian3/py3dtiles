@@ -74,3 +74,21 @@ def test_ply_get_metadata_buggy(buggy_ply_data, buggy_ply_filepath):
     with raises(KeyError, match=buggy_ply_data["msg"]):
         _ = ply_reader.get_metadata(path=buggy_ply_filepath)
     buggy_ply_filepath.unlink()
+
+
+def test_create_plydata_with_renamed_property(ply_filepath):
+    ply_data = plyfile.PlyData.read(ply_filepath)
+    modified_ply_data = ply_reader.create_plydata_with_renamed_property(
+        ply_data, "label", "classification"
+    )
+    for prop1, prop2 in zip(
+        ply_data["vertex"].properties, modified_ply_data["vertex"].properties
+    ):
+        assert prop1.name == prop2.name or (
+            prop1.name == "label" and prop2.name == "classification"
+        )
+    for dtype1, dtype2 in zip(
+        ply_data["vertex"].data.dtype.names,
+        modified_ply_data["vertex"].data.dtype.names,
+    ):
+        assert dtype1 == dtype2 or (dtype1 == "label" and dtype2 == "classification")
