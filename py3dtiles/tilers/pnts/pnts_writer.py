@@ -65,7 +65,7 @@ def points_to_pnts(
     body.batch_table = bt
 
     tile = Pnts(PntsHeader(), body)
-    tile.header.sync(body)
+    tile.sync()
 
     node_path = node_name_to_path(out_folder, name, ".pnts")
 

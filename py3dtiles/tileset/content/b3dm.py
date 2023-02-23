@@ -21,6 +21,27 @@ class B3dm(TileContent):
         self.header: B3dmHeader = header
         self.body: B3dmBody = body
 
+    def sync(self) -> None:
+        """
+        Allow to synchronize headers with contents.
+        """
+
+        # extract array
+        glTF_arr = self.body.glTF.to_array()
+
+        # sync the tile header with feature table contents
+        self.header.tile_byte_length = len(glTF_arr) + B3dmHeader.BYTE_LENGTH
+        self.header.bt_json_byte_length = 0
+        self.header.bt_bin_byte_length = 0
+        self.header.ft_json_byte_length = 0
+        self.header.ft_bin_byte_length = 0
+
+        if self.body.batch_table is not None:
+            bth_arr = self.body.batch_table.to_array()
+
+            self.header.tile_byte_length += len(bth_arr)
+            self.header.bt_json_byte_length = len(bth_arr)
+
     @staticmethod
     def from_glTF(gltf: GlTF, batch_table: BatchTable | None = None) -> B3dm:
         b3dm_body = B3dmBody()
@@ -29,9 +50,10 @@ class B3dm(TileContent):
             b3dm_body.batch_table = batch_table
 
         b3dm_header = B3dmHeader()
-        b3dm_header.sync(b3dm_body)
+        b3dm = B3dm(b3dm_header, b3dm_body)
+        b3dm.sync()
 
-        return B3dm(b3dm_header, b3dm_body)
+        return b3dm
 
     @staticmethod
     def from_array(array: npt.NDArray[np.uint8]) -> B3dm:
@@ -74,27 +96,6 @@ class B3dmHeader(TileContentHeader):
         )
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
-
-    def sync(self, body: B3dmBody) -> None:
-        """
-        Allow to synchronize headers with contents.
-        """
-
-        # extract array
-        glTF_arr = body.glTF.to_array()
-
-        # sync the tile header with feature table contents
-        self.tile_byte_length = len(glTF_arr) + B3dmHeader.BYTE_LENGTH
-        self.bt_json_byte_length = 0
-        self.bt_bin_byte_length = 0
-        self.ft_json_byte_length = 0
-        self.ft_bin_byte_length = 0
-
-        if body.batch_table is not None:
-            bth_arr = body.batch_table.to_array()
-
-            self.tile_byte_length += len(bth_arr)
-            self.bt_json_byte_length = len(bth_arr)
 
     @staticmethod
     def from_array(array: npt.NDArray[np.uint8]) -> B3dmHeader:

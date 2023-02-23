@@ -30,11 +30,11 @@ class TileContent(ABC):
         with path.open("bw") as f:
             f.write(bytes(tile_arr))
 
+    @abstractmethod
     def sync(self) -> None:
         """
         Allow to synchronize headers with contents.
         """
-        self.header.sync(self.body)
 
     @staticmethod
     @abstractmethod
@@ -61,10 +61,6 @@ class TileContentHeader(ABC):
 
     @abstractmethod
     def to_array(self) -> npt.NDArray:
-        ...
-
-    @abstractmethod
-    def sync(self, body) -> None:  # type: ignore
         ...
 
 
