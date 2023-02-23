@@ -493,7 +493,7 @@ class _Convert:
 
     def get_file_info(
         self,
-        color_scale: float | None,
+        color_scale: Optional[float],
         crs_in: Optional[CRS],
         force_crs_in: bool = False,
     ) -> Dict[str, Any]:

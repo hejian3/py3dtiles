@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -167,7 +167,7 @@ def build_tileset_quadtree(
     tilesets: List[Dict[str, Any]],
     inv_base_transform: npt.NDArray,
     name: str,
-) -> TileDictType | None:
+) -> Optional[TileDictType]:
     insides = [tileset for tileset in tilesets if is_tileset_inside(tileset, aabb)]
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])
