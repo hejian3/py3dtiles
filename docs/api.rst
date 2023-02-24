@@ -13,10 +13,10 @@ specification:
 - *TileContentHeader* represents the metadata of the tile (magic value, version, ...)
 - *TileContentBody* contains varying semantic and geometric data depending on the the tile's type
 
-Moreover, a utility class *TileContentReader* is available to read a tile
-file as well as a simple command line tool to retrieve basic information
-about a tile: **py3dtiles\_info**. We also provide a utility to generate a
-tileset from a list of 3D models in WKB format or stored in a postGIS table.
+Moreover, a utility module *tile_content_reader.py* provides a function *read_file* to read a tile
+file as well as a simple command line tool to retrieve basic information about a tile:
+**py3dtiles\_info**. We also provide a utility to generate a tileset from a list of 3D models in
+WKB format or stored in a postGIS table.
 
 
 Point Cloud
@@ -33,13 +33,15 @@ In the current implementation, the *Pnts* class only contains a *FeatureTable*
 
 .. code-block:: python
 
-    >>> from py3dtiles.tileset.content import Pnts
-    >>> from py3dtiles.tileset.utils import TileContentReader
+    >>> from pathlib import Path
     >>>
-    >>> filename = 'tests/pointCloudRGB.pnts'
+    >>> from py3dtiles.tileset.content import Pnts
+    >>> from py3dtiles.tileset import tile_content_reader
+    >>>
+    >>> filename = Path('tests/pointCloudRGB.pnts')
     >>>
     >>> # read the file
-    >>> tile_content = TileContentReader.read_file(filename)
+    >>> tile_content = tile_content_reader.read_file(filename)
     >>>
     >>> # tile_content is an instance of the TileContent class
     >>> tile_content
@@ -119,13 +121,15 @@ https://github.com/AnalyticalGraphicsInc/3d-tiles/tree/master/TileFormats/Batche
 
 .. code-block:: python
 
-    >>> from py3dtiles.tileset.content import B3dm
-    >>> from py3dtiles.tileset.utils import TileContentReader
+    >>> from pathlib import Path
     >>>
-    >>> filename = 'tests/dragon_low.b3dm'
+    >>> from py3dtiles.tileset.content import B3dm
+    >>> from py3dtiles.tileset import tile_content_reader
+    >>>
+    >>> filename = Path('tests/dragon_low.b3dm')
     >>>
     >>> # read the file
-    >>> tile_content = TileContentReader.read_file(filename)
+    >>> tile_content = tile_content_reader.read_file(filename)
     >>>
     >>> # tile_content is an instance of the TileContent class
     >>> tile_content
