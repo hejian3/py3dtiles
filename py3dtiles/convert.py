@@ -134,7 +134,7 @@ class Worker(Process):
                     self.execute_process_jobs(content)
                     command_type = 2
                 elif command == CommandType.WRITE_PNTS.value:
-                    self.execute_write_pnts(content)
+                    self.execute_write_pnts(content[2], content[1])
                     command_type = 3
                 elif command == CommandType.SHUTDOWN.value:
                     break  # ack
@@ -188,15 +188,14 @@ class Worker(Process):
             self.transformer,
         )
 
-    def execute_write_pnts(self, content):
-        pnts_writer.run(
-            self.skt,
-            content[2],
-            content[1],
-            self.folder,
-            self.write_rgb,
-            self.write_classification,
+    def execute_write_pnts(self, data, node_name):
+        pnts_writer_gen = pnts_writer.run(
+            data, self.folder, self.write_rgb, self.write_classification
         )
+        for total in pnts_writer_gen:
+            self.skt.send_multipart(
+                [ResponseType.PNTS_WRITTEN.value, struct.pack(">I", total), node_name]
+            )
 
     def execute_process_jobs(self, content):
         node_process.run(content[1:], self.octree_metadata, self.skt, self.verbosity)
