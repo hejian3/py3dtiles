@@ -180,13 +180,26 @@ class Worker(Process):
                 f"the available extensions are: {READER_MAP.keys()}"
             )
 
-        reader.run(
+        reader_gen = reader.run(
             parameters["filename"],
             parameters["offset_scale"],
             parameters["portion"],
-            self.skt,
             self.transformer,
         )
+        for coords, colors, classification in reader_gen:
+            self.skt.send_multipart(
+                [
+                    ResponseType.NEW_TASK.value,
+                    b"",
+                    pickle.dumps(
+                        {"xyz": coords, "rgb": colors, "classification": classification}
+                    ),
+                    struct.pack(">I", len(coords)),
+                ],
+                copy=False,
+            )
+
+        self.skt.send_multipart([ResponseType.READ.value])
 
     def execute_write_pnts(self, data, node_name):
         pnts_writer_gen = pnts_writer.run(

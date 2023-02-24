@@ -1,16 +1,13 @@
 import math
 from pathlib import Path
-import pickle
-import struct
-from typing import Optional
+from typing import Generator, Optional, Tuple
 
 import numpy as np
 from plyfile import PlyData, PlyElement
 from pyproj import Transformer
-from zmq import Socket
 
+from py3dtiles.exceptions import catch_exception
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
-from py3dtiles.utils import ResponseType
 
 
 def get_metadata(
@@ -51,9 +48,8 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionType,
-    queue: Socket,
     transformer: Optional[Transformer],
-) -> None:
+) -> Generator[Tuple, None, None]:
     """
     Reads points from a ply file.
     """
@@ -116,19 +112,7 @@ def run(
             else:
                 classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
 
-            queue.send_multipart(
-                [
-                    ResponseType.NEW_TASK.value,
-                    b"",
-                    pickle.dumps(
-                        {"xyz": coords, "rgb": colors, "classification": classification}
-                    ),
-                    struct.pack(">I", len(coords)),
-                ],
-                copy=False,
-            )
-
-        queue.send_multipart([ResponseType.READ.value])
+            yield coords, colors, classification
 
     except Exception as e:
         print(f"Exception while reading points from ply file {filename}")

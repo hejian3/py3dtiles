@@ -1,10 +1,8 @@
 import json
 import math
 from pathlib import Path
-import pickle
-import struct
 import subprocess
-from typing import Optional
+from typing import Generator, Optional, Tuple
 
 import laspy
 import numpy as np
@@ -12,8 +10,6 @@ from pyproj import Transformer
 from zmq import Socket
 
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
-from py3dtiles.utils import ResponseType
-
 
 def get_metadata(
     path: Path, color_scale: Optional[float] = None, fraction: int = 100
@@ -60,9 +56,8 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionType,
-    queue: Socket,
     transformer: Optional[Transformer],
-) -> None:
+) -> Generator[Tuple, None, None]:
     """
     Reads points from a las file
     """
@@ -132,23 +127,7 @@ def run(
                 else:
                     classification = np.zeros((len(points.x), 1), dtype=np.uint8)
 
-                queue.send_multipart(
-                    [
-                        ResponseType.NEW_TASK.value,
-                        b"",
-                        pickle.dumps(
-                            {
-                                "xyz": coords,
-                                "rgb": colors,
-                                "classification": classification,
-                            }
-                        ),
-                        struct.pack(">I", len(coords)),
-                    ],
-                    copy=False,
-                )
-
-            queue.send_multipart([ResponseType.READ.value])
+                yield coords, colors, classification
 
     except Exception as e:
         print(f"Exception while reading points from las file {filename}")
