@@ -15,6 +15,47 @@ from py3dtiles.utils import split_aabb
 T = TypeVar("T", bound=np.floating)
 
 
+def merge(
+    tilesets: List[TileSet], tileset_path: Optional[List[Path]] = None
+) -> TileSet:
+    """
+    Create a tileset that include all input tilesets. The tilesets don't need to be written.
+    The output tileset is not written but return as dict (TilesetDictType).
+    """
+    if not tilesets:
+        raise ValueError("The tileset list cannot be empty")
+
+    global_tileset = TileSet()
+    for i, tileset in enumerate(tilesets):
+        bounding_volume = copy.deepcopy(tileset.root_tile.bounding_volume)
+        if bounding_volume is None:
+            raise BoundingVolumeMissingException(
+                "The root tile of all tilesets should have a bounding volume"
+            )
+
+        bounding_volume.transform(tileset.root_tile.transform)
+
+        tile = Tile(
+            geometric_error=tileset.root_tile.geometric_error,
+            bounding_volume=bounding_volume,
+            refine_mode="REPLACE",
+        )
+        if tileset_path is not None:
+            tile.content_uri = tileset_path[i]
+
+        global_tileset.root_tile.add_child(tile)
+
+    biggest_geometric_error = 0.0
+    for child in global_tileset.root_tile.children:
+        biggest_geometric_error = max(biggest_geometric_error, child.geometric_error)
+
+    global_tileset.geometric_error = biggest_geometric_error
+    global_tileset.root_tile.geometric_error = biggest_geometric_error
+    global_tileset.root_tile.set_refine_mode("REPLACE")
+
+    return global_tileset
+
+
 def quadtree_split(aabb: npt.NDArray[T]) -> List[npt.NDArray[T]]:
     return [
         split_aabb(aabb, 0, True),
@@ -35,6 +76,7 @@ def build_tileset_quadtree(
     tilesets: List[TileSet],
     bounding_box_centers: List[npt.NDArray[np.floating]],
     inv_base_transform: npt.NDArray[np.floating],
+    tileset_paths: Optional[List[Path]] = None,
 ) -> Optional[Tile]:
     insides = [
         (tileset, center)
@@ -42,7 +84,7 @@ def build_tileset_quadtree(
         if is_point_inside(center, aabb)
     ]
 
-    if not insides:
+    if len(insides) == 0:
         return None
 
     quadtree_diag = np.linalg.norm(aabb[1][:2] - aabb[0][:2])
@@ -86,15 +128,26 @@ def build_tileset_quadtree(
 
         max_point_count = 50000
         point_count = 0
-        for tileset in tileset_insides:
-            root_tile_content = tileset.root_tile.get_or_fetch_content()
-            point_count += root_tile_content.body.feature_table.header.points_length
+        for i, tileset in enumerate(tileset_insides):
+            if tileset.root_tile.tile_content is not None:
+                root_tile_content = tileset.root_tile.tile_content
+            elif tileset_paths is not None:
+                root_tile_content = tileset.root_tile.get_or_fetch_content(
+                    tileset_paths[i]
+                )
+            else:
+                root_tile_content = None
+
+            if root_tile_content is not None:
+                point_count += root_tile_content.body.feature_table.header.points_length
 
         ratio = min(0.5, max_point_count / point_count)
 
         for tileset in tileset_insides:
             root_tile = tileset.root_tile
-            root_tile_content = root_tile.get_or_fetch_content()
+            if (root_tile_content := root_tile.tile_content) is None:
+                continue
+
             local_transform = root_tile.transform.reshape((4, 4)).T @ inv_base_transform
             _xyz, _rgb = root_tile_content.body.get_points(local_transform)
 
@@ -132,7 +185,7 @@ def build_tileset_quadtree(
         return tile
 
 
-def merge(tilesets: List[TileSet]) -> TileSet:
+def merge_with_pnts_content(tilesets: List[TileSet]) -> TileSet:
     global_bounding_volume = BoundingVolumeBox()
     bounding_box_centers = []
 
@@ -173,8 +226,12 @@ def merge(tilesets: List[TileSet]) -> TileSet:
 
 
 def merge_from_files(
-    tileset_paths: List[Path], output_tileset_path: Path, overwrite: bool = True
+    tileset_paths: List[Path],
+    output_tileset_path: Path,
+    overwrite: bool = True,
+    force_universal_merger: bool = True,
 ) -> None:
+    output_tileset_path = output_tileset_path.absolute()
     if output_tileset_path.exists():
         if overwrite:
             TileSet.from_file(output_tileset_path).delete_on_disk(
@@ -187,20 +244,22 @@ def merge_from_files(
 
     tilesets = []
     for path in tileset_paths:
-        tilesets.append(TileSet.from_file(path))
+        tilesets.append(TileSet.from_file(path.absolute()))
 
-    tileset = merge(tilesets)
+    not_only_pnts = force_universal_merger or any(
+        not isinstance(
+            tileset.root_tile.get_or_fetch_content(tileset_path.absolute()), Pnts
+        )
+        for tileset_path, tileset in zip(tileset_paths, tilesets)
+    )
 
-    tileset.root_uri = output_tileset_path
-    content = tileset.root_tile.get_or_fetch_content(tileset.root_uri)
-    if content is not None:
-        if isinstance(content, TileSet):
-            raise RuntimeError(
-                "The root tile content of the merged tileset shouldn't be a tileset"
-            )
-        content.save_as(output_tileset_path.parent / "r.pnts")
+    if not_only_pnts:
+        tileset = merge(tilesets, tileset_paths)
+    else:
+        tileset = merge_with_pnts_content(tilesets)
 
-    tileset.write_as_json(output_tileset_path)
+    tileset.root_uri = output_tileset_path.parent
+    tileset.write_to_directory(output_tileset_path)
 
 
 def init_parser(subparser):
@@ -222,5 +281,7 @@ def init_parser(subparser):
 
 def main(args):
     return merge_from_files(
-        [Path(file) for file in args.tilesets], Path(args.output_tileset)
+        [Path(tileset_file) for tileset_file in args.tilesets],
+        Path(args.output_tileset),
+        args.overwrite,
     )
