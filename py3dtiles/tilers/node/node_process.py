@@ -60,6 +60,19 @@ def _balance(node_catalog, node, max_depth=1, depth=0):
             )
 
 
+def infer_depth_from_name(name: str) -> int:
+    halt_at_depth = 0
+    if len(name) >= 7:
+        halt_at_depth = 5
+    elif len(name) >= 5:
+        halt_at_depth = 3
+    elif len(name) > 2:
+        halt_at_depth = 2
+    elif len(name) >= 1:
+        halt_at_depth = 1
+    return halt_at_depth
+
+
 def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
     node_catalog = NodeCatalog(nodes, name, octree_metadata)
 
@@ -70,17 +83,8 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
 
     node = node_catalog.get_node(name)
 
-    halt_at_depth = 0
-    if len(name) >= 7:
-        halt_at_depth = 5
-    elif len(name) >= 5:
-        halt_at_depth = 3
-    elif len(name) > 2:
-        halt_at_depth = 2
-    elif len(name) >= 1:
-        halt_at_depth = 1
-
     total = 0
+    halt_at_depth = infer_depth_from_name(name)
 
     for index, task in enumerate(tasks):
         if log_enabled:
@@ -142,7 +146,7 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
         print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
 
     # save node state on disk
-    if halt_at_depth > 0:
+    if len(name) > 0:
         data = node_catalog.dump(name, halt_at_depth - 1)
     else:
         data = b""
