@@ -103,7 +103,6 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
 
         # insert points in node (no children handling here)
         node.insert(
-            node_catalog,
             octree_metadata.scale,
             data["xyz"],
             data["rgb"],

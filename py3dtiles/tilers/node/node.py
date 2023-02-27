@@ -98,7 +98,6 @@ class Node:
 
     def insert(
         self,
-        node_catalog: NodeCatalog,
         scale: float,
         xyz: npt.NDArray,
         rgb: npt.NDArray,
@@ -118,7 +117,7 @@ class Node:
             count = sum([xyz.shape[0] for xyz, rgb, classification in self.points])
             # stop subdividing if spacing is 1mm
             if count >= 20000 and self.spacing > 0.001 * scale:
-                self._split(node_catalog, scale)
+                self._split(scale)
             self.dirty = True
 
             return
@@ -149,7 +148,7 @@ class Node:
 
     def flush_pending_points(self, catalog: NodeCatalog, scale: float) -> None:
         for name, xyz, rgb, classification in self._get_pending_points():
-            catalog.get_node(name).insert(catalog, scale, xyz, rgb, classification)
+            catalog.get_node(name).insert(scale, xyz, rgb, classification)
         self.pending_xyz = []
         self.pending_rgb = []
         self.pending_classification = []
@@ -214,10 +213,10 @@ class Node:
             if len(xyz) > 0:
                 yield name, xyz, pending_rgb_arr[mask], pending_classification_arr[mask]
 
-    def _split(self, node_catalog: NodeCatalog, scale: float) -> None:
+    def _split(self, scale: float) -> None:
         self.children = []
         for xyz, rgb, classification in self.points:
-            self.insert(node_catalog, scale, xyz, rgb, classification)
+            self.insert(scale, xyz, rgb, classification)
         self.points = []
 
     def get_point_count(
