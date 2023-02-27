@@ -2,68 +2,43 @@ import os
 import pickle
 import struct
 import time
+from typing import Generator, Tuple
 
 from py3dtiles.tilers.node.node_catalog import NodeCatalog
 from py3dtiles.utils import ResponseType
-
-
-def _forward_unassigned_points(node, queue, log_file):
-    total = 0
-
-    result = node.dump_pending_points()
-
-    for r in result:
-        if len(r) > 0:
-            if log_file is not None:
-                print(f"    -> put on queue ({r[0]},{r[2]})", file=log_file)
-            total += r[2]
-            queue.send_multipart(
-                [ResponseType.NEW_TASK.value, r[0], r[1], struct.pack(">I", r[2])],
-                copy=False,
-                block=False,
-            )
-
-    return total
 
 
 def _flush(
     node_catalog,
     scale,
     node,
-    queue,
     max_depth=1,
     force_forward=False,
     log_file=None,
     depth=0,
-):
+) -> Generator[Tuple, None, None]:
     if depth >= max_depth:
         threshold = 0 if force_forward else 10_000
         if node.get_pending_points_count() > threshold:
-            return _forward_unassigned_points(node, queue, log_file)
-        else:
-            return 0
+            yield from node.dump_pending_points()
+        return
 
     node.flush_pending_points(node_catalog, scale)
-
-    total = 0
     if node.children is not None:
         # then flush children
         children = node.children
         # release node
         del node
-        for name in children:
-            total += _flush(
+        for child_name in children:
+            yield from _flush(
                 node_catalog,
                 scale,
-                node_catalog.get_node(name),
-                queue,
+                node_catalog.get_node(child_name),
                 max_depth,
                 force_forward,
                 log_file,
                 depth + 1,
             )
-
-    return total
 
 
 def _balance(node_catalog, node, max_depth=1, depth=0):
@@ -75,12 +50,14 @@ def _balance(node_catalog, node, max_depth=1, depth=0):
         node.dirty = True
 
     if node.children is not None:
-        # then _flush children
+        # then _balance children
         children = node.children
         # release node
         del node
-        for name in children:
-            _balance(node_catalog, node_catalog.get_node(name), max_depth, depth + 1)
+        for child_name in children:
+            _balance(
+                node_catalog, node_catalog.get_node(child_name), max_depth, depth + 1
+            )
 
 
 def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
@@ -140,16 +117,25 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
             print(f"  -> _flush [{time.time() - begin}]", file=log_file, flush=True)
         # _flush push pending points (= call insert) from level N to level N + 1
         # (_flush is recursive)
-        written = _flush(
+        for flush_name, flush_data, flush_point_count in _flush(
             node_catalog,
             octree_metadata.scale,
             node,
-            queue,
             halt_at_depth - 1,
             index == len(tasks) - 1,
             log_file,
-        )
-        total -= written
+        ):
+            queue.send_multipart(
+                [
+                    ResponseType.NEW_TASK.value,
+                    flush_name,
+                    flush_data,
+                    struct.pack(">I", flush_point_count),
+                ],
+                copy=False,
+                block=False,
+            )
+            total -= flush_point_count
 
     _balance(node_catalog, node, halt_at_depth - 1)
 
@@ -178,8 +164,6 @@ def run(work, octree_metadata, queue, verbose):
         else:
             log_file = None
 
-        total = 0
-
         i = 0
         while i < len(work):
             name = work[i]
@@ -190,7 +174,6 @@ def run(work, octree_metadata, queue, verbose):
             result, data = _process(
                 node, octree_metadata, name, tasks, queue, begin, log_file
             )
-            total += result
 
             queue.send_multipart(
                 [
@@ -199,7 +182,7 @@ def run(work, octree_metadata, queue, verbose):
                         {
                             "name": name,
                             "total": result,
-                            "save": data,
+                            "data": data,
                         }
                     ),
                 ],
@@ -216,8 +199,6 @@ def run(work, octree_metadata, queue, verbose):
             )
             if log_file is not None:
                 log_file.close()
-
-        return total
 
     except Exception as e:
         print("Exception while processing node:", e)

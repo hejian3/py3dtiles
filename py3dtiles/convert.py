@@ -784,7 +784,7 @@ class _Convert:
         if not content["name"]:
             return
 
-        self.node_store.put(content["name"], content["save"])
+        self.node_store.put(content["name"], content["data"])
         self.state.waiting_writing_nodes.append(content["name"])
 
         if not self.state.is_reading_finish():
