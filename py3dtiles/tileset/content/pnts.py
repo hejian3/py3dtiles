@@ -6,7 +6,13 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.feature_table import Feature, FeatureTable, SemanticPoint
+from py3dtiles.tileset.feature_table import (
+    Feature,
+    FeatureTable,
+    FeatureTableBody,
+    FeatureTableHeader,
+    SemanticPoint,
+)
 from .tile_content import (
     TileContent,
     TileContentBody,
@@ -86,6 +92,55 @@ class Pnts(TileContent):
 
         # build the tile with header and body
         return Pnts(pnts_header, pnts_body)
+
+    @staticmethod
+    def from_points(
+        points: npt.NDArray[np.uint8], include_rgb: bool, include_classification: bool
+    ) -> Pnts:
+        if len(points) == 0:
+            raise ValueError("The argument points cannot be empty.")
+
+        point_size = (
+            3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0)
+        )
+
+        if len(points) % point_size != 0:
+            raise ValueError(
+                f"The length of points array is {len(points)} but the point size is {point_size}."
+                f"There is a rest of {len(points) % point_size}"
+            )
+
+        count = len(points) // point_size
+
+        pdt = np.dtype([("X", "<f4"), ("Y", "<f4"), ("Z", "<f4")])
+        cdt = (
+            np.dtype([("Red", "u1"), ("Green", "u1"), ("Blue", "u1")])
+            if include_rgb
+            else None
+        )
+
+        ft = FeatureTable()
+        ft.header = FeatureTableHeader.from_dtype(pdt, cdt, count)
+        ft.body = FeatureTableBody.from_array(ft.header, points)
+        bt = BatchTable()
+        if include_classification:
+            sdt = np.dtype([("Classification", "u1")])
+            offset = count * (3 * 4 + (3 if include_rgb else 0))
+            bt.add_property_as_binary(
+                "Classification",
+                points[offset : offset + count * sdt.itemsize],
+                "UNSIGNED_BYTE",
+                "SCALAR",
+            )
+
+        body = PntsBody()
+        body.feature_table = ft
+        body.batch_table = bt
+
+        pnts = Pnts(PntsHeader(), body)
+        pnts.sync()
+
+        return pnts
 
 
 class PntsHeader(TileContentHeader):

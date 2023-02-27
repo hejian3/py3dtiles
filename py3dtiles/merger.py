@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
+from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts_file
 from py3dtiles.tileset.content import B3dm, Pnts
 from py3dtiles.tileset.tile_content_reader import read_file
 from py3dtiles.tileset.tileset import TileSet
@@ -212,7 +212,7 @@ def build_tileset_quadtree(
             union_aabb[0] = np.minimum(union_aabb[0], ab[0])
             union_aabb[1] = np.maximum(union_aabb[1], ab[1])
 
-        _, pnts_path = points_to_pnts(
+        _, pnts_path = points_to_pnts_file(
             name.encode("ascii"),
             np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
             out_folder,
