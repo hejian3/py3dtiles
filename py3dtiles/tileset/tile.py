@@ -140,13 +140,20 @@ class Tile(Extendable):
         return self._refine
 
     def add_child(self, tile: Tile) -> None:
+        self.children.append(tile)
+
         if tile.bounding_volume is not None:
             if self.bounding_volume is None:
                 self.bounding_volume = copy.deepcopy(tile.bounding_volume)
+                self.bounding_volume.transform(tile.transform)
             else:
-                self.bounding_volume.add(tile.bounding_volume)
-
-        self.children.append(tile)
+                transformed_bounding_volume = copy.deepcopy(tile.bounding_volume)
+                transformed_bounding_volume.transform(tile.transform)
+                parent_inv_transform = np.linalg.inv(
+                    self.transform.reshape((4, 4))
+                ).flatten()
+                transformed_bounding_volume.transform(parent_inv_transform)
+                self.bounding_volume.add(transformed_bounding_volume)
 
     def get_all_children(self) -> list[Tile]:
         """

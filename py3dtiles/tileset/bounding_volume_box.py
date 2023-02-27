@@ -165,7 +165,7 @@ class BoundingVolumeBox(BoundingVolume):
 
         if self._box is None:
             # Then it is safe to overwrite
-            self._box = other._box
+            self._box = copy.deepcopy(other._box)
             return
 
         corners = self.get_corners() + other.get_corners()
