@@ -74,8 +74,7 @@ def infer_depth_from_name(name: str) -> int:
     return halt_at_depth
 
 
-def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
-    node_catalog = NodeCatalog(nodes, name, octree_metadata)
+def _process(nodes, node_catalog, octree_metadata, name, tasks, begin, log_file):
 
     log_enabled = log_file is not None
 
@@ -129,33 +128,10 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
             index == len(tasks) - 1,
             log_file,
         ):
-            queue.send_multipart(
-                [
-                    ResponseType.NEW_TASK.value,
-                    flush_name,
-                    flush_data,
-                    struct.pack(">I", flush_point_count),
-                ],
-                copy=False,
-                block=False,
-            )
             total -= flush_point_count
+            yield flush_name, flush_data, flush_point_count, total
 
     _balance(node_catalog, node, halt_at_depth - 1)
-
-    if log_enabled:
-        print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
-
-    # save node state on disk
-    if len(name) > 0:
-        data = node_catalog.dump(name, halt_at_depth - 1)
-    else:
-        data = b""
-
-    if log_enabled:
-        print(f"saved on disk [{time.time() - begin}]", file=log_file)
-
-    return total, data
 
 
 @catch_exception(msg="Exception while processing node")
@@ -168,6 +144,7 @@ def run(work, octree_metadata, queue, verbose):
     else:
         log_file = None
 
+    total_point_count = 0
     i = 0
     while i < len(work):
         name = work[i]
@@ -175,9 +152,41 @@ def run(work, octree_metadata, queue, verbose):
         count = struct.unpack(">I", work[i + 2])[0]
         tasks = work[i + 3 : i + 3 + count]
         i += 3 + count
-        result, data = _process(
-            node, octree_metadata, name, tasks, queue, begin, log_file
-        )
+
+        node_catalog = NodeCatalog(node, name, octree_metadata)
+
+        for proc_name, proc_data, proc_point_count, point_count in _process(
+            node,
+            node_catalog,
+            octree_metadata,
+            name,
+            tasks,
+            begin,
+            log_file,
+        ):
+            queue.send_multipart(
+                [
+                    ResponseType.NEW_TASK.value,
+                    proc_name,
+                    proc_data,
+                    struct.pack(">I", proc_point_count),
+                ],
+                copy=False,
+                block=False,
+            )
+            total_point_count = point_count
+
+        if log_enabled:
+            print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
+
+        # save node state on disk
+        if len(name) > 0:
+            data = node_catalog.dump(name, infer_depth_from_name(name) - 1)
+        else:
+            data = b""
+
+        if log_enabled:
+            print(f"saved on disk [{time.time() - begin}]", file=log_file)
 
         queue.send_multipart(
             [
@@ -185,7 +194,7 @@ def run(work, octree_metadata, queue, verbose):
                 pickle.dumps(
                     {
                         "name": name,
-                        "total": result,
+                        "total": total_point_count,
                         "data": data,
                     }
                 ),
