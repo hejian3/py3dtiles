@@ -311,7 +311,7 @@ class Node:
         pnts_path = node_name_to_path(folder, self.name, ".pnts")
         tile = read_file(pnts_path)
         fth = tile.body.feature_table.header
-        xyz = tile.body.feature_table.body.positions_arr
+        xyz = tile.body.feature_table.body.position
 
         # check if this node should be merged in the parent.
         prune = False  # prune only if the node is a leaf
@@ -322,10 +322,13 @@ class Node:
             parent_tile = read_file(parent_pnts_path)
             parent_fth = parent_tile.body.feature_table.header
 
-            parent_xyz = parent_tile.body.feature_table.body.positions_arr
+            parent_xyz = parent_tile.body.feature_table.body.position
 
-            if parent_fth.colors != SemanticPoint.NONE:
-                parent_rgb = parent_tile.body.feature_table.body.colors_arr
+            if (
+                parent_fth.colors != SemanticPoint.NONE
+                and parent_tile.body.feature_table.body.color is not None
+            ):
+                parent_rgb = parent_tile.body.feature_table.body.color
             else:
                 parent_rgb = np.array([], dtype=np.uint8)
 
@@ -336,9 +339,7 @@ class Node:
             else:
                 parent_classification = np.array([], dtype=np.uint8)
 
-            parent_xyz_float = parent_xyz.view(np.float32).reshape(
-                (parent_fth.points_length, 3)
-            )
+            parent_xyz_float = parent_xyz.reshape((parent_fth.points_length, 3))
             # update aabb based on real values
             parent_aabb = np.array(
                 [
@@ -350,8 +351,12 @@ class Node:
             parent_xyz = np.concatenate((parent_xyz, xyz))
 
             if fth.colors != SemanticPoint.NONE:
+                if tile.body.feature_table.body.color is None:
+                    raise RuntimeError(
+                        "If the parent has color data, the children should also have color data."
+                    )
                 parent_rgb = np.concatenate(
-                    (parent_rgb, tile.body.feature_table.body.colors_arr)
+                    (parent_rgb, tile.body.feature_table.body.color)
                 )
 
             if "Classification" in tile.body.batch_table.header.data:
@@ -375,7 +380,9 @@ class Node:
             parent_pnts_path.unlink()
             points_to_pnts(
                 parent_node.name,
-                np.concatenate((parent_xyz, parent_rgb, parent_classification)),
+                np.concatenate(
+                    (parent_xyz.view(np.uint8), parent_rgb, parent_classification)
+                ),
                 folder,
                 len(parent_rgb) != 0,
                 len(parent_classification) != 0,

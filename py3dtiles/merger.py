@@ -34,13 +34,11 @@ def _get_root_transform(tileset: dict) -> np.ndarray:
 def _get_tile_points(tile, tile_transform, out_transform):
     fth = tile.body.feature_table.header
 
-    xyz = tile.body.feature_table.body.positions_arr.view(np.float32).reshape(
+    xyz = tile.body.feature_table.body.position.view(np.float32).reshape(
         (fth.points_length, 3)
     )
     if fth.colors == SemanticPoint.RGB:
-        rgb = tile.body.feature_table.body.colors_arr.reshape(
-            (fth.points_length, 3)
-        ).astype(np.uint8)
+        rgb = tile.body.feature_table.body.color.reshape((fth.points_length, 3))
     else:
         rgb = None
 

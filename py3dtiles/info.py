@@ -29,10 +29,14 @@ def print_pnts_info(tile: Pnts) -> None:
             print("")
             print("First point")
             print("-----------")
-            f = tile.body.feature_table.feature(0)
-            d = f.positions
-            d.update(f.colors)
-            print(d)
+            (
+                feature_position,
+                feature_color,
+                feature_normal,
+            ) = tile.body.feature_table.get_feature_at(0)
+            print(f"Position: {feature_position}")
+            print(f"Color: {feature_color}")
+            print(f"Normal: {feature_normal}")
     else:
         print("Tile with no body")
 

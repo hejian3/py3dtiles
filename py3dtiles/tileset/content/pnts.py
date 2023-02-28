@@ -6,7 +6,10 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.feature_table import Feature, FeatureTable
+from py3dtiles.tileset.feature_table import (
+    FeatureTable,
+    FeatureTableHeader,
+)
 from .tile_content import (
     TileContent,
     TileContentBody,
@@ -19,45 +22,46 @@ class Pnts(TileContent):
         super().__init__()
         self.header: PntsHeader = header
         self.body: PntsBody = body
+        self.sync()
 
     def sync(self) -> None:
         """
         Synchronizes headers with the Pnts body.
         """
-
-        # extract arrays
-        feature_table_header_array = self.body.feature_table.header.to_array()
-        feature_table_body_array = self.body.feature_table.body.to_array()
-        batch_table_header_array = self.body.batch_table.header.to_array()
-        batch_table_body_array = self.body.batch_table.body.to_array()
-
-        # sync the tile header with feature table contents
-        self.header.tile_byte_length = (
-            len(feature_table_header_array)
-            + len(feature_table_body_array)
-            + len(batch_table_header_array)
-            + len(batch_table_body_array)
-            + PntsHeader.BYTE_LENGTH
+        self.header.ft_json_byte_length = len(self.body.feature_table.header.to_array())
+        self.header.ft_bin_byte_length = sum(
+            len(array) for array in self.body.feature_table.body.to_array()
         )
-        self.header.ft_json_byte_length = len(feature_table_header_array)
-        self.header.ft_bin_byte_length = len(feature_table_body_array)
-        self.header.bt_json_byte_length = len(batch_table_header_array)
-        self.header.bt_bin_byte_length = len(batch_table_body_array)
+        self.header.bt_json_byte_length = len(self.body.batch_table.header.to_array())
+        self.header.bt_bin_byte_length = len(self.body.batch_table.body.to_array())
+
+        self.header.tile_byte_length = (
+            PntsHeader.BYTE_LENGTH
+            + self.header.ft_json_byte_length
+            + self.header.ft_bin_byte_length
+            + self.header.bt_json_byte_length
+            + self.header.bt_bin_byte_length
+        )
 
     @staticmethod
     def from_features(
-        pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]
+        feature_table_header: FeatureTableHeader,
+        position_array: npt.NDArray[np.float32 | np.uint8],
+        color_array: npt.NDArray[np.uint8 | np.uint16] | None = None,
+        normal_position: npt.NDArray[np.float32 | np.uint8] | None = None,
     ) -> Pnts:
         """
         Creates a Pnts from features defined by pd_type and cd_type.
         """
-
-        ft = FeatureTable.from_features(pd_type, cd_type, features)
-
         pnts_body = PntsBody()
-        pnts_body.feature_table = ft
+        pnts_body.feature_table = FeatureTable.from_features(
+            feature_table_header, position_array, color_array, normal_position
+        )
 
-        return Pnts(PntsHeader(), pnts_body)
+        pnts = Pnts(PntsHeader(), pnts_body)
+        pnts.sync()
+
+        return pnts
 
     @staticmethod
     def from_array(array: npt.NDArray) -> Pnts:
@@ -158,7 +162,7 @@ class PntsBody(TileContentBody):
 
         # build feature table
         feature_table_size = header.ft_json_byte_length + header.ft_bin_byte_length
-        feature_table_array = array[0:feature_table_size]
+        feature_table_array = array[:feature_table_size]
         feature_table = FeatureTable.from_array(header, feature_table_array)
 
         # build batch table
