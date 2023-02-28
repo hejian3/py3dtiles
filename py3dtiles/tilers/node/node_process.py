@@ -1,12 +1,6 @@
-import os
 import pickle
-import struct
 import time
 from typing import Generator, Tuple
-
-from py3dtiles.exceptions import catch_exception
-from py3dtiles.tilers.node.node_catalog import NodeCatalog
-from py3dtiles.utils import ResponseType
 
 
 def _flush(
@@ -74,7 +68,9 @@ def infer_depth_from_name(name: str) -> int:
     return halt_at_depth
 
 
-def _process(nodes, node_catalog, octree_metadata, name, tasks, begin, log_file):
+def run(
+    node_catalog, octree_metadata, name, tasks, begin, log_file
+) -> Generator[Tuple, None, None]:
 
     log_enabled = log_file is not None
 
@@ -132,83 +128,3 @@ def _process(nodes, node_catalog, octree_metadata, name, tasks, begin, log_file)
             yield flush_name, flush_data, flush_point_count, total
 
     _balance(node_catalog, node, halt_at_depth - 1)
-
-
-@catch_exception(msg="Exception while processing node")
-def run(work, octree_metadata, queue, verbose):
-    begin = time.time()
-    log_enabled = verbose >= 2
-    if log_enabled:
-        log_filename = f"py3dtiles-{os.getpid()}.log"
-        log_file = open(log_filename, "a")
-    else:
-        log_file = None
-
-    total_point_count = 0
-    i = 0
-    while i < len(work):
-        name = work[i]
-        node = work[i + 1]
-        count = struct.unpack(">I", work[i + 2])[0]
-        tasks = work[i + 3 : i + 3 + count]
-        i += 3 + count
-
-        node_catalog = NodeCatalog(node, name, octree_metadata)
-
-        for proc_name, proc_data, proc_point_count, point_count in _process(
-            node,
-            node_catalog,
-            octree_metadata,
-            name,
-            tasks,
-            begin,
-            log_file,
-        ):
-            queue.send_multipart(
-                [
-                    ResponseType.NEW_TASK.value,
-                    proc_name,
-                    proc_data,
-                    struct.pack(">I", proc_point_count),
-                ],
-                copy=False,
-                block=False,
-            )
-            total_point_count = point_count
-
-        if log_enabled:
-            print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
-
-        # save node state on disk
-        if len(name) > 0:
-            data = node_catalog.dump(name, infer_depth_from_name(name) - 1)
-        else:
-            data = b""
-
-        if log_enabled:
-            print(f"saved on disk [{time.time() - begin}]", file=log_file)
-
-        queue.send_multipart(
-            [
-                ResponseType.PROCESSED.value,
-                pickle.dumps(
-                    {
-                        "name": name,
-                        "total": total_point_count,
-                        "data": data,
-                    }
-                ),
-            ],
-            copy=False,
-        )
-
-    if log_enabled:
-        print(
-            "[<] return result [{} sec] [{}]".format(
-                round(time.time() - begin, 2), time.time() - begin
-            ),
-            file=log_file,
-            flush=True,
-        )
-        if log_file is not None:
-            log_file.close()

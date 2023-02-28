@@ -32,6 +32,7 @@ from py3dtiles.tilers.matrix_manipulation import (
 from py3dtiles.tilers.node import Node
 from py3dtiles.tilers.node import node_process
 from py3dtiles.tilers.node import SharedNodeStore
+from py3dtiles.tilers.node.node_catalog import NodeCatalog
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.tile_content_reader import read_file
@@ -211,7 +212,84 @@ class Worker(Process):
             )
 
     def execute_process_jobs(self, content):
-        node_process.run(content[1:], self.octree_metadata, self.skt, self.verbosity)
+        begin = time.time()
+        log_enabled = self.verbosity >= 2
+        if log_enabled:
+            log_filename = f"py3dtiles-{os.getpid()}.log"
+            log_file = open(log_filename, "a")
+        else:
+            log_file = None
+
+        work = content[1:]
+        total_point_count = 0
+        i = 0
+        while i < len(work):
+            name = work[i]
+            node = work[i + 1]
+            count = struct.unpack(">I", work[i + 2])[0]
+            tasks = work[i + 3 : i + 3 + count]
+            i += 3 + count
+
+            node_catalog = NodeCatalog(node, name, self.octree_metadata)
+
+            for proc_name, proc_data, proc_point_count, point_count in node_process.run(
+                node_catalog,
+                self.octree_metadata,
+                name,
+                tasks,
+                begin,
+                log_file,
+            ):
+                self.skt.send_multipart(
+                    [
+                        ResponseType.NEW_TASK.value,
+                        proc_name,
+                        proc_data,
+                        struct.pack(">I", proc_point_count),
+                    ],
+                    copy=False,
+                    block=False,
+                )
+                total_point_count = point_count
+
+            if log_enabled:
+                print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
+
+            # save node state on disk
+            if len(name) > 0:
+                data = node_catalog.dump(
+                    name, node_process.infer_depth_from_name(name) - 1
+                )
+            else:
+                data = b""
+
+            if log_enabled:
+                print(f"saved on disk [{time.time() - begin}]", file=log_file)
+
+            self.skt.send_multipart(
+                [
+                    ResponseType.PROCESSED.value,
+                    pickle.dumps(
+                        {
+                            "name": name,
+                            "total": total_point_count,
+                            "data": data,
+                        }
+                    ),
+                ],
+                copy=False,
+            )
+
+        if log_enabled:
+            print(
+                "[<] return result [{} sec] [{}]".format(
+                    round(time.time() - begin, 2), time.time() - begin
+                ),
+                file=log_file,
+                flush=True,
+            )
+            if log_file is not None:
+                log_file.close()
 
 
 # Manager
