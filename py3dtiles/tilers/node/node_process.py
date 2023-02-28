@@ -4,6 +4,7 @@ import struct
 import time
 from typing import Generator, Tuple
 
+from py3dtiles.exceptions import catch_exception
 from py3dtiles.tilers.node.node_catalog import NodeCatalog
 from py3dtiles.utils import ResponseType
 
@@ -157,52 +158,48 @@ def _process(nodes, octree_metadata, name, tasks, queue, begin, log_file):
     return total, data
 
 
+@catch_exception(msg="Exception while processing node")
 def run(work, octree_metadata, queue, verbose):
-    try:
-        begin = time.time()
-        log_enabled = verbose >= 2
-        if log_enabled:
-            log_filename = f"py3dtiles-{os.getpid()}.log"
-            log_file = open(log_filename, "a")
-        else:
-            log_file = None
+    begin = time.time()
+    log_enabled = verbose >= 2
+    if log_enabled:
+        log_filename = f"py3dtiles-{os.getpid()}.log"
+        log_file = open(log_filename, "a")
+    else:
+        log_file = None
 
-        i = 0
-        while i < len(work):
-            name = work[i]
-            node = work[i + 1]
-            count = struct.unpack(">I", work[i + 2])[0]
-            tasks = work[i + 3 : i + 3 + count]
-            i += 3 + count
-            result, data = _process(
-                node, octree_metadata, name, tasks, queue, begin, log_file
-            )
+    i = 0
+    while i < len(work):
+        name = work[i]
+        node = work[i + 1]
+        count = struct.unpack(">I", work[i + 2])[0]
+        tasks = work[i + 3 : i + 3 + count]
+        i += 3 + count
+        result, data = _process(
+            node, octree_metadata, name, tasks, queue, begin, log_file
+        )
 
-            queue.send_multipart(
-                [
-                    ResponseType.PROCESSED.value,
-                    pickle.dumps(
-                        {
-                            "name": name,
-                            "total": result,
-                            "data": data,
-                        }
-                    ),
-                ],
-                copy=False,
-            )
-
-        if log_enabled:
-            print(
-                "[<] return result [{} sec] [{}]".format(
-                    round(time.time() - begin, 2), time.time() - begin
+        queue.send_multipart(
+            [
+                ResponseType.PROCESSED.value,
+                pickle.dumps(
+                    {
+                        "name": name,
+                        "total": result,
+                        "data": data,
+                    }
                 ),
-                file=log_file,
-                flush=True,
-            )
-            if log_file is not None:
-                log_file.close()
+            ],
+            copy=False,
+        )
 
-    except Exception as e:
-        print("Exception while processing node:", e)
-        raise e
+    if log_enabled:
+        print(
+            "[<] return result [{} sec] [{}]".format(
+                round(time.time() - begin, 2), time.time() - begin
+            ),
+            file=log_file,
+            flush=True,
+        )
+        if log_file is not None:
+            log_file.close()
