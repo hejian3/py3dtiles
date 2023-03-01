@@ -12,7 +12,9 @@ from py3dtiles.tileset.tile_content_reader import read_file
 
 class TestTileContentReader(unittest.TestCase):
     def test_read(self):
-        tile = read_file(Path("tests/fixtures/dragon_low.b3dm"))
+        tile = read_file(
+            Path("tests/fixtures/dragon_low.b3dm")
+        )  # TODO re-export b3dm once feature table is added
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 47246)
@@ -26,7 +28,9 @@ class TestTileContentReader(unittest.TestCase):
         self.assertDictEqual(gltf_header, tile.body.gltf.header)
 
     def test_read_and_write(self):
-        tile_content = read_file(Path("tests/fixtures/buildings.b3dm"))
+        tile_content = read_file(
+            Path("tests/fixtures/buildings.b3dm")
+        )  # TODO re-export b3dm once feature table is added
 
         self.assertEqual(tile_content.header.tile_byte_length, 6180)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
@@ -37,7 +41,7 @@ class TestTileContentReader(unittest.TestCase):
             tile_content.body.batch_table.header.data,
             {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]},
         )
-        self.assertEqual(len(tile_content.body.gltf.to_array()), 6088)
+        self.assertEqual(tile_content.body.gltf.to_array().nbytes, 6088)
         self.assertEqual(tile_content.body.gltf.header["asset"]["version"], "2.0")
 
         path_name = Path("tests/output_tests/buildings.b3dm")
@@ -76,11 +80,29 @@ class TestTileContentBuilder(unittest.TestCase):
         # get an array
         t.to_array()
         self.assertEqual(t.header.version, 1.0)
-        self.assertEqual(t.header.tile_byte_length, 2952)
+
+        # Test the tile byte length
+        self.assertEqual(t.header.tile_byte_length, 2956)
+        # self.assertEqual(t.header.tile_byte_length % 8, 0)  # tile bytes must be 8-byte aligned  # TODO enable these tests when feature table is added in b3dm
+
+        # Test the feature table byte lengths
+        # json_feature_table_end = B3dmHeader.BYTE_LENGTH + t.header.ft_json_byte_length  # TODO enable these tests when feature table is added in b3dm
+        # self.assertEqual(json_feature_table_end % 8, 0)
         self.assertEqual(t.header.ft_json_byte_length, 0)
+        # bin_feature_table_end = json_feature_table_end + t.header.ft_bin_byte_length  # TODO enable these tests when feature table is added in b3dm
+        # self.assertEqual(bin_feature_table_end % 8, 0)
         self.assertEqual(t.header.ft_bin_byte_length, 0)
+
+        # Test the batch table byte lengths
         self.assertEqual(t.header.bt_json_byte_length, 0)
         self.assertEqual(t.header.bt_bin_byte_length, 0)
+
+        # Test the gltf byte length
+        # gltf_start_bounding = bin_feature_table_end + t.header.bt_json_byte_length + t.header.bt_bin_byte_length  # TODO enable these tests when feature table is added in b3dm
+        # self.assertEqual(gltf_start_bounding % 8, 0)  # the gltf part must be 8-byte aligned
+        self.assertEqual(
+            t.body.gltf.to_array().nbytes % 8, 0
+        )  # gltf bytes must be 8-byte aligned
 
         # t.save_as("/tmp/py3dtiles_test_build_1.b3dm")
 
