@@ -6,6 +6,8 @@ from typing import Any, Literal, TYPE_CHECKING, Union
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import Invalid3dtilesError
+
 if TYPE_CHECKING:
     from py3dtiles.tileset.content import TileContentHeader
 
@@ -112,7 +114,7 @@ class BatchTable:
         property_type: PropertyLiteralType,
     ) -> None:
         if array.dtype != COMPONENT_TYPE_NUMPY_MAPPING[component_type]:
-            raise RuntimeError(
+            raise Invalid3dtilesError(
                 "The dtype of array should be the same as component_type,"
                 f"the dtype of the array is {array.dtype} and"
                 f"the dytpe of {component_type} is {COMPONENT_TYPE_NUMPY_MAPPING[component_type]}"
@@ -174,12 +176,12 @@ class BatchTable:
             if (
                 batch_len is None
             ):  # todo once feature table is supported in B3dm, remove this exception
-                raise ValueError(
-                    "batch_len shouldn't be None if there are binary property in the batch table array"
+                raise Invalid3dtilesError(
+                    "batch_len shouldn't be None if there are binary properties in the batch table array"
                 )
 
             if previous_byte_offset != property_definition["byteOffset"]:
-                raise ValueError(
+                raise Invalid3dtilesError(
                     f"The byte offset is {property_definition['byteOffset']} but the byte offset computed is {previous_byte_offset}"
                 )
 

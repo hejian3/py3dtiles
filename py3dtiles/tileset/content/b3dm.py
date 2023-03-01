@@ -5,6 +5,7 @@ import struct
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import InvalidB3dmError
 from py3dtiles.tileset.batch_table import BatchTable
 from .gltf import GlTF
 from .tile_content import (
@@ -62,7 +63,10 @@ class B3dm(TileContent):
         b3dm_header = B3dmHeader.from_array(h_arr)
 
         if b3dm_header.tile_byte_length != len(array):
-            raise RuntimeError("Invalid byte length in header")
+            raise InvalidB3dmError(
+                f"Invalid byte length in header, the size of array is {len(array)}, "
+                f"the tile_byte_length for header is {b3dm_header.tile_byte_length}"
+            )
 
         # build tile body
         b_arr = array[B3dmHeader.BYTE_LENGTH : b3dm_header.tile_byte_length]
@@ -102,7 +106,10 @@ class B3dmHeader(TileContentHeader):
         h = B3dmHeader()
 
         if len(array) != B3dmHeader.BYTE_LENGTH:
-            raise RuntimeError("Invalid header length")
+            raise InvalidB3dmError(
+                f"Invalid header byte length, the size of array is {len(array)}, "
+                f"the header must have a size of {B3dmHeader.BYTE_LENGTH}"
+            )
 
         h.version = struct.unpack("i", array[4:8].tobytes())[0]
         h.tile_byte_length = struct.unpack("i", array[8:12].tobytes())[0]

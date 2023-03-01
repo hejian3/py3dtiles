@@ -7,6 +7,8 @@ from typing import Any, Literal, Sequence, TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import InvalidPntsError
+
 if TYPE_CHECKING:
     from py3dtiles.tileset.content import PntsHeader
 
@@ -140,11 +142,11 @@ class FeatureTableHeader:
         next_offset = SEMANTIC_ITEM_SIZE_MAP[fth.positions] * nb_points
         if fth.positions == SemanticPoint.POSITION_QUANTIZED:
             if quantized_volume_offset is None:
-                raise ValueError(
+                raise InvalidPntsError(
                     "If the position is quantized, quantized_volume_offset should be set."
                 )
             if quantized_volume_scale is None:
-                raise ValueError(
+                raise InvalidPntsError(
                     "If the position is quantized, quantized_volume_scale should be set."
                 )
 
@@ -174,8 +176,8 @@ class FeatureTableHeader:
         if "POINTS_LENGTH" in jsond:
             fth.points_length = jsond["POINTS_LENGTH"]
         else:
-            raise RuntimeError(
-                "The json in the array should have a POINTS_LENGTH entry"
+            raise InvalidPntsError(
+                "The pnts feature table json in the array must have a POINTS_LENGTH entry."
             )
 
         # search position
@@ -185,10 +187,23 @@ class FeatureTableHeader:
         elif "POSITION_QUANTIZED" in jsond:
             fth.positions = SemanticPoint.POSITION_QUANTIZED
             fth.positions_offset = jsond["POSITION_QUANTIZED"]["byteOffset"]
+
+            if (
+                "QUANTIZED_VOLUME_OFFSET" not in jsond
+                and "QUANTIZED_VOLUME_SCALE" not in jsond
+            ):
+                raise InvalidPntsError(
+                    "When the position is quantized, the pnts feature table json in the array"
+                    "must have a QUANTIZED_VOLUME_OFFSET and QUANTIZED_VOLUME_SCALE entry."
+                )
+
             fth.quantized_volume_offset = jsond["QUANTIZED_VOLUME_OFFSET"]
             fth.quantized_volume_offset = jsond["QUANTIZED_VOLUME_SCALE"]
         else:
-            raise RuntimeError("The json in the array should have a position semantic")
+            raise InvalidPntsError(
+                "The pnts feature table json in the array must have a position entry "
+                "(either POSITION or POSITION_QUANTIZED"
+            )
 
         # search colors
         if "RGB" in jsond:
@@ -246,7 +261,7 @@ class FeatureTableBody:
             len(feature_table_body.position)
             != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.positions]
         ):
-            raise ValueError(
+            raise InvalidPntsError(
                 f"The array position has a wrong size. Expecting a size of "
                 f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.positions]}, got {len(feature_table_body.position)}"
             )
@@ -263,7 +278,7 @@ class FeatureTableBody:
                 len(feature_table_body.color)
                 != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.colors]
             ):
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The array color has a wrong size.. Expecting a size of "
                     f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.colors]}, got {len(feature_table_body.color)}"
                 )
@@ -279,7 +294,7 @@ class FeatureTableBody:
                 len(feature_table_body.normal)
                 != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.normal]
             ):
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The array normal has a wrong size.. Expecting a size of "
                     f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.normal]}, got {len(feature_table_body.normal)}"
                 )
@@ -359,7 +374,7 @@ class FeatureTable:
             len(feature_table.body.position)
             != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.positions]
         ):
-            raise ValueError(
+            raise InvalidPntsError(
                 f"The array position has a wrong size. Expecting a size of "
                 f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.positions]}, got {len(feature_table.body.position)}"
             )
@@ -368,7 +383,7 @@ class FeatureTable:
         feature_table.body.color = color_array
         if feature_table.header.colors != SemanticPoint.NONE:
             if feature_table.body.color is None:
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The argument color_array cannot be None "
                     f"if the color has a semantic of {feature_table.header.colors} in the feature_table_header"
                 )
@@ -376,7 +391,7 @@ class FeatureTable:
                 len(feature_table.body.color)
                 != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.colors]
             ):
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The array position has a wrong size. Expecting a size of "
                     f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.colors]}, got {len(feature_table.body.color)}"
                 )
@@ -385,7 +400,7 @@ class FeatureTable:
         feature_table.body.normal = normal_position
         if feature_table.header.normal != SemanticPoint.NONE:
             if feature_table.body.normal is None:
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The argument normal_array cannot be None "
                     f"if the color has a semantic of {feature_table.header.normal} in the feature_table_header"
                 )
@@ -393,7 +408,7 @@ class FeatureTable:
                 len(feature_table.body.normal)
                 != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.normal]
             ):
-                raise ValueError(
+                raise InvalidPntsError(
                     f"The array position has a wrong size. Expecting a size of "
                     f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.normal]}, got {len(feature_table.body.normal)}"
                 )
@@ -415,7 +430,9 @@ class FeatureTable:
 
     def get_feature_position_at(self, index: int) -> npt.NDArray[np.float32 | np.uint8]:
         if index >= self.nb_points():
-            raise ValueError(f"The index {index} is out of range.")
+            raise IndexError(
+                f"The index {index} is out of range. The number of point is {self.nb_points()}"
+            )
 
         return self.body.position[3 * index : 3 * (index + 1)]
 
@@ -423,13 +440,18 @@ class FeatureTable:
         self, index: int
     ) -> npt.NDArray[np.uint8 | np.uint16] | None:
         if index >= self.nb_points():
-            raise ValueError(f"The index {index} is out of range.")
+            raise IndexError(
+                f"The index {index} is out of range. The number of point is {self.nb_points()}"
+            )
 
         if self.header.colors == SemanticPoint.NONE:
             return self.header.constant_rgba
 
         if self.body.color is None:
-            raise RuntimeError("The feature table body color shouldn't be None.")
+            raise InvalidPntsError(
+                "The feature table body color shouldn't be None "
+                f"if self.header.colors is {self.header.colors}."
+            )
 
         if self.header.colors == SemanticPoint.RGB:
             color = self.body.color[3 * index : 3 * (index + 1)]
@@ -438,8 +460,8 @@ class FeatureTable:
         elif self.header.colors == SemanticPoint.RGB565:
             color = self.body.color[index : index + 1]
         else:
-            raise RuntimeError(
-                f"The Semantic point for normal should be either SemanticPoint.RGB,"
+            raise InvalidPntsError(
+                f"The semantic point for normal must be either SemanticPoint.RGB,"
                 f"SemanticPoint.RGBA, or SemanticPoint.RGB565, not {self.header.colors}"
             )
 
@@ -449,21 +471,26 @@ class FeatureTable:
         self, index: int
     ) -> npt.NDArray[np.float32 | np.uint8] | None:
         if index >= self.nb_points():
-            raise ValueError(f"The index {index} is out of range.")
+            raise IndexError(
+                f"The index {index} is out of range. The number of point is {self.nb_points()}"
+            )
 
         if self.header.normal == SemanticPoint.NONE:
             return None
 
         if self.body.normal is None:
-            raise RuntimeError("The feature table body normal shouldn't be None.")
+            raise InvalidPntsError(
+                "The feature table body normal shouldn't be None "
+                f"if self.header.colors is {self.header.normal}."
+            )
 
         if self.header.normal == SemanticPoint.NORMAL:
             normal = self.body.normal[3 * index : 3 * (index + 1)]
         elif self.header.normal == SemanticPoint.NORMAL_OCT16P:
             normal = self.body.normal[2 * index : 2 * (index + 1)]
         else:
-            raise RuntimeError(
-                f"The Semantic point for normal should be either SemanticPoint.NORMAL"
+            raise InvalidPntsError(
+                f"The Semantic point for normal must be either SemanticPoint.NORMAL"
                 f"or SemanticPoint.NORMAL_OCT16P, not {self.header.normal}"
             )
 

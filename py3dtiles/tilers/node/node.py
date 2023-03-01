@@ -9,6 +9,7 @@ from typing import Any, Generator, Iterator, TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import TilerException
 from py3dtiles.tilers.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.pnts.pnts_writer import points_to_pnts
 from py3dtiles.tileset.feature_table import SemanticPoint
@@ -352,8 +353,8 @@ class Node:
 
             if fth.colors != SemanticPoint.NONE:
                 if tile.body.feature_table.body.color is None:
-                    raise RuntimeError(
-                        "If the parent has color data, the children should also have color data."
+                    raise TilerException(
+                        "If the parent has color data, the children must also have color data."
                     )
                 parent_rgb = np.concatenate(
                     (parent_rgb, tile.body.feature_table.body.color)
@@ -424,9 +425,6 @@ class Node:
             # recompute the aabb in function of children
             aabb = None
             for child_tileset_part in children_tileset_parts:
-                if not isinstance(child_tileset_part, dict):
-                    raise RuntimeError("child_tileset_part should be a dict.")
-
                 bounding_box = child_tileset_part["boundingVolume"].get("box")
                 if not isinstance(bounding_box, list):
                     raise ValueError("bounding_box must be a list")
@@ -447,7 +445,7 @@ class Node:
                     aabb[1] = np.amax([aabb[1], child_aabb[1]], axis=0)
 
             if aabb is None:
-                raise RuntimeError("aabb shouldn't be None")
+                raise TilerException("aabb shouldn't be None")
 
             center = ((aabb[0] + aabb[1]) * 0.5).tolist()
             half_size = ((aabb[1] - aabb[0]) * 0.5).tolist()

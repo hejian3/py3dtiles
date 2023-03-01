@@ -5,6 +5,7 @@ import struct
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import InvalidPntsError
 from py3dtiles.tileset.batch_table import BatchTable
 from py3dtiles.tileset.feature_table import (
     FeatureTable,
@@ -74,8 +75,9 @@ class Pnts(TileContent):
         pnts_header = PntsHeader.from_array(h_arr)
 
         if pnts_header.tile_byte_length != len(array):
-            raise RuntimeError(
-                f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {pnts_header.tile_byte_length}"
+            raise InvalidPntsError(
+                f"Invalid byte length in header, the size of array is {len(array)}, "
+                f"the tile_byte_length for header is {pnts_header.tile_byte_length}"
             )
 
         # build tile body
@@ -129,7 +131,10 @@ class PntsHeader(TileContentHeader):
         h = PntsHeader()
 
         if len(array) != PntsHeader.BYTE_LENGTH:
-            raise RuntimeError("Invalid header length")
+            raise InvalidPntsError(
+                f"Invalid header byte length, the size of array is {len(array)}, "
+                f"the header must have a size of {PntsHeader.BYTE_LENGTH}"
+            )
 
         h.version = struct.unpack("i", array[4:8].tobytes())[0]
         h.tile_byte_length = struct.unpack("i", array[8:12].tobytes())[0]
