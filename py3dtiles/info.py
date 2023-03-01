@@ -53,11 +53,11 @@ def print_b3dm_info(tile: B3dm) -> None:
         print("Tile with no header")
 
     if tile.body:
-        gltfh = tile.body.glTF.header
+        gltf_header = tile.body.gltf.header
         print("")
         print("glTF Header")
         print("-----------")
-        print(gltfh)
+        print(gltf_header)
     else:
         print("Tile with no body")
 

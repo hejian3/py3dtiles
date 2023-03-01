@@ -27,10 +27,10 @@ class B3dm(TileContent):
         """
 
         # extract array
-        glTF_arr = self.body.glTF.to_array()
+        gltf_arr = self.body.gltf.to_array()
 
         # sync the tile header with feature table contents
-        self.header.tile_byte_length = len(glTF_arr) + B3dmHeader.BYTE_LENGTH
+        self.header.tile_byte_length = len(gltf_arr) + B3dmHeader.BYTE_LENGTH
         self.header.bt_json_byte_length = 0
         self.header.bt_bin_byte_length = 0
         self.header.ft_json_byte_length = 0
@@ -43,9 +43,9 @@ class B3dm(TileContent):
             self.header.bt_json_byte_length = len(bth_arr)
 
     @staticmethod
-    def from_glTF(gltf: GlTF, batch_table: BatchTable | None = None) -> B3dm:
+    def from_gltf(gltf: GlTF, batch_table: BatchTable | None = None) -> B3dm:
         b3dm_body = B3dmBody()
-        b3dm_body.glTF = gltf
+        b3dm_body.gltf = gltf
         if batch_table is not None:
             b3dm_body.batch_table = batch_table
 
@@ -117,20 +117,20 @@ class B3dmHeader(TileContentHeader):
 class B3dmBody(TileContentBody):
     def __init__(self) -> None:
         self.batch_table = BatchTable()
-        self.glTF = GlTF()
+        self.gltf = GlTF()
 
     def to_array(self) -> npt.NDArray[np.uint8]:
         # TODO : export feature table
-        array = self.glTF.to_array()
+        array = self.gltf.to_array()
         if self.batch_table is not None:
             array = np.concatenate((self.batch_table.to_array(), array))
         return array
 
     @staticmethod
-    def from_glTF(glTF: GlTF) -> B3dmBody:
+    def from_gltf(gltf: GlTF) -> B3dmBody:
         # build tile body
         b = B3dmBody()
-        b.glTF = glTF
+        b.gltf = gltf
 
         return b
 
@@ -143,15 +143,15 @@ class B3dmBody(TileContentBody):
         bt_len = b3dm_header.bt_json_byte_length + b3dm_header.bt_bin_byte_length
 
         # build glTF
-        glTF_len = (
+        gltf_len = (
             b3dm_header.tile_byte_length - ft_len - bt_len - B3dmHeader.BYTE_LENGTH
         )
-        glTF_arr = array[ft_len + bt_len : ft_len + bt_len + glTF_len]
-        glTF = GlTF.from_array(glTF_arr)
+        gltf_arr = array[ft_len + bt_len : ft_len + bt_len + gltf_len]
+        gltf = GlTF.from_array(gltf_arr)
 
         # build tile body with batch table
         b = B3dmBody()
-        b.glTF = glTF
+        b.gltf = gltf
         if b3dm_header.bt_json_byte_length > 0:
             b.batch_table = BatchTable.from_array(
                 b3dm_header, array[0 : b3dm_header.bt_json_byte_length]

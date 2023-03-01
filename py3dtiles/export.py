@@ -194,7 +194,7 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
             if ids is not None:
                 bt = BatchTable()
                 bt.add_property_as_json("id", gids)
-            b3dm = B3dm.from_glTF(gltf, bt).to_array()
+            b3dm = B3dm.from_gltf(gltf, bt).to_array()
             f = open(f"tiles/{node.id}.b3dm", "wb")
             f.write(b3dm)
 

@@ -23,7 +23,7 @@ class TestTileContentReader(unittest.TestCase):
 
         with open("tests/fixtures/dragon_low_gltf_header.json") as f:
             gltf_header = json.loads(f.read())
-        self.assertDictEqual(gltf_header, tile.body.glTF.header)
+        self.assertDictEqual(gltf_header, tile.body.gltf.header)
 
     def test_read_and_write(self):
         tile_content = read_file(Path("tests/fixtures/buildings.b3dm"))
@@ -36,8 +36,8 @@ class TestTileContentReader(unittest.TestCase):
             tile_content.body.batch_table.header.data,
             {"id": ["BATIMENT0000000240853073", "BATIMENT0000000240853157"]},
         )
-        self.assertEqual(len(tile_content.body.glTF.to_array()), 6084)
-        self.assertEqual(tile_content.body.glTF.header["asset"]["version"], "2.0")
+        self.assertEqual(len(tile_content.body.gltf.to_array()), 6084)
+        self.assertEqual(tile_content.body.gltf.header["asset"]["version"], "2.0")
 
         path_name = Path("tests/output_tests/buildings.b3dm")
         path_name.parent.mkdir(parents=True, exist_ok=True)
@@ -69,8 +69,8 @@ class TestTileContentBuilder(unittest.TestCase):
         )
         # translation : 1842015.125, 5177109.25, 247.87364196777344
         transform = transform.flatten("F")
-        glTF = GlTF.from_binary_arrays(arrays, transform)
-        t = B3dm.from_glTF(glTF)
+        gltf = GlTF.from_binary_arrays(arrays, transform)
+        t = B3dm.from_gltf(gltf)
 
         # get an array
         t.to_array()
@@ -101,10 +101,10 @@ class TestTexturedTileBuilder(unittest.TestCase):
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float
         )
         transform = transform.flatten("F")
-        glTF = GlTF.from_binary_arrays(
+        gltf = GlTF.from_binary_arrays(
             arrays, transform, texture_uri="squaretexture.jpg"
         )
-        t = B3dm.from_glTF(glTF)
+        t = B3dm.from_gltf(gltf)
 
         # get an array
         t.to_array()
