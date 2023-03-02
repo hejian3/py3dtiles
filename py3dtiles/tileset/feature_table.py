@@ -25,6 +25,26 @@ class SemanticPoint(Enum):
     BATCH_ID = 8
 
 
+class SemanticCategory(Enum):
+    NONE = 0
+    POSITION = 1
+    COLOR = 2
+    NORMAL = 3
+    BATCH = 4
+
+
+SEMANTIC_CATEGORY_MAP = {
+    SemanticPoint.NONE: SemanticCategory.NONE,
+    SemanticPoint.POSITION: SemanticCategory.POSITION,
+    SemanticPoint.POSITION_QUANTIZED: SemanticCategory.POSITION,
+    SemanticPoint.RGB: SemanticCategory.COLOR,
+    SemanticPoint.RGBA: SemanticCategory.COLOR,
+    SemanticPoint.RGB565: SemanticCategory.COLOR,
+    SemanticPoint.NORMAL: SemanticCategory.NORMAL,
+    SemanticPoint.NORMAL_OCT16P: SemanticCategory.NORMAL,
+    SemanticPoint.BATCH_ID: SemanticCategory.BATCH,
+}
+
 SEMANTIC_TYPE_MAP = {
     SemanticPoint.POSITION: np.float32,
     SemanticPoint.POSITION_QUANTIZED: np.uint16,
@@ -35,7 +55,7 @@ SEMANTIC_TYPE_MAP = {
     SemanticPoint.NORMAL_OCT16P: np.uint8,
 }
 
-SEMANTIC_SIZE_MAP = {
+SEMANTIC_DIMENSION_MAP = {
     SemanticPoint.POSITION: 3,
     SemanticPoint.POSITION_QUANTIZED: 3,
     SemanticPoint.RGB: 3,
@@ -46,10 +66,35 @@ SEMANTIC_SIZE_MAP = {
 }
 
 SEMANTIC_ITEM_SIZE_MAP = {
-    semantic: SEMANTIC_SIZE_MAP[semantic]
+    semantic: SEMANTIC_DIMENSION_MAP[semantic]
     * np.dtype(SEMANTIC_TYPE_MAP[semantic]).itemsize
     for semantic in SEMANTIC_TYPE_MAP
 }
+
+
+def check_semantic_type(semantic: SemanticPoint, category: SemanticCategory) -> None:
+    """
+    This function checks if the category of the semantic is the same as the parameter category.
+    If not, it raises an InvalidPntsError exception.
+    """
+    if SEMANTIC_CATEGORY_MAP[semantic] != category:
+        raise InvalidPntsError(
+            f"The category of {semantic} is {SEMANTIC_CATEGORY_MAP[semantic]}, it cannot be used to set {category}"
+        )
+
+
+def check_array_size(
+    array: npt.NDArray, semantic: SemanticPoint, nb_points: int
+) -> None:
+    """
+    This function checks if the size of the given array is correct according semantic and nb_points.
+    If not, it raises an InvalidPntsError exception.
+    """
+    if len(array) != nb_points * SEMANTIC_DIMENSION_MAP[semantic]:
+        raise InvalidPntsError(
+            f"The array {SEMANTIC_CATEGORY_MAP[semantic]} has a wrong size. Expecting a size of "
+            f"{nb_points * SEMANTIC_DIMENSION_MAP[semantic]}, got {len(array)}"
+        )
 
 
 class FeatureTableHeader:
@@ -190,7 +235,7 @@ class FeatureTableHeader:
 
             if (
                 "QUANTIZED_VOLUME_OFFSET" not in jsond
-                and "QUANTIZED_VOLUME_SCALE" not in jsond
+                or "QUANTIZED_VOLUME_SCALE" not in jsond
             ):
                 raise InvalidPntsError(
                     "When the position is quantized, the pnts feature table json in the array"
@@ -251,53 +296,33 @@ class FeatureTableBody:
         nb_points = feature_table_header.points_length
 
         # extract positions
-        position_item_size = SEMANTIC_ITEM_SIZE_MAP[feature_table_header.positions]
-        position_offset = feature_table_header.positions_offset
-        feature_table_body.position = array[
-            position_offset : position_offset + position_item_size * nb_points
-        ].view(SEMANTIC_TYPE_MAP[feature_table_header.positions])
-
-        if (
-            len(feature_table_body.position)
-            != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.positions]
-        ):
-            raise InvalidPntsError(
-                f"The array position has a wrong size. Expecting a size of "
-                f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.positions]}, got {len(feature_table_body.position)}"
-            )
+        feature_table_body.position = cls._fetch_semantic_from_array(
+            array,
+            feature_table_header.positions,
+            feature_table_header.positions_offset,
+            nb_points,
+            SemanticCategory.POSITION,
+        )
 
         # extract colors
         if feature_table_header.colors != SemanticPoint.NONE:
-            color_item_size = SEMANTIC_ITEM_SIZE_MAP[feature_table_header.colors]
-            color_offset = feature_table_header.colors_offset
-            feature_table_body.color = array[
-                color_offset : color_offset + color_item_size * nb_points
-            ].view(SEMANTIC_TYPE_MAP[feature_table_header.colors])
+            feature_table_body.color = cls._fetch_semantic_from_array(
+                array,
+                feature_table_header.colors,
+                feature_table_header.colors_offset,
+                nb_points,
+                SemanticCategory.COLOR,
+            )
 
-            if (
-                len(feature_table_body.color)
-                != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.colors]
-            ):
-                raise InvalidPntsError(
-                    f"The array color has a wrong size.. Expecting a size of "
-                    f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.colors]}, got {len(feature_table_body.color)}"
-                )
-
+        # extract normals
         if feature_table_header.normal != SemanticPoint.NONE:
-            normal_item_size = SEMANTIC_ITEM_SIZE_MAP[feature_table_header.normal]
-            normal_offset = feature_table_header.colors_offset
-            feature_table_body.normal = array[
-                normal_offset : normal_offset + normal_item_size * nb_points
-            ].view(SEMANTIC_TYPE_MAP[feature_table_header.normal])
-
-            if (
-                len(feature_table_body.normal)
-                != nb_points * SEMANTIC_SIZE_MAP[feature_table_header.normal]
-            ):
-                raise InvalidPntsError(
-                    f"The array normal has a wrong size.. Expecting a size of "
-                    f"{nb_points * SEMANTIC_SIZE_MAP[feature_table_header.normal]}, got {len(feature_table_body.normal)}"
-                )
+            feature_table_body.normal = cls._fetch_semantic_from_array(
+                array,
+                feature_table_header.normal,
+                feature_table_header.colors_offset,
+                nb_points,
+                SemanticCategory.NORMAL,
+            )
 
         return feature_table_body
 
@@ -321,6 +346,24 @@ class FeatureTableBody:
         padding = np.frombuffer(padding_str.encode("utf-8"), dtype=np.uint8)
 
         return position_array, color_array, normal_array, padding
+
+    @staticmethod
+    def _fetch_semantic_from_array(
+        array: npt.NDArray,
+        semantic: SemanticPoint,
+        offset: int,
+        nb_points: int,
+        category: SemanticCategory,
+    ) -> npt.NDArray:
+        check_semantic_type(semantic, category)
+
+        semantic_array = array[
+            offset : offset + SEMANTIC_ITEM_SIZE_MAP[semantic] * nb_points
+        ].view(SEMANTIC_TYPE_MAP[semantic])
+
+        check_array_size(semantic_array, semantic, nb_points)
+
+        return semantic_array
 
 
 class FeatureTable:
@@ -369,49 +412,31 @@ class FeatureTable:
         nb_points = feature_table.header.points_length
 
         # set the position array
+        check_semantic_type(feature_table.header.positions, SemanticCategory.POSITION)
+        check_array_size(position_array, feature_table.header.positions, nb_points)
         feature_table.body.position = position_array
-        if (
-            len(feature_table.body.position)
-            != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.positions]
-        ):
-            raise InvalidPntsError(
-                f"The array position has a wrong size. Expecting a size of "
-                f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.positions]}, got {len(feature_table.body.position)}"
-            )
 
         # set the color array
-        feature_table.body.color = color_array
         if feature_table.header.colors != SemanticPoint.NONE:
-            if feature_table.body.color is None:
+            if color_array is None:
                 raise InvalidPntsError(
                     f"The argument color_array cannot be None "
                     f"if the color has a semantic of {feature_table.header.colors} in the feature_table_header"
                 )
-            elif (
-                len(feature_table.body.color)
-                != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.colors]
-            ):
-                raise InvalidPntsError(
-                    f"The array position has a wrong size. Expecting a size of "
-                    f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.colors]}, got {len(feature_table.body.color)}"
-                )
+            check_semantic_type(feature_table.header.colors, SemanticCategory.COLOR)
+            check_array_size(color_array, feature_table.header.colors, nb_points)
+        feature_table.body.color = color_array
 
         # set the normal array
-        feature_table.body.normal = normal_position
         if feature_table.header.normal != SemanticPoint.NONE:
-            if feature_table.body.normal is None:
+            if normal_position is None:
                 raise InvalidPntsError(
                     f"The argument normal_array cannot be None "
                     f"if the color has a semantic of {feature_table.header.normal} in the feature_table_header"
                 )
-            elif (
-                len(feature_table.body.normal)
-                != nb_points * SEMANTIC_SIZE_MAP[feature_table.header.normal]
-            ):
-                raise InvalidPntsError(
-                    f"The array position has a wrong size. Expecting a size of "
-                    f"{nb_points * SEMANTIC_SIZE_MAP[feature_table.header.normal]}, got {len(feature_table.body.normal)}"
-                )
+            check_semantic_type(feature_table.header.positions, SemanticCategory.NORMAL)
+            check_array_size(normal_position, feature_table.header.normal, nb_points)
+        feature_table.body.normal = normal_position
 
         return feature_table
 
@@ -434,7 +459,10 @@ class FeatureTable:
                 f"The index {index} is out of range. The number of point is {self.nb_points()}"
             )
 
-        return self.body.position[3 * index : 3 * (index + 1)]
+        check_semantic_type(self.header.positions, SemanticCategory.POSITION)
+
+        dimension = SEMANTIC_DIMENSION_MAP[self.header.positions]
+        return self.body.position[dimension * index : dimension * (index + 1)]
 
     def get_feature_color_at(
         self, index: int
@@ -453,19 +481,10 @@ class FeatureTable:
                 f"if self.header.colors is {self.header.colors}."
             )
 
-        if self.header.colors == SemanticPoint.RGB:
-            color = self.body.color[3 * index : 3 * (index + 1)]
-        elif self.header.colors == SemanticPoint.RGBA:
-            color = self.body.color[4 * index : 4 * (index + 1)]
-        elif self.header.colors == SemanticPoint.RGB565:
-            color = self.body.color[index : index + 1]
-        else:
-            raise InvalidPntsError(
-                f"The semantic point for normal must be either SemanticPoint.RGB,"
-                f"SemanticPoint.RGBA, or SemanticPoint.RGB565, not {self.header.colors}"
-            )
+        check_semantic_type(self.header.colors, SemanticCategory.COLOR)
 
-        return color
+        dimension = SEMANTIC_DIMENSION_MAP[self.header.colors]
+        return self.body.color[dimension * index : dimension * (index + 1)]
 
     def get_feature_normal_at(
         self, index: int
@@ -484,14 +503,7 @@ class FeatureTable:
                 f"if self.header.colors is {self.header.normal}."
             )
 
-        if self.header.normal == SemanticPoint.NORMAL:
-            normal = self.body.normal[3 * index : 3 * (index + 1)]
-        elif self.header.normal == SemanticPoint.NORMAL_OCT16P:
-            normal = self.body.normal[2 * index : 2 * (index + 1)]
-        else:
-            raise InvalidPntsError(
-                f"The Semantic point for normal must be either SemanticPoint.NORMAL"
-                f"or SemanticPoint.NORMAL_OCT16P, not {self.header.normal}"
-            )
+        check_semantic_type(self.header.normal, SemanticCategory.NORMAL)
 
-        return normal
+        dimension = SEMANTIC_DIMENSION_MAP[self.header.normal]
+        return self.body.normal[dimension * index : dimension * (index + 1)]
