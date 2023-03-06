@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 from pathlib import Path
 import shutil
 from unittest.mock import patch
@@ -7,7 +8,7 @@ import laspy
 import numpy as np
 import plyfile
 from pyproj import CRS
-from pytest import fixture, raises
+from pytest import fixture, mark, raises
 
 from py3dtiles.convert import convert
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
@@ -316,6 +317,10 @@ def test_convert_mix_input_crs(tmp_dir):
     assert tmp_dir.exists()
 
 
+@mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="'patch' function works only with the multiprocessing 'fork' method (not available on windows).",
+)
 def test_convert_xyz_exception_in_run(tmp_dir):
     with patch("py3dtiles.reader.xyz_reader.run") as mock_run, raises(
         Exception, match="An exception occurred in a worker: Exception in run"
@@ -329,6 +334,10 @@ def test_convert_xyz_exception_in_run(tmp_dir):
         )
 
 
+@mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="'patch' function works only with the multiprocessing 'fork' method (not available on windows).",
+)
 def test_convert_las_exception_in_run(tmp_dir):
     with patch("py3dtiles.reader.las_reader.run") as mock_run, raises(
         Exception, match="An exception occurred in a worker: Exception in run"

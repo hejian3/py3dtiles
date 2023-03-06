@@ -137,6 +137,24 @@ test:
     matrix:
       - PYTHON_VERSION: ['3.8', '3.9', '3.10']
 
+windows-test:
+  stage: 🤞 test
+  tags:
+    - windows
+  before_script:
+    - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    - choco install -y python --version=3.9.5
+    - RefreshEnv
+    - python -m pip install --upgrade pip setuptools wheel
+    - python -m pip install .[dev]
+  script:
+    - pytest
+    - py3dtiles info tests/fixtures/pointCloudRGB.pnts
+  only:
+    refs:
+      - tags
+      - master
+
 3d-tiles-validator:
   stage: 🤞 test
   image:
