@@ -61,7 +61,11 @@ READER_MAP = {
 }
 
 
-class Worker(Process):
+def worker_target(*args):
+    return Worker(*args).run()
+
+
+class Worker:
     """
     This class waits from jobs commands from the Zmq socket.
     """
@@ -77,7 +81,6 @@ class Worker(Process):
         verbosity: int,
         uri: str,
     ) -> None:
-        super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
         self.octree_metadata = octree_metadata
@@ -306,7 +309,7 @@ class ZmqManager:
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            Worker(*process_args, self.uri)  # type: ignore [call-arg]
+            Process(target=worker_target, args=(*process_args, self.uri))
             for _ in range(number_of_jobs)
         ]
         for p in self.processes:
