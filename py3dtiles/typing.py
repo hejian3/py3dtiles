@@ -92,7 +92,6 @@ PortionsType = Sequence[Tuple[str, PortionType]]
 class MetadataReaderType(TypedDict):
     portions: PortionsType
     aabb: npt.NDArray[np.double]
-    color_scale: float | None
     crs_in: CRS | None
     point_count: int
     avg_min: npt.NDArray[np.double]
