@@ -15,25 +15,13 @@ from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 from py3dtiles.utils import ResponseType
 
 
-def get_metadata(
-    path: Path, color_scale: Optional[float] = None, fraction: int = 100
-) -> MetadataReaderType:
+def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
     pointcloud_file_portions = []
     srs_in = None
 
     filename = str(path)
     with laspy.open(filename) as f:
         point_count = f.header.point_count * fraction // 100
-
-        # read the first points red channel
-        if not color_scale:
-            if "red" in f.header.point_format.dimension_names:
-                points = next(f.chunk_iterator(10_000))["red"]
-                if np.max(points) > 255:
-                    color_scale = 1.0 / 255
-            else:
-                # the intensity is then used as color
-                color_scale = 1.0 / 255
 
         _1M = min(point_count, 1_000_000)
         steps = math.ceil(point_count / _1M)
@@ -49,7 +37,6 @@ def get_metadata(
     return {
         "portions": pointcloud_file_portions,
         "aabb": np.array([f.header.mins, f.header.maxs]),
-        "color_scale": color_scale,
         "srs_in": srs_in,
         "point_count": point_count,
         "avg_min": np.array(f.header.mins),
@@ -62,6 +49,7 @@ def run(
     portion: PortionType,
     queue: Socket,
     transformer: Optional[Transformer],
+    color_scale: Optional[float],
 ) -> None:
     """
     Reads points from a las file
@@ -74,8 +62,6 @@ def run(
             step = min(point_count, max(point_count // 10, 100_000))
 
             indices = list(range(math.ceil(point_count / step)))
-
-            color_scale = offset_scale[3]
 
             for index in indices:
                 start_offset = portion[0] + index * step
@@ -114,14 +100,14 @@ def run(
                     green = points["intensity"]
                     blue = points["intensity"]
 
-                if not color_scale:
-                    red = red.astype(np.uint8)
-                    green = green.astype(np.uint8)
-                    blue = blue.astype(np.uint8)
-                else:
+                if color_scale:
                     red = (red * color_scale).astype(np.uint8)
                     green = (green * color_scale).astype(np.uint8)
                     blue = (blue * color_scale).astype(np.uint8)
+                else:
+                    red = red.astype(np.uint8)
+                    green = green.astype(np.uint8)
+                    blue = blue.astype(np.uint8)
 
                 colors = np.vstack((red, green, blue)).transpose()
 

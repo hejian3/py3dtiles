@@ -132,6 +132,62 @@ def test_convert_simple_xyz(tmp_dir):
     assert box == expecting_box
 
 
+def test_convert_xyz_with_rgb(tmp_dir):
+    convert(DATA_DIRECTORY / "simple_with_rgb.xyz", outfolder=tmp_dir)
+
+    tile1 = tile_content_reader.read_file(tmp_dir / "r1.pnts")
+    assert tile1.body.feature_table.nb_points() == 1
+    pt1 = tile1.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt1.colors["Red"] == 10
+    assert pt1.colors["Green"] == 0
+    assert pt1.colors["Blue"] == 0
+
+    tile2 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
+    assert tile2.body.feature_table.nb_points() == 1
+    pt2 = tile2.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt2.colors["Red"] == 0
+    assert pt2.colors["Green"] == 0
+    assert pt2.colors["Blue"] == 20
+
+    tile3 = tile_content_reader.read_file(tmp_dir / "r7.pnts")
+    assert tile3.body.feature_table.nb_points() == 1
+    pt3 = tile3.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt3.colors["Red"] == 0
+    assert pt3.colors["Green"] == 10
+    assert pt3.colors["Blue"] == 0
+
+
+def test_convert_xyz_with_rgb_color_scale(tmp_dir):
+    convert(DATA_DIRECTORY / "simple_with_rgb.xyz", outfolder=tmp_dir, color_scale=1.5)
+
+    tile1 = tile_content_reader.read_file(tmp_dir / "r1.pnts")
+    assert tile1.body.feature_table.nb_points() == 1
+    pt1 = tile1.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt1.colors["Red"] == 15
+    assert pt1.colors["Green"] == 0
+    assert pt1.colors["Blue"] == 0
+
+    tile2 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
+    assert tile2.body.feature_table.nb_points() == 1
+    pt2 = tile2.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt2.colors["Red"] == 0
+    assert pt2.colors["Green"] == 0
+    assert pt2.colors["Blue"] == 30
+
+    tile3 = tile_content_reader.read_file(tmp_dir / "r7.pnts")
+    assert tile3.body.feature_table.nb_points() == 1
+    pt3 = tile3.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt3.colors["Red"] == 0
+    assert pt3.colors["Green"] == 15
+    assert pt3.colors["Blue"] == 0
+
+
 def test_convert_ply(tmp_dir):
     convert(DATA_DIRECTORY / "simple.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()

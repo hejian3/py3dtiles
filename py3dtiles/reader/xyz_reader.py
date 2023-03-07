@@ -12,9 +12,7 @@ from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 from py3dtiles.utils import ResponseType
 
 
-def get_metadata(
-    path: Path, color_scale: Optional[float] = None, fraction: int = 100
-) -> MetadataReaderType:
+def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
     aabb = None
     count = 0
     seek_values = []
@@ -70,7 +68,6 @@ def get_metadata(
     return {
         "portions": pointcloud_file_portions,
         "aabb": aabb,
-        "color_scale": color_scale,
         "srs_in": None,
         "point_count": point_count,
         "avg_min": aabb[0],
@@ -83,6 +80,7 @@ def run(
     portion: PortionType,
     queue: Socket,
     transformer: Optional[Transformer],
+    color_scale: Optional[float],
 ) -> None:
     """
     Reads points from a xyz file
@@ -145,7 +143,10 @@ def run(
                 coords = np.ascontiguousarray(coords.astype(np.float32))
 
                 # Read colors: 3 last columns of the point cloud
-                colors = points[:, -3:].astype(np.uint8)
+                if color_scale:
+                    colors = (points[:, -3:] * color_scale).astype(np.uint8)
+                else:
+                    colors = points[:, -3:].astype(np.uint8)
 
                 classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
                 queue.send_multipart(
