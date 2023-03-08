@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from io import StringIO
 from pathlib import Path, PurePath
-from typing import Callable
+from typing import Callable, NamedTuple
 
 import numpy as np
 from pyproj import CRS
@@ -38,6 +38,12 @@ class ResponseType(Enum):
     PNTS_WRITTEN = b"pnts_written"
     NEW_TASK = b"new_task"
     ERROR = b"error"
+
+
+class OctreeMetadata(NamedTuple):
+    aabb: np.ndarray
+    spacing: float
+    scale: float
 
 
 def profile(func: Callable) -> Callable:

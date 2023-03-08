@@ -1,16 +1,20 @@
 import pickle
 import time
-from typing import Generator, Tuple
+from typing import Generator, List, Optional, TextIO, Tuple
+
+from py3dtiles.tilers.node.node import Node
+from py3dtiles.tilers.node.node_catalog import NodeCatalog
+from py3dtiles.utils import OctreeMetadata
 
 
 def _flush(
-    node_catalog,
-    scale,
-    node,
-    max_depth=1,
-    force_forward=False,
-    log_file=None,
-    depth=0,
+    node_catalog: NodeCatalog,
+    scale: float,
+    node: Node,
+    max_depth: int = 1,
+    force_forward: bool = False,
+    log_file: Optional[TextIO] = None,
+    depth: int = 0,
 ) -> Generator[Tuple, None, None]:
     if depth >= max_depth:
         threshold = 0 if force_forward else 10_000
@@ -55,7 +59,7 @@ def _balance(node_catalog, node, max_depth=1, depth=0):
             )
 
 
-def infer_depth_from_name(name: str) -> int:
+def infer_depth_from_name(name: bytes) -> int:
     halt_at_depth = 0
     if len(name) >= 7:
         halt_at_depth = 5
@@ -69,13 +73,18 @@ def infer_depth_from_name(name: str) -> int:
 
 
 def run(
-    node_catalog, octree_metadata, name, tasks, begin, log_file
+    node_catalog: NodeCatalog,
+    octree_metadata: OctreeMetadata,
+    name: bytes,
+    tasks: List,
+    begin: float,
+    log_file: Optional[TextIO],
 ) -> Generator[Tuple, None, None]:
 
     log_enabled = log_file is not None
 
     if log_enabled:
-        print(f'[>] process_node: "{name}", {len(tasks)}', file=log_file, flush=True)
+        print(f'[>] process_node: "{name!r}", {len(tasks)}', file=log_file, flush=True)
 
     node = node_catalog.get_node(name)
 

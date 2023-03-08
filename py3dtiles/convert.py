@@ -1,5 +1,4 @@
 import argparse
-from collections import namedtuple
 import concurrent.futures
 import json
 from multiprocessing import cpu_count, Process
@@ -42,6 +41,7 @@ from py3dtiles.utils import (
     compute_spacing,
     node_from_name,
     node_name_to_path,
+    OctreeMetadata,
     ResponseType,
     str_to_CRS,
 )
@@ -55,8 +55,6 @@ if os.name == "nt":
     URI = "tcp://127.0.0.1:0"
 else:
     URI = "ipc:///tmp/py3dtiles1"
-
-OctreeMetadata = namedtuple("OctreeMetadata", ["aabb", "spacing", "scale"])
 
 READER_MAP = {
     ".xyz": xyz_reader,
