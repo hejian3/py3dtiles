@@ -73,7 +73,7 @@ typing-check:
   before_script:
     - pip install .[dev]
   script:
-    - mypy setup.py py3dtiles/ tests/ --ignore-missing-imports
+    - mypy
   only:
     refs:
       - merge_requests

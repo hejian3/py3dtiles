@@ -60,10 +60,10 @@ class GlTF:
 
         Returns
         -------
-        glTF : GlTf
+        gltf : GlTf
         """
 
-        glTF = GlTF()
+        gltf = GlTF()
 
         if struct.unpack("4s", array[0:4])[0] != b"glTF":
             raise RuntimeError("Array does not contain a binary glTF")
@@ -85,14 +85,14 @@ class GlTF:
         header = struct.unpack(
             str(json_chunk_length) + "s", array[index : index + json_chunk_length]
         )[0]
-        glTF.header = json.loads(header.decode("ascii"))
+        gltf.header = json.loads(header.decode("ascii"))
 
         index += (
             json_chunk_length + GlTF.CHUNK_HEADER_LENGTH
         )  # Skip the JSON chunk data and the binary chunk header
-        glTF.body = array[index:length]
+        gltf.body = array[index:length]
 
-        return glTF
+        return gltf
 
     @staticmethod
     def from_binary_arrays(arrays, transform, batched=True, uri=None, texture_uri=None):
@@ -112,10 +112,10 @@ class GlTF:
 
         Returns
         -------
-        glTF : GlTF
+        gltf : GlTF
         """
 
-        glTF = GlTF()
+        gltf = GlTF()
 
         textured = "uv" in arrays[0]
         bin_vertices = []
@@ -154,7 +154,7 @@ class GlTF:
                 maxz = max(maxz, box[1][2])
             bb = [[[minx, miny, minz], [maxx, maxy, maxz]]]
 
-        glTF.header = compute_header(
+        gltf.header = compute_header(
             bin_vertices,
             n_vertices,
             bb,
@@ -165,11 +165,11 @@ class GlTF:
             uri,
             texture_uri,
         )
-        glTF.body = np.frombuffer(
+        gltf.body = np.frombuffer(
             compute_binary(bin_vertices, bin_normals, bin_ids, bin_uvs), dtype=np.uint8
         )
 
-        return glTF
+        return gltf
 
 
 def compute_binary(bin_vertices, bin_normals, bin_ids, bin_uvs):

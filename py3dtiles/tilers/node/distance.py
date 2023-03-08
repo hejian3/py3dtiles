@@ -1,4 +1,4 @@
-from numba import jit, njit  # type: ignore
+from numba import jit, njit  # type: ignore [attr-defined]
 import numpy as np
 
 

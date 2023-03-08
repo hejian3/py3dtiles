@@ -4,7 +4,7 @@ from py3dtiles.tileset.content import B3dm, Pnts
 from py3dtiles.tileset.tile_content_reader import read_file
 
 
-def print_pnts_info(tile: Pnts):
+def print_pnts_info(tile: Pnts) -> None:
     if tile.header:
         th = tile.header
         print("Tile Header")
@@ -37,7 +37,7 @@ def print_pnts_info(tile: Pnts):
         print("Tile with no body")
 
 
-def print_b3dm_info(tile: B3dm):
+def print_b3dm_info(tile: B3dm) -> None:
     if tile.header:
         th = tile.header
         print("Tile Header")
@@ -53,11 +53,11 @@ def print_b3dm_info(tile: B3dm):
         print("Tile with no header")
 
     if tile.body:
-        gltfh = tile.body.glTF.header
+        gltf_header = tile.body.gltf.header
         print("")
         print("glTF Header")
         print("-----------")
-        print(gltfh)
+        print(gltf_header)
     else:
         print("Tile with no body")
 

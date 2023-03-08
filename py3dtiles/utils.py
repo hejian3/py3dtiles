@@ -18,7 +18,7 @@ def str_to_CRS(srs: str | CRS | None) -> CRS | None:
         return None
 
     try:
-        return CRS.from_epsg(int(srs))  # type: ignore
+        return CRS.from_epsg(int(srs))  # type: ignore [arg-type]
     except ValueError:
         return CRS(srs)
 

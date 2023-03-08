@@ -28,6 +28,8 @@ dev_requirements = (
     "pytest-cov",
     "mypy",
     "typing_extensions",
+    "types_psutil",
+    "types_psycopg2",
 )
 
 doc_requirements = (

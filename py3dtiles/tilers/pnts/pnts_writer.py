@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 from pathlib import Path
 import pickle
 import struct
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
 import numpy as np
+import numpy.typing as npt
+from zmq import Socket
 
 import py3dtiles
 from py3dtiles.tileset.batch_table import BatchTable
@@ -16,10 +20,17 @@ from py3dtiles.tileset.feature_table import (
 )
 from py3dtiles.utils import node_name_to_path, ResponseType
 
+if TYPE_CHECKING:
+    from py3dtiles.tilers.node import DummyNode, Node
+
 
 def points_to_pnts(
-    name, points, out_folder: Path, include_rgb, include_classification
-) -> Tuple[int, Optional[Path]]:
+    name: bytes,
+    points: npt.NDArray[np.uint8],
+    out_folder: Path,
+    include_rgb: bool,
+    include_classification: bool,
+) -> tuple[int, Path | None]:
     count = int(
         len(points)
         / (3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0))
@@ -54,7 +65,7 @@ def points_to_pnts(
     body.batch_table = bt
 
     tile = Pnts(PntsHeader(), body)
-    tile.header.sync(body)
+    tile.sync()
 
     node_path = node_name_to_path(out_folder, name, ".pnts")
 
@@ -66,14 +77,27 @@ def points_to_pnts(
     return count, node_path
 
 
-def node_to_pnts(name, node, out_folder: Path, include_rgb, include_classification):
+def node_to_pnts(
+    name: bytes,
+    node: Node | DummyNode,
+    out_folder: Path,
+    include_rgb: bool,
+    include_classification: bool,
+) -> tuple[int, Path | None]:
     points = py3dtiles.tilers.node.Node.get_points(
         node, include_rgb, include_classification
     )
     return points_to_pnts(name, points, out_folder, include_rgb, include_classification)
 
 
-def run(sender, data, node_name, folder: Path, write_rgb, write_classification):
+def run(
+    sender: Socket,
+    data: bytes,
+    node_name: bytes,
+    folder: Path,
+    write_rgb: bool,
+    write_classification: bool,
+) -> None:
     # we can safely write the .pnts file
     if len(data) > 0:
         root = pickle.loads(gzip.decompress(data))

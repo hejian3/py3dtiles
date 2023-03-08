@@ -45,8 +45,11 @@ class Tile(Extendable):
     def from_dict(cls, tile_dict: TileDictType) -> Tile:
         if "box" in tile_dict["boundingVolume"]:
             bounding_volume = BoundingVolumeBox()
-            bounding_volume.set_from_list(tile_dict["boundingVolume"]["box"])  # type: ignore
-        elif tile_dict["boundingVolume"] in ("region", "sphere"):
+            bounding_volume.set_from_list(tile_dict["boundingVolume"]["box"])  # type: ignore [typeddict-item]
+        elif (
+            "region" in tile_dict["boundingVolume"]
+            or "sphere" in tile_dict["boundingVolume"]
+        ):
             raise NotImplementedError(
                 "The support of bounding volume region and sphere is not implemented yet"
             )
@@ -192,7 +195,7 @@ class Tile(Extendable):
             raise AttributeError("Bounding volume is not set")
         bounding_volume_dict = bounding_volume.to_dict()
 
-        refine = self._refine.upper()
+        refine = self._refine
         if refine not in ["ADD", "REPLACE"]:
             raise ValueError(
                 f"refine should be either ADD or REPLACE, currently {refine}."
@@ -201,7 +204,7 @@ class Tile(Extendable):
         dict_data: TileDictType = {
             "boundingVolume": bounding_volume_dict,
             "geometricError": self.geometric_error,
-            "refine": refine,  # type: ignore
+            "refine": refine,
         }
 
         if (

@@ -20,6 +20,30 @@ class Pnts(TileContent):
         self.header: PntsHeader = header
         self.body: PntsBody = body
 
+    def sync(self) -> None:
+        """
+        Synchronizes headers with the Pnts body.
+        """
+
+        # extract arrays
+        feature_table_header_array = self.body.feature_table.header.to_array()
+        feature_table_body_array = self.body.feature_table.body.to_array()
+        batch_table_header_array = self.body.batch_table.header.to_array()
+        batch_table_body_array = self.body.batch_table.body.to_array()
+
+        # sync the tile header with feature table contents
+        self.header.tile_byte_length = (
+            len(feature_table_header_array)
+            + len(feature_table_body_array)
+            + len(batch_table_header_array)
+            + len(batch_table_body_array)
+            + PntsHeader.BYTE_LENGTH
+        )
+        self.header.ft_json_byte_length = len(feature_table_header_array)
+        self.header.ft_bin_byte_length = len(feature_table_body_array)
+        self.header.bt_json_byte_length = len(batch_table_header_array)
+        self.header.bt_bin_byte_length = len(batch_table_body_array)
+
     @staticmethod
     def from_features(
         pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]
@@ -91,30 +115,6 @@ class PntsHeader(TileContentHeader):
         )
 
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
-
-    def sync(self, body: PntsBody) -> None:
-        """
-        Synchronizes headers with the Pnts body.
-        """
-
-        # extract arrays
-        feature_table_header_array = body.feature_table.header.to_array()
-        feature_table_body_array = body.feature_table.body.to_array()
-        batch_table_header_array = body.batch_table.header.to_array()
-        batch_table_body_array = body.batch_table.body.to_array()
-
-        # sync the tile header with feature table contents
-        self.tile_byte_length = (
-            len(feature_table_header_array)
-            + len(feature_table_body_array)
-            + len(batch_table_header_array)
-            + len(batch_table_body_array)
-            + PntsHeader.BYTE_LENGTH
-        )
-        self.ft_json_byte_length = len(feature_table_header_array)
-        self.ft_bin_byte_length = len(feature_table_body_array)
-        self.bt_json_byte_length = len(batch_table_header_array)
-        self.bt_bin_byte_length = len(batch_table_body_array)
 
     @staticmethod
     def from_array(array: npt.NDArray) -> PntsHeader:
