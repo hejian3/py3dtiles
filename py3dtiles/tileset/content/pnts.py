@@ -7,15 +7,19 @@ import numpy.typing as npt
 
 from py3dtiles.tileset.batch_table import BatchTable
 from py3dtiles.tileset.feature_table import Feature, FeatureTable
-from py3dtiles.tileset.tile_content import (
+from .tile_content import (
     TileContent,
     TileContentBody,
     TileContentHeader,
-    TileContentType,
 )
 
 
 class Pnts(TileContent):
+    def __init__(self, header: PntsHeader, body: PntsBody) -> None:
+        super().__init__()
+        self.header: PntsHeader = header
+        self.body: PntsBody = body
+
     @staticmethod
     def from_features(
         pd_type: npt.DTypeLike, cd_type: npt.DTypeLike, features: list[Feature]
@@ -26,16 +30,10 @@ class Pnts(TileContent):
 
         ft = FeatureTable.from_features(pd_type, cd_type, features)
 
-        tb = PntsBody()
-        tb.feature_table = ft
+        pnts_body = PntsBody()
+        pnts_body.feature_table = ft
 
-        th = PntsHeader()
-
-        t = Pnts()
-        t.body = tb
-        t.header = th
-
-        return t
+        return Pnts(PntsHeader(), pnts_body)
 
     @staticmethod
     def from_array(array: npt.NDArray) -> Pnts:
@@ -45,29 +43,25 @@ class Pnts(TileContent):
 
         # build tile header
         h_arr = array[0 : PntsHeader.BYTE_LENGTH]
-        h = PntsHeader.from_array(h_arr)
+        pnts_header = PntsHeader.from_array(h_arr)
 
-        if h.tile_byte_length != len(array):
+        if pnts_header.tile_byte_length != len(array):
             raise RuntimeError(
-                f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {h.tile_byte_length}"
+                f"Invalid byte length in header, this tile has a length of {len(array)} but the length in the header is {pnts_header.tile_byte_length}"
             )
 
         # build tile body
         b_len = (
-            h.ft_json_byte_length
-            + h.ft_bin_byte_length
-            + h.bt_json_byte_length
-            + h.bt_bin_byte_length
+            pnts_header.ft_json_byte_length
+            + pnts_header.ft_bin_byte_length
+            + pnts_header.bt_json_byte_length
+            + pnts_header.bt_bin_byte_length
         )
         b_arr = array[PntsHeader.BYTE_LENGTH : PntsHeader.BYTE_LENGTH + b_len]
-        b = PntsBody.from_array(h, b_arr)
+        pnts_body = PntsBody.from_array(pnts_header, b_arr)
 
-        # build TileContent with header and body
-        t = Pnts()
-        t.header = h
-        t.body = b
-
-        return t
+        # build the tile with header and body
+        return Pnts(pnts_header, pnts_body)
 
 
 class PntsHeader(TileContentHeader):
@@ -75,7 +69,6 @@ class PntsHeader(TileContentHeader):
 
     def __init__(self) -> None:
         super().__init__()
-        self.type = TileContentType.POINT_CLOUD
         self.magic_value = b"pnts"
         self.version = 1
 

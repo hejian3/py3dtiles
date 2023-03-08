@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from py3dtiles.tileset.tile_content import TileContent
+from py3dtiles.tileset.content import B3dm, Pnts
 from py3dtiles.tileset.tile_content_reader import read_file
 
 
-def print_pnts_info(tile: TileContent):
+def print_pnts_info(tile: Pnts):
     if tile.header:
         th = tile.header
         print("Tile Header")
@@ -37,7 +37,7 @@ def print_pnts_info(tile: TileContent):
         print("Tile with no body")
 
 
-def print_b3dm_info(tile: TileContent):
+def print_b3dm_info(tile: B3dm):
     if tile.header:
         th = tile.header
         print("Tile Header")

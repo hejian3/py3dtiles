@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -7,11 +9,26 @@ from .tile import Tile
 
 
 class TileSet(Extendable):
-    def __init__(self, geometric_error: float = 500) -> None:
+    def __init__(
+        self,
+        geometric_error: float = 500,
+        root_uri: Path | None = None,
+    ) -> None:
         super().__init__()
         self._asset: AssetDictType = {"version": "1.0"}
         self.geometric_error: GeometricErrorType = geometric_error
         self.root_tile = Tile()
+        self.root_uri = root_uri
+
+    @classmethod
+    def from_dict(cls, tileset_dict: TilesetDictType, root_uri: Path) -> TileSet:
+        tileset = cls(geometric_error=tileset_dict["geometricError"])
+
+        tileset._asset = tileset_dict["asset"]
+        tileset.root_tile = Tile.from_dict(tileset_dict["root"])
+        tileset.root_uri = root_uri
+
+        return tileset
 
     def add_asset_extras(self, comment: str) -> None:
         """
@@ -40,9 +57,9 @@ class TileSet(Extendable):
         # Prior to writing the TileSet, the future location of the enclosed
         # Tile's content (set as their respective TileContent uri) must be
         # specified:
-        all_tiles = self.root_tile.get_children()
+        all_tiles = self.root_tile.get_all_children()
         for index, tile in enumerate(all_tiles):
-            tile.set_content_uri("tiles/" + f"{index}.b3dm")
+            tile.content_uri = Path("tiles") / f"{index}.b3dm"
 
         # Proceed with the writing of the TileSet per se:
         self.write_as_json(target_dir)

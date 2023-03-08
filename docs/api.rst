@@ -41,38 +41,38 @@ In the current implementation, the *Pnts* class only contains a *FeatureTable*
     >>> filename = Path('tests/pointCloudRGB.pnts')
     >>>
     >>> # read the file
-    >>> tile_content = tile_content_reader.read_file(filename)
+    >>> pnts = tile_content_reader.read_file(filename)
     >>>
-    >>> # tile_content is an instance of the TileContent class
-    >>> tile_content
-    <py3dtiles.tile_content.TileContent>
+    >>> # pnts is an instance of the Pnts class
+    >>> pnts
+    <py3dtiles.tileset.content.pnts.Pnts>
     >>>
-    >>> # extract information about the tile_content header
-    >>> th = tile_content.header
-    >>> th
-    <py3dtiles.tile_content.TileContentHeader>
-    >>> th.magic_value
-    'pnts'
-    >>> th.tile_byte_length
+    >>> # extract information about the pnts header
+    >>> pnts_header = pnts.header
+    >>> pnts_header
+    <py3dtiles.tileset.content.pnts.PntsHeader>
+    >>> pnts_header.magic_value
+    b'pnts'
+    >>> pnts_header.tile_byte_length
     15176
     >>>
     >>> # extract the feature table
-    >>> ft = tile_content.body.feature_table
-    >>> ft
-    <py3dtiles.feature_table.FeatureTable
+    >>> feature_table = pnts.body.feature_table
+    >>> feature_table
+    <py3dtiles.tileset.feature_table.FeatureTable>
     >>>
     >>> # display feature table header
-    >>> ft.header.to_json()
+    >>> feature_table.header.to_json()
     {'RTC_CENTER': [1215012.8828876738, -4736313.051199594, 4081605.22126042],
     'RGB': {'byteOffset': 12000}, 'POINTS_LENGTH': 1000, 'POSITION': {'byteOffset': 0}}
     >>>
     >>> # extract positions and colors of the first point
-    >>> f = ft.feature(0)
-    >>> f
-    <py3dtiles.feature_table.Feature>
-    >>> f.positions
+    >>> feature = feature_table.feature(0)
+    >>> feature
+    <py3dtiles.tileset.feature_table.Feature>
+    >>> feature.positions
     {'Y': 4.4896851, 'X': 2.19396, 'Z': -0.17107764}
-    >>> f.colors
+    >>> feature.colors
     {'Green': 243, 'Red': 44, 'Blue': 209}
 
 **How to write a .pnts file**
@@ -94,21 +94,21 @@ corresponding data type.
     >>> position = np.array([(4.489, 2.19, -0.17)], dtype=dt)
     >>>
     >>> # create a new feature from a uint8 numpy array
-    >>> f = Feature.from_array(dt, position.view('uint8'))
-    >>> f
-    <py3dtiles.feature_table.Feature>
-    >>> f.positions
+    >>> feature = Feature.from_array(dt, position.view('uint8'))
+    >>> feature
+    <py3dtiles.tileset.feature_table.Feature>
+    >>> feature.positions
     {'Y': 2.19, 'X': 4.489, 'Z': -0.17}
     >>>
-    >>> # create a tile directly from our feature. None is for "no colors".
-    >>> t  = Pnts.from_features(dt, None, [f])
+    >>> # create a pnts directly from our feature. None is for "no colors".
+    >>> pnts  = Pnts.from_features(dt, None, [feature])
     >>>
-    >>> # the tile is complete
-    >>> t.body.feature_table.header.to_json()
+    >>> # the pnts is complete
+    >>> pnts.body.feature_table.header.to_json()
     {'POINTS_LENGTH': 1, 'POSITION': {'byteOffset': 0}}
     >>>
     >>> # to save our tile as a .pnts file
-    >>> t.save_as("mypoints.pnts")
+    >>> pnts.save_as(Path("mypoints.pnts"))
 
 
 Batched 3D Model
@@ -129,25 +129,25 @@ https://github.com/AnalyticalGraphicsInc/3d-tiles/tree/master/TileFormats/Batche
     >>> filename = Path('tests/dragon_low.b3dm')
     >>>
     >>> # read the file
-    >>> tile_content = tile_content_reader.read_file(filename)
+    >>> b3dm = tile_content_reader.read_file(filename)
     >>>
-    >>> # tile_content is an instance of the TileContent class
-    >>> tile_content
-    <py3dtiles.tile_content.TileContent>
+    >>> # b3dm is an instance of the B3dm class
+    >>> b3dm
+    <py3dtiles.tileset.content.b3dm.B3dm>
     >>>
-    >>> # extract information about the tile header
-    >>> th = tile_content.header
-    >>> th
-    <py3dtiles.b3dm.B3dmHeader>
-    >>> th.magic_value
-    'b3dm'
-    >>> th.tile_byte_length
+    >>> # extract information about the b3dm header
+    >>> b3dm_header = b3dm.header
+    >>> b3dm_header
+    <py3dtiles.tileset.content.b3dm.B3dmHeader>
+    >>> b3dm_header.magic_value
+    b'b3dm'
+    >>> b3dm_header.tile_byte_length
     47246
     >>>
     >>> # extract the glTF
-    >>> gltf = tile_content.body.glTF
+    >>> gltf = b3dm.body.glTF
     >>> gltf
-    <py3dtiles.gltf.GlTF>
+    <py3dtiles.tileset.content.gltf.GlTF>
     >>>
     >>> # display gltf header's asset field
     >>> gltf.header['asset']
@@ -168,7 +168,7 @@ file containing polyhedralsurfaces or multipolygons.
     >>> # load a wkb file
     >>> wkb = open('tests/building.wkb', 'rb').read()
     >>>
-    >>> # define the geometry's bouding box
+    >>> # define the geometry's bounding box
     >>> box = [[-8.75, -7.36, -2.05], [8.80, 7.30, 2.05]]
     >>>
     >>> # define the geometry's world transformation
@@ -190,8 +190,8 @@ file containing polyhedralsurfaces or multipolygons.
     >>> geometry = { 'position': positions, 'normal': normals, 'bbox': box }
     >>> gltf = GlTF.from_binary_arrays([geometry], transform)
     >>>
-    >>> # create a b3dm tile_content directly from the glTF.
-    >>> t = B3dm.from_glTF(gltf)
+    >>> # create a b3dm directly from the glTF.
+    >>> b3dm = B3dm.from_glTF(gltf)
     >>>
-    >>> # to save our tile as a .b3dm file
-    >>> t.save_as("mymodel.b3dm")
+    >>> # to save our tile content as a .b3dm file
+    >>> b3dm.save_as(Path("mymodel.b3dm"))

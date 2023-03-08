@@ -1,18 +1,25 @@
+from __future__ import annotations
+
 import struct
 
 import numpy as np
 
 from py3dtiles.tileset.batch_table import BatchTable
-from py3dtiles.tileset.tile_content import (
+from .gltf import GlTF
+from .tile_content import (
     TileContent,
     TileContentBody,
     TileContentHeader,
-    TileContentType,
 )
-from .gltf import GlTF
 
 
 class B3dm(TileContent):
+    def __init__(self, header: B3dmHeader, body: B3dmBody) -> None:
+        super().__init__()
+
+        self.header: B3dmHeader = header
+        self.body: B3dmBody = body
+
     @staticmethod
     def from_glTF(gltf, bt=None):
         """
@@ -29,18 +36,14 @@ class B3dm(TileContent):
         tile : TileContent
         """
 
-        tb = B3dmBody()
-        tb.glTF = gltf
-        tb.batch_table = bt
+        b3dm_body = B3dmBody()
+        b3dm_body.glTF = gltf
+        b3dm_body.batch_table = bt
 
-        th = B3dmHeader()
-        th.sync(tb)
+        b3dm_header = B3dmHeader()
+        b3dm_header.sync(b3dm_body)
 
-        t = TileContent()
-        t.body = tb
-        t.header = th
-
-        return t
+        return B3dm(b3dm_header, b3dm_body)
 
     @staticmethod
     def from_array(array):
@@ -56,21 +59,17 @@ class B3dm(TileContent):
 
         # build tile header
         h_arr = array[0 : B3dmHeader.BYTE_LENGTH]
-        h = B3dmHeader.from_array(h_arr)
+        b3dm_header = B3dmHeader.from_array(h_arr)
 
-        if h.tile_byte_length != len(array):
+        if b3dm_header.tile_byte_length != len(array):
             raise RuntimeError("Invalid byte length in header")
 
         # build tile body
-        b_arr = array[B3dmHeader.BYTE_LENGTH : h.tile_byte_length]
-        b = B3dmBody.from_array(h, b_arr)
+        b_arr = array[B3dmHeader.BYTE_LENGTH : b3dm_header.tile_byte_length]
+        b3dm_body = B3dmBody.from_array(b3dm_header, b_arr)
 
-        # build TileContent with header and body
-        t = TileContent()
-        t.header = h
-        t.body = b
-
-        return t
+        # build tile with header and body
+        return B3dm(b3dm_header, b3dm_body)
 
 
 class B3dmHeader(TileContentHeader):
@@ -78,7 +77,6 @@ class B3dmHeader(TileContentHeader):
 
     def __init__(self):
         super().__init__()
-        self.type = TileContentType.BATCHED_3D_MODEL
         self.magic_value = b"b3dm"
         self.version = 1
 
@@ -121,15 +119,11 @@ class B3dmHeader(TileContentHeader):
             self.bt_json_byte_length = len(bth_arr)
 
     @staticmethod
-    def from_array(array):
+    def from_array(array) -> B3dmHeader:
         """
         Parameters
         ----------
         array : numpy.array
-
-        Returns
-        -------
-        h : TileContentHeader
         """
 
         h = B3dmHeader()
@@ -180,17 +174,13 @@ class B3dmBody(TileContentBody):
         return b
 
     @staticmethod
-    def from_array(th, array):
+    def from_array(th, array) -> B3dmBody:
         """
         Parameters
         ----------
         th : TileContentHeader
 
         array : numpy.array
-
-        Returns
-        -------
-        b : TileContentBody
         """
 
         # build feature table

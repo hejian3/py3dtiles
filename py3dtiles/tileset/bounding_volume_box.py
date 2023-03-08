@@ -181,7 +181,7 @@ class BoundingVolumeBox(BoundingVolume):
         # We reset to some dummy state of this Bounding Volume Box so we
         # can add up in place the boxes of the owner's children
         # If there is no child, no modifications are done.
-        for child in owner.get_direct_children():
+        for child in owner.children:
             if child.bounding_volume is None:
                 raise ValueError("Child should have a bounding volume.")
 
