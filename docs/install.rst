@@ -1,9 +1,6 @@
 Install
 -------
 
-Dependencies:
-- llvm for numba
-
 From pypi
 ~~~~~~~~~~~~
 
@@ -12,8 +9,6 @@ From pypi
 ```
 pip install py3dtiles
 ```
-
-
 
 From sources
 ~~~~~~~~~~~~
