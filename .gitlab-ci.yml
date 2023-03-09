@@ -108,7 +108,7 @@ test:
       - ${PIP_CACHE_DIR}
   before_script:
     - apt update
-    - apt install -y pdal llvm
+    - apt install -y llvm
     - pip install -U pip setuptools
   script:
     - pip install .[dev]
@@ -167,7 +167,7 @@ windows-test:
       - ${PIP_CACHE_DIR}
   before_script:
     - apt update
-    - apt install -y python3-pip pdal llvm liblaszip8
+    - apt install -y python3-pip llvm liblaszip8
     - pip install -U pip setuptools
     - pip install .
     - pip install laspy[laszip]

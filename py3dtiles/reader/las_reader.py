@@ -1,7 +1,5 @@
-import json
 import math
 from pathlib import Path
-import subprocess
 from typing import Generator, Optional, Tuple
 
 import laspy
@@ -15,7 +13,6 @@ def get_metadata(
     path: Path, color_scale: Optional[float] = None, fraction: int = 100
 ) -> MetadataReaderType:
     pointcloud_file_portions = []
-    srs_in = None
 
     filename = str(path)
     with laspy.open(filename) as f:
@@ -37,16 +34,13 @@ def get_metadata(
         for p in portions:
             pointcloud_file_portions += [(filename, p)]
 
-        output = subprocess.check_output(["pdal", "info", "--summary", filename])
-        summary = json.loads(output)["summary"]
-        if "srs" in summary:
-            srs_in = summary["srs"].get("proj4")
+        crs_in = f.header.parse_crs()
 
     return {
         "portions": pointcloud_file_portions,
         "aabb": np.array([f.header.mins, f.header.maxs]),
         "color_scale": color_scale,
-        "srs_in": srs_in,
+        "crs_in": crs_in,
         "point_count": point_count,
         "avg_min": np.array(f.header.mins),
     }

@@ -37,7 +37,7 @@ def get_metadata(
         "portions": pointcloud_file_portions,
         "aabb": aabb,
         "color_scale": color_scale,
-        "srs_in": None,
+        "crs_in": None,
         "point_count": point_count,
         "avg_min": aabb[0],
     }

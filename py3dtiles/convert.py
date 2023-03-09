@@ -610,7 +610,7 @@ class _Convert:
                 aabb[1] = np.maximum(aabb[1], file_info["aabb"][1])
             color_scale_by_file[str(file)] = file_info["color_scale"]
 
-            file_crs_in = str_to_CRS(file_info["srs_in"])
+            file_crs_in = file_info["crs_in"]
             if file_crs_in is not None:
                 if crs_in is None:
                     crs_in = file_crs_in
