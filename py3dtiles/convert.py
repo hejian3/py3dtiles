@@ -1162,7 +1162,7 @@ class _Convert:
             )
             time_left = (100 - percent) * now / (percent + 0.001)
             print(
-                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]",
+                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]      ",
                 end="",
                 flush=True,
             )
