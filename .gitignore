@@ -1,3 +1,7 @@
+# specific py3dtiles
+# default conversion folder, useful for tests
+3dtiles/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
