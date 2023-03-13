@@ -1,3 +1,4 @@
+from typing import List
 import unittest
 
 import numpy as np
@@ -24,7 +25,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
 
     def test_constructor(self):
         bounding_volume_box = BoundingVolumeBox()
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
     def test_set_from_list(self):
         bounding_volume_box = BoundingVolumeBox()
@@ -35,29 +36,29 @@ class TestBoundingVolumeBox(unittest.TestCase):
         bounding_volume_box = BoundingVolumeBox()
 
         # Empty list
-        bounding_volume_list = []
+        bounding_volume_list: List = []
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(bounding_volume_list)
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
         # Too small list
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1])
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
         # Too long list
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(DUMMY_MATRIX + [13])
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
         # Not only number
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1] + ["a"])
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1] + [[1]])
-        self.assertIs(bounding_volume_box._box, None)
+        self.assertTrue(bounding_volume_box._box.ndim == 0)
 
     def test_set_from_points(self):
         pass

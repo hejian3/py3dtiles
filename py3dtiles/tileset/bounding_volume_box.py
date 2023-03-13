@@ -43,10 +43,10 @@ class BoundingVolumeBox(BoundingVolume):
 
     def __init__(self) -> None:
         super().__init__()
-        self._box: npt.NDArray[np.float64] | None = None
+        self._box: npt.NDArray[np.float64] = np.empty([], np.float64)
 
     def get_center(self) -> npt.NDArray[np.float64]:
-        if self._box is None:
+        if self._box.ndim == 0:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         return self._box[0:3]
@@ -56,7 +56,7 @@ class BoundingVolumeBox(BoundingVolume):
         Translate the box center with the given offset "vector"
         :param offset: the 3D vector by which the box should be translated
         """
-        if self._box is None:
+        if self._box.ndim == 0:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         self._box[:3] += offset[:3]
@@ -66,7 +66,7 @@ class BoundingVolumeBox(BoundingVolume):
         Apply the provided transformation matrix (4x4) to the box
         :param transform: transformation matrix (4x4) to be applied
         """
-        if self._box is None:
+        if self._box.ndim == 0:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         # FIXME: the following code only uses the first three coordinates
@@ -121,7 +121,7 @@ class BoundingVolumeBox(BoundingVolume):
         """
         :return: the corners (3D points) of the box as a list
         """
-        if self._box is None:
+        if self._box.ndim == 0:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         center = self._box[0:3:1]
@@ -169,7 +169,7 @@ class BoundingVolumeBox(BoundingVolume):
                 "The add method works only with BoundingVolumeBox"
             )
 
-        if self._box is None:
+        if self._box.ndim == 0:
             # Then it is safe to overwrite
             self._box = other._box
             return
@@ -195,7 +195,7 @@ class BoundingVolumeBox(BoundingVolume):
             self.add(bounding_volume)
 
     def to_dict(self) -> BoundingVolumeBoxDictType:
-        if self._box is None:
+        if self._box.ndim == 0:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         return {"box": list(self._box)}
