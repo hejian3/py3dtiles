@@ -84,7 +84,7 @@ def run(
                 # the inverse of this matrix)
                 coords = np.dot(coords, offset_scale[2])
 
-            coords = np.ascontiguousarray(coords.astype(np.float32))
+            coords = np.ascontiguousarray(coords.astype(np.float64))
 
             # Read colors
             if "red" in ply_vertices:

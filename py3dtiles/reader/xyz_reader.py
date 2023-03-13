@@ -106,7 +106,7 @@ def run(
             feature_nb = 7
 
             for _ in range(0, point_count, step):
-                points = np.zeros((step, feature_nb), dtype=np.float32)
+                points = np.zeros((step, feature_nb), dtype=np.float64)
 
                 for j in range(step):
                     line = f.readline()

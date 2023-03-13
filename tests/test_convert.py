@@ -107,6 +107,71 @@ def test_convert_simple_xyz(tmp_dir):
     convert(
         DATA_DIRECTORY / "simple.xyz",
         outfolder=tmp_dir,
+        jobs=1,
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    xyz_point_count = 0
+    with open(DATA_DIRECTORY / "simple.xyz") as f:
+        line = True
+        while line:
+            line = f.readline()
+            xyz_point_count += 1 if line else 0
+
+    tileset_path = tmp_dir / "tileset.json"
+    assert xyz_point_count == number_of_points_in_tileset(tileset_path)
+
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [0.3889, 0.3278, 0.0, 0.3889, 0, 0, 0, 0.3278, 0, 0, 0, 0.0]
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == expecting_box
+
+    # check offset
+    offset_x = tileset["root"]["transform"][12]
+    assert offset_x == 281345.1234
+    offset_y = tileset["root"]["transform"][13]
+    assert offset_y == 369123.2345
+
+    EPSILON = 0.000001
+    tile1 = tile_content_reader.read_file(tmp_dir / "r1.pnts")
+    assert tile1.body.feature_table.nb_points() == 1
+    pt1 = tile1.body.feature_table.feature(0)
+    # Note the first point is taken as offset base
+    assert pt1.positions["X"] + offset_x - 281345.1234 < EPSILON
+    assert pt1.positions["Y"] + offset_y - 369123.4567 < EPSILON
+    assert pt1.positions["Z"] == 0
+    assert pt1.colors["Red"] == 0
+    assert pt1.colors["Green"] == 0
+    assert pt1.colors["Blue"] == 0
+
+    tile2 = tile_content_reader.read_file(tmp_dir / "r7.pnts")
+    assert tile2.body.feature_table.nb_points() == 1
+    pt21 = tile2.body.feature_table.feature(0)
+    assert pt21.positions["X"] + offset_x - 281345.5678 < EPSILON
+    assert pt21.positions["Y"] + offset_y - 369124.8901 < EPSILON
+    assert pt21.positions["Z"] == 0
+    assert pt21.colors["Red"] == 0
+    assert pt21.colors["Green"] == 0
+    assert pt21.colors["Blue"] == 0
+
+    tile3 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
+    assert tile3.body.feature_table.nb_points() == 1
+    pt3 = tile3.body.feature_table.feature(0)
+    assert pt3.positions["X"] + offset_x - 281345.9012 < EPSILON
+    assert pt3.positions["Y"] + offset_y - 369125.2345 < EPSILON
+    assert pt3.positions["Z"] == 0
+    assert pt3.colors["Red"] == 0
+    assert pt3.colors["Green"] == 0
+    assert pt3.colors["Blue"] == 0
+
+
+def test_convert_simple_xyz_reprojection(tmp_dir):
+    convert(
+        DATA_DIRECTORY / "simple.xyz",
+        outfolder=tmp_dir,
         crs_in=CRS.from_epsg(3857),
         crs_out=CRS.from_epsg(4978),
         jobs=1,
