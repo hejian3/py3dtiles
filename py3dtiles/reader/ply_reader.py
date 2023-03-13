@@ -1,16 +1,12 @@
 import math
 from pathlib import Path
-import pickle
-import struct
-from typing import Optional
+from typing import Generator, Optional, Tuple
 
 import numpy as np
 from plyfile import PlyData, PlyElement
 from pyproj import Transformer
-from zmq import Socket
 
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
-from py3dtiles.utils import ResponseType
 
 
 def get_metadata(
@@ -51,88 +47,70 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionType,
-    queue: Socket,
     transformer: Optional[Transformer],
-) -> None:
+) -> Generator[Tuple, None, None]:
     """
     Reads points from a ply file.
     """
-    try:
-        ply_point_cloud = PlyData.read(filename)
-        ply_vertices = ply_point_cloud["vertex"]
+    ply_point_cloud = PlyData.read(filename)
+    ply_vertices = ply_point_cloud["vertex"]
 
-        point_count = portion[1] - portion[0]
-        step = min(point_count, max(point_count // 10, 100_000))
-        indices = list(range(math.ceil(point_count / step)))
-        color_scale = offset_scale[3]
+    point_count = portion[1] - portion[0]
+    step = min(point_count, max(point_count // 10, 100_000))
+    indices = list(range(math.ceil(point_count / step)))
+    color_scale = offset_scale[3]
 
-        for index in indices:
-            start_offset = portion[0] + index * step
-            num = min(step, portion[1] - start_offset)
+    for index in indices:
+        start_offset = portion[0] + index * step
+        num = min(step, portion[1] - start_offset)
 
-            x = ply_vertices["x"][start_offset : (start_offset + num)]
-            y = ply_vertices["y"][start_offset : (start_offset + num)]
-            z = ply_vertices["z"][start_offset : (start_offset + num)]
-            if transformer:
-                x, y, z = transformer.transform(x, y, z)
+        x = ply_vertices["x"][start_offset : (start_offset + num)]
+        y = ply_vertices["y"][start_offset : (start_offset + num)]
+        z = ply_vertices["z"][start_offset : (start_offset + num)]
+        if transformer:
+            x, y, z = transformer.transform(x, y, z)
 
-            x = (x + offset_scale[0][0]) * offset_scale[1][0]
-            y = (y + offset_scale[0][1]) * offset_scale[1][1]
-            z = (z + offset_scale[0][2]) * offset_scale[1][2]
+        x = (x + offset_scale[0][0]) * offset_scale[1][0]
+        y = (y + offset_scale[0][1]) * offset_scale[1][1]
+        z = (z + offset_scale[0][2]) * offset_scale[1][2]
 
-            coords = np.vstack((x, y, z)).transpose()
+        coords = np.vstack((x, y, z)).transpose()
 
-            if offset_scale[2] is not None:
-                # Apply transformation matrix (because the tile's transform will contain
-                # the inverse of this matrix)
-                coords = np.dot(coords, offset_scale[2])
+        if offset_scale[2] is not None:
+            # Apply transformation matrix (because the tile's transform will contain
+            # the inverse of this matrix)
+            coords = np.dot(coords, offset_scale[2])
 
-            coords = np.ascontiguousarray(coords.astype(np.float32))
+        coords = np.ascontiguousarray(coords.astype(np.float32))
 
-            # Read colors
-            if "red" in ply_vertices:
-                red = ply_vertices["red"]
-                green = ply_vertices["green"]
-                blue = ply_vertices["blue"]
-            else:
-                red = green = blue = np.zeros(num)
+        # Read colors
+        if "red" in ply_vertices:
+            red = ply_vertices["red"]
+            green = ply_vertices["green"]
+            blue = ply_vertices["blue"]
+        else:
+            red = green = blue = np.zeros(num)
 
-            if not color_scale:
-                red = red.astype(np.uint8)
-                green = green.astype(np.uint8)
-                blue = blue.astype(np.uint8)
-            else:
-                red = (red * color_scale).astype(np.uint8)
-                green = (green * color_scale).astype(np.uint8)
-                blue = (blue * color_scale).astype(np.uint8)
+        if not color_scale:
+            red = red.astype(np.uint8)
+            green = green.astype(np.uint8)
+            blue = blue.astype(np.uint8)
+        else:
+            red = (red * color_scale).astype(np.uint8)
+            green = (green * color_scale).astype(np.uint8)
+            blue = (blue * color_scale).astype(np.uint8)
 
-            colors = np.vstack((red, green, blue)).transpose()
-            colors = colors[start_offset : (start_offset + num)]
+        colors = np.vstack((red, green, blue)).transpose()
+        colors = colors[start_offset : (start_offset + num)]
 
-            if "classification" in ply_vertices:
-                classification = np.array(
-                    ply_vertices["classification"].reshape(-1, 1), dtype=np.uint8
-                )
-            else:
-                classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
-
-            queue.send_multipart(
-                [
-                    ResponseType.NEW_TASK.value,
-                    b"",
-                    pickle.dumps(
-                        {"xyz": coords, "rgb": colors, "classification": classification}
-                    ),
-                    struct.pack(">I", len(coords)),
-                ],
-                copy=False,
+        if "classification" in ply_vertices:
+            classification = np.array(
+                ply_vertices["classification"].reshape(-1, 1), dtype=np.uint8
             )
+        else:
+            classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
 
-        queue.send_multipart([ResponseType.READ.value])
-
-    except Exception as e:
-        print(f"Exception while reading points from ply file {filename}")
-        raise e
+        yield coords, colors, classification
 
 
 def create_plydata_with_renamed_property(

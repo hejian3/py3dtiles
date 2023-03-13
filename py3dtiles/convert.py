@@ -1,5 +1,4 @@
 import argparse
-from collections import namedtuple
 import concurrent.futures
 import json
 from multiprocessing import cpu_count, Process
@@ -32,6 +31,7 @@ from py3dtiles.tilers.matrix_manipulation import (
 from py3dtiles.tilers.node import Node
 from py3dtiles.tilers.node import node_process
 from py3dtiles.tilers.node import SharedNodeStore
+from py3dtiles.tilers.node.node_catalog import NodeCatalog
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.tile_content_reader import read_file
@@ -41,6 +41,7 @@ from py3dtiles.utils import (
     compute_spacing,
     node_from_name,
     node_name_to_path,
+    OctreeMetadata,
     ResponseType,
     str_to_CRS,
 )
@@ -54,8 +55,6 @@ if os.name == "nt":
     URI = "tcp://127.0.0.1:0"
 else:
     URI = "ipc:///tmp/py3dtiles1"
-
-OctreeMetadata = namedtuple("OctreeMetadata", ["aabb", "spacing", "scale"])
 
 READER_MAP = {
     ".xyz": xyz_reader,
@@ -134,7 +133,7 @@ class Worker(Process):
                     self.execute_process_jobs(content)
                     command_type = 2
                 elif command == CommandType.WRITE_PNTS.value:
-                    self.execute_write_pnts(content)
+                    self.execute_write_pnts(content[2], content[1])
                     command_type = 3
                 elif command == CommandType.SHUTDOWN.value:
                     break  # ack
@@ -180,26 +179,115 @@ class Worker(Process):
                 f"the available extensions are: {READER_MAP.keys()}"
             )
 
-        reader.run(
+        reader_gen = reader.run(
             parameters["filename"],
             parameters["offset_scale"],
             parameters["portion"],
-            self.skt,
             self.transformer,
         )
+        for coords, colors, classification in reader_gen:
+            self.skt.send_multipart(
+                [
+                    ResponseType.NEW_TASK.value,
+                    b"",
+                    pickle.dumps(
+                        {"xyz": coords, "rgb": colors, "classification": classification}
+                    ),
+                    struct.pack(">I", len(coords)),
+                ],
+                copy=False,
+            )
 
-    def execute_write_pnts(self, content):
-        pnts_writer.run(
-            self.skt,
-            content[2],
-            content[1],
-            self.folder,
-            self.write_rgb,
-            self.write_classification,
+        self.skt.send_multipart([ResponseType.READ.value])
+
+    def execute_write_pnts(self, data, node_name):
+        pnts_writer_gen = pnts_writer.run(
+            data, self.folder, self.write_rgb, self.write_classification
         )
+        for total in pnts_writer_gen:
+            self.skt.send_multipart(
+                [ResponseType.PNTS_WRITTEN.value, struct.pack(">I", total), node_name]
+            )
 
     def execute_process_jobs(self, content):
-        node_process.run(content[1:], self.octree_metadata, self.skt, self.verbosity)
+        begin = time.time()
+        log_enabled = self.verbosity >= 2
+        if log_enabled:
+            log_filename = f"py3dtiles-{os.getpid()}.log"
+            log_file = open(log_filename, "a")
+        else:
+            log_file = None
+
+        work = content[1:]
+        total_point_count = 0
+        i = 0
+        while i < len(work):
+            name = work[i]
+            node = work[i + 1]
+            count = struct.unpack(">I", work[i + 2])[0]
+            tasks = work[i + 3 : i + 3 + count]
+            i += 3 + count
+
+            node_catalog = NodeCatalog(node, name, self.octree_metadata)
+
+            for proc_name, proc_data, proc_point_count, point_count in node_process.run(
+                node_catalog,
+                self.octree_metadata,
+                name,
+                tasks,
+                begin,
+                log_file,
+            ):
+                self.skt.send_multipart(
+                    [
+                        ResponseType.NEW_TASK.value,
+                        proc_name,
+                        proc_data,
+                        struct.pack(">I", proc_point_count),
+                    ],
+                    copy=False,
+                    block=False,
+                )
+                total_point_count = point_count
+
+            if log_enabled:
+                print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
+
+            # save node state on disk
+            if len(name) > 0:
+                data = node_catalog.dump(
+                    name, node_process.infer_depth_from_name(name) - 1
+                )
+            else:
+                data = b""
+
+            if log_enabled:
+                print(f"saved on disk [{time.time() - begin}]", file=log_file)
+
+            self.skt.send_multipart(
+                [
+                    ResponseType.PROCESSED.value,
+                    pickle.dumps(
+                        {
+                            "name": name,
+                            "total": total_point_count,
+                            "data": data,
+                        }
+                    ),
+                ],
+                copy=False,
+            )
+
+        if log_enabled:
+            print(
+                "[<] return result [{} sec] [{}]".format(
+                    round(time.time() - begin, 2), time.time() - begin
+                ),
+                file=log_file,
+                flush=True,
+            )
+            if log_file is not None:
+                log_file.close()
 
 
 # Manager
@@ -772,7 +860,7 @@ class _Convert:
         if not content["name"]:
             return
 
-        self.node_store.put(content["name"], content["save"])
+        self.node_store.put(content["name"], content["data"])
         self.state.waiting_writing_nodes.append(content["name"])
 
         if not self.state.is_reading_finish():

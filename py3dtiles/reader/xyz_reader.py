@@ -1,15 +1,11 @@
 import math
 from pathlib import Path
-import pickle
-import struct
-from typing import List, Optional
+from typing import Generator, List, Optional, Tuple
 
 import numpy as np
 from pyproj import Transformer
-from zmq import Socket
 
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
-from py3dtiles.utils import ResponseType
 
 
 def get_metadata(
@@ -81,9 +77,8 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionType,
-    queue: Socket,
     transformer: Optional[Transformer],
-) -> None:
+) -> Generator[Tuple, None, None]:
     """
     Reads points from a xyz file
 
@@ -96,76 +91,54 @@ def run(
 
     (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
     """
-    try:
-        with open(filename) as f:
+    with open(filename) as f:
 
-            point_count = portion[1] - portion[0]
+        point_count = portion[1] - portion[0]
 
-            step = min(point_count, max((point_count) // 10, 100000))
+        step = min(point_count, max((point_count) // 10, 100000))
 
-            f.seek(portion[2])
+        f.seek(portion[2])
 
-            feature_nb = 7
+        feature_nb = 7
 
-            for _ in range(0, point_count, step):
-                points = np.zeros((step, feature_nb), dtype=np.float32)
+        for _ in range(0, point_count, step):
+            points = np.zeros((step, feature_nb), dtype=np.float32)
 
-                for j in range(step):
-                    line = f.readline()
-                    if not line:
-                        points = np.resize(points, (j, feature_nb))
-                        break
-                    line_features: List[float | None] = [
-                        float(s) for s in line.split(" ")
-                    ]
-                    if len(line_features) == 3:
-                        line_features += [None] * 4  # Insert intensity and RGB
-                    elif len(line_features) == 4:
-                        line_features += [None] * 3  # Insert RGB
-                    elif len(line_features) == 6:
-                        line_features.insert(3, None)  # Insert intensity
-                    points[j] = line_features
+            for j in range(step):
+                line = f.readline()
+                if not line:
+                    points = np.resize(points, (j, feature_nb))
+                    break
+                line_features: List[float | None] = [float(s) for s in line.split(" ")]
+                if len(line_features) == 3:
+                    line_features += [None] * 4  # Insert intensity and RGB
+                elif len(line_features) == 4:
+                    line_features += [None] * 3  # Insert RGB
+                elif len(line_features) == 6:
+                    line_features.insert(3, None)  # Insert intensity
+                points[j] = line_features
 
-                x, y, z = (points[:, c] for c in [0, 1, 2])
+            x, y, z = (points[:, c] for c in [0, 1, 2])
 
-                if transformer:
-                    x, y, z = transformer.transform(x, y, z)
+            if transformer:
+                x, y, z = transformer.transform(x, y, z)
 
-                x = (x + offset_scale[0][0]) * offset_scale[1][0]
-                y = (y + offset_scale[0][1]) * offset_scale[1][1]
-                z = (z + offset_scale[0][2]) * offset_scale[1][2]
+            x = (x + offset_scale[0][0]) * offset_scale[1][0]
+            y = (y + offset_scale[0][1]) * offset_scale[1][1]
+            z = (z + offset_scale[0][2]) * offset_scale[1][2]
 
-                coords = np.vstack((x, y, z)).transpose()
+            coords = np.vstack((x, y, z)).transpose()
 
-                if offset_scale[2] is not None:
-                    # Apply transformation matrix (because the tile's transform will contain
-                    # the inverse of this matrix)
-                    coords = np.dot(coords, offset_scale[2])
+            if offset_scale[2] is not None:
+                # Apply transformation matrix (because the tile's transform will contain
+                # the inverse of this matrix)
+                coords = np.dot(coords, offset_scale[2])
 
-                coords = np.ascontiguousarray(coords.astype(np.float32))
+            coords = np.ascontiguousarray(coords.astype(np.float32))
 
-                # Read colors: 3 last columns of the point cloud
-                colors = points[:, -3:].astype(np.uint8)
+            # Read colors: 3 last columns of the point cloud
+            colors = points[:, -3:].astype(np.uint8)
 
-                classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
-                queue.send_multipart(
-                    [
-                        ResponseType.NEW_TASK.value,
-                        b"",
-                        pickle.dumps(
-                            {
-                                "xyz": coords,
-                                "rgb": colors,
-                                "classification": classification,
-                            }
-                        ),
-                        struct.pack(">I", len(coords)),
-                    ],
-                    copy=False,
-                )
+            classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
 
-            queue.send_multipart([ResponseType.READ.value])
-
-    except Exception as e:
-        print(f"Exception while reading points from xyz file {filename}")
-        raise e
+            yield coords, colors, classification
