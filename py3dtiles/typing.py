@@ -6,7 +6,6 @@ from typing import (
     List,
     Literal,
     Optional,
-    Sequence,
     Tuple,
     TYPE_CHECKING,
     TypedDict,
@@ -86,7 +85,7 @@ class TilesetDictType(ThreeDDictBase):
 
 
 PortionType = Tuple[int, ...]
-PortionsType = Sequence[Tuple[str, PortionType]]
+PortionsType = List[Tuple[str, PortionType]]
 
 
 class MetadataReaderType(TypedDict):

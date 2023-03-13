@@ -31,10 +31,10 @@ def buggy_ply_data(request):
     """This ply data does not contain any 'vertex' element!"""
     types = [("x", np.float32, (5,)), ("y", np.float32, (5,)), ("z", np.float32, (5,))]
     data = [(np.random.sample(5), np.random.sample(5), np.random.sample(5))]
-    arr = np.array(
-        data if request.param == "wrongname" else [data[0][:2]],
-        dtype=np.dtype(types) if request.param == "wrongname" else np.dtype(types[:2]),
-    )
+    if request.param == "wrongname":
+        arr = np.array(data, dtype=np.dtype(types))
+    else:
+        arr = np.array([data[0][:2]], np.dtype(types[:2]))
     ply_item = plyfile.PlyElement.describe(data=arr, name=request.param)
     ply_data = plyfile.PlyData(elements=[ply_item])
     yield {

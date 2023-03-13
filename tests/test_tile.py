@@ -157,7 +157,7 @@ class TestTile:
         assert tile.get_refine_mode() == "ADD"
 
         with pytest.raises(InvalidTilesetError):
-            tile.set_refine_mode("replace")
+            tile.set_refine_mode("replace")  # type: ignore [arg-type]
 
         tile.set_refine_mode("REPLACE")
         assert tile.get_refine_mode() == "REPLACE"

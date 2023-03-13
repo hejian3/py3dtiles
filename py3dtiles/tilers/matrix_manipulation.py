@@ -1,7 +1,10 @@
 import numpy as np
+import numpy.typing as npt
 
 
-def make_rotation_matrix(z1: np.ndarray, z2: np.ndarray) -> np.ndarray:
+def make_rotation_matrix(
+    z1: npt.NDArray[np.float64], z2: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
     v0 = z1 / np.linalg.norm(z1)
     v1 = z2 / np.linalg.norm(z2)
 

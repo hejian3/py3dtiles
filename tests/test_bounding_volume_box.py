@@ -1,3 +1,4 @@
+from typing import List
 import unittest
 
 import numpy as np
@@ -29,13 +30,16 @@ class TestBoundingVolumeBox(unittest.TestCase):
     def test_set_from_list(self):
         bounding_volume_box = BoundingVolumeBox()
         bounding_volume_box.set_from_list(DUMMY_MATRIX)
-        assert_array_equal(bounding_volume_box._box, np.array(DUMMY_MATRIX))
+        box = bounding_volume_box._box
+        if box is None:
+            raise RuntimeError("bounding_volume_box._box shouldn't be None.")
+        assert_array_equal(box, np.array(DUMMY_MATRIX))
 
     def test_set_from_invalid_list(self):
         bounding_volume_box = BoundingVolumeBox()
 
         # Empty list
-        bounding_volume_list = []
+        bounding_volume_list: List = []
         with self.assertRaises(ValueError):
             bounding_volume_box.set_from_list(bounding_volume_list)
         self.assertIs(bounding_volume_box._box, None)
@@ -97,7 +101,10 @@ class TestBoundingVolumeBox(unittest.TestCase):
             9, 10, 11, 12,
         ]
         # fmt: on
-        assert_array_equal(bounding_volume_box._box, expected_result)
+        box = bounding_volume_box._box
+        if box is None:
+            raise RuntimeError("bounding_volume_box._box shouldn't be None.")
+        assert_array_equal(box, expected_result)
 
     def test_transform(self):
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()

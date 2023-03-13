@@ -13,6 +13,7 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import numpy.typing as npt
 import psutil
 from pyproj import CRS, Transformer
 import zmq
@@ -94,15 +95,14 @@ class Worker:
 
         # Socket to receive messages on
         self.context = zmq.Context()
-        self.skt = None
 
     def run(self):
-        self.skt = self.context.socket(zmq.DEALER)
+        self.skt: zmq.sugar.socket.Socket = self.context.socket(zmq.DEALER)
 
         self.skt.connect(self.uri)
 
         startup_time = time.time()
-        idle_time = 0
+        idle_time = 0.0
 
         if self.activity_graph:
             activity = open(f"activity.{os.getpid()}.csv", "w")
@@ -140,7 +140,7 @@ class Worker:
                 elif command == CommandType.SHUTDOWN.value:
                     break  # ack
                 else:
-                    raise NotImplementedError(f"Unknown command {command}")
+                    raise NotImplementedError(f"Unknown command {command!r}")
 
                 # notify we're idle
                 self.skt.send_multipart([ResponseType.IDLE.value])
@@ -323,7 +323,7 @@ class ZmqManager:
 
         self.killing_processes = False
         self.number_processes_killed = 0
-        self.time_waiting_an_idle_process = 0
+        self.time_waiting_an_idle_process = 0.0
 
     def send_to_process(self, message):
         if not self.idle_clients:
@@ -530,7 +530,6 @@ class _Convert:
         self.verbose = verbose
         self.graph = graph
         self.benchmark = benchmark
-        self.startup = None
 
         self.color_scale = color_scale
 
@@ -647,19 +646,19 @@ class _Convert:
         return transformer
 
     def get_rotation_matrix(self, crs_out, transformer):
-        avg_min = self.file_info["avg_min"]
-        aabb = self.file_info["aabb"]
+        avg_min: npt.NDArray[np.float64] = self.file_info["avg_min"]
+        aabb: npt.NDArray[np.float64] = self.file_info["aabb"]
 
-        rotation_matrix = None
+        rotation_matrix: npt.NDArray[np.float64] = np.identity(4)
         if crs_out:
 
-            bl = np.array(
+            bl: npt.NDArray[np.float64] = np.array(
                 list(transformer.transform(aabb[0][0], aabb[0][1], aabb[0][2]))
             )
-            tr = np.array(
+            tr: npt.NDArray[np.float64] = np.array(
                 list(transformer.transform(aabb[1][0], aabb[1][1], aabb[1][2]))
             )
-            br = np.array(
+            br: npt.NDArray[np.float64] = np.array(
                 list(transformer.transform(aabb[1][0], aabb[0][1], aabb[0][2]))
             )
 
@@ -681,8 +680,10 @@ class _Convert:
                     make_rotation_matrix(x_axis, np.array([1, 0, 0])), rotation_matrix
                 )
 
-                bl = np.dot(bl, rotation_matrix[:3, :3].T)
-                tr = np.dot(tr, rotation_matrix[:3, :3].T)
+                rotation_matrix_part = rotation_matrix[:3, :3].T
+
+                bl = np.dot(bl, rotation_matrix_part)
+                tr = np.dot(tr, rotation_matrix_part)
 
             root_aabb = np.array([np.minimum(bl, tr), np.maximum(bl, tr)])
         else:
@@ -709,11 +710,11 @@ class _Convert:
 
         Convert pointclouds (xyz, las or laz) to 3dtiles tileset containing pnts node
         """
-        self.startup = time.time()
+        startup: float = time.time()
 
         try:
             while not self.zmq_manager.killing_processes:
-                now = time.time() - self.startup
+                now = time.time() - startup
 
                 at_least_one_job_ended = False
                 if (
@@ -751,7 +752,7 @@ class _Convert:
                             3,
                         )
                         print(
-                            f"{time.time() - self.startup}, {percent}",
+                            f"{time.time() - startup}, {percent}",
                             file=self.progression_log,
                         )
 
@@ -780,7 +781,7 @@ class _Convert:
                         self.benchmark,
                         ",".join([f.name for f in self.files]),
                         self.state.points_in_pnts,
-                        round(time.time() - self.startup, 1),
+                        round(time.time() - startup, 1),
                     )
                 )
         finally:
@@ -851,7 +852,7 @@ class _Convert:
             )
 
         else:
-            raise NotImplementedError(f"The command {return_type} is not implemented")
+            raise NotImplementedError(f"The command {return_type!r} is not implemented")
 
         return one_job_ended
 
@@ -899,7 +900,7 @@ class _Convert:
         node_name = self.state.pnts_to_writing.pop()
         data = self.node_store.get(node_name)
         if not data:
-            raise ValueError(f"{node_name} has no data")
+            raise ValueError(f"{node_name!r} has no data")
 
         self.zmq_manager.send_to_process(
             [CommandType.WRITE_PNTS.value, node_name, data]
@@ -962,9 +963,7 @@ class _Convert:
                         "offset_scale": (
                             -self.avg_min,
                             self.root_scale,
-                            self.rotation_matrix[:3, :3].T
-                            if self.rotation_matrix is not None
-                            else None,
+                            self.rotation_matrix[:3, :3].T,
                         ),
                         "portion": portion,
                     }
@@ -976,10 +975,7 @@ class _Convert:
 
     def write_tileset(self):
         # compute tile transform matrix
-        if self.rotation_matrix is None:
-            transform = np.identity(4)
-        else:
-            transform = np.linalg.inv(self.rotation_matrix)
+        transform = np.linalg.inv(self.rotation_matrix)
         transform = np.dot(transform, make_scale_matrix(1.0 / self.root_scale[0]))
         transform = np.dot(make_translation_matrix(self.avg_min), transform)
 
@@ -1080,10 +1076,10 @@ class _Convert:
             with activity_csv_path.open() as f:
                 content = f.read().split("\n")
                 for line in content[1:]:
-                    line = line.split(",")
-                    if line[0]:
-                        ts = float(line[0])
-                        value = int(line[1]) / 3.0
+                    line_item = line.split(",")
+                    if line_item[0]:
+                        ts = float(line_item[0])
+                        value = int(line_item[1]) / 3.0
                         activity.append((ts, i + value * 0.9))
 
             activity_csv_path.unlink()
@@ -1097,8 +1093,8 @@ class _Convert:
             values = []
             for line in f.read().split("\n"):
                 if line:
-                    line = line.split(",")
-                    values += [(float(line[0]), float(line[1]))]
+                    line_item = line.split(",")
+                    values += [(float(line_item[0]), float(line_item[1]))]
         progression_csv_path.unlink()
         dateline.add(
             "progression",
