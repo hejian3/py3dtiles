@@ -116,10 +116,8 @@ def test_convert_simple_xyz(tmp_dir):
 
     xyz_point_count = 0
     with open(DATA_DIRECTORY / "simple.xyz") as f:
-        line = True
-        while line:
-            line = f.readline()
-            xyz_point_count += 1 if line else 0
+        while line := f.readline():
+            xyz_point_count += 1 if line != "" else 0
 
     tileset_path = tmp_dir / "tileset.json"
     assert xyz_point_count == number_of_points_in_tileset(tileset_path)
@@ -196,7 +194,7 @@ def test_convert_ply_with_good_classification(tmp_dir):
         assert "Classification" in tile_content.body.batch_table.header.data
         pnts_labels = np.unique(tile_content.body.batch_table.body.data[0])
         # classification is OK for each pnts
-        assert np.all(labels in EXPECTED_LABELS for labels in pnts_labels)
+        assert np.all([labels in EXPECTED_LABELS for labels in pnts_labels])
         tileset_labels = np.unique(np.append(tileset_labels, pnts_labels))
     # Every label is encountered in the global tileset
     assert np.array_equal(tileset_labels, EXPECTED_LABELS)
@@ -216,10 +214,8 @@ def test_convert_mix_las_xyz(tmp_dir):
 
     xyz_point_count = 0
     with open(DATA_DIRECTORY / "simple.xyz") as f:
-        line = True
-        while line:
-            line = f.readline()
-            xyz_point_count += 1 if line else 0
+        while line := f.readline():
+            xyz_point_count += 1 if line != "" else 0
 
     with laspy.open(DATA_DIRECTORY / "with_srs_3857.las") as f:
         las_point_count = f.header.point_count
