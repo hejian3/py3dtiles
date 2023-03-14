@@ -12,7 +12,7 @@ from py3dtiles.tileset.tile_content_reader import read_file
 
 class TestTileContentReader(unittest.TestCase):
     def test_read(self):
-        tile = read_file(Path("tests/fixtures/dragon_low.b3dm"))
+        tile: B3dm = read_file(Path("tests/fixtures/dragon_low.b3dm"))  # type: ignore [assignment]
 
         self.assertEqual(tile.header.version, 1.0)
         self.assertEqual(tile.header.tile_byte_length, 47246)
@@ -26,7 +26,7 @@ class TestTileContentReader(unittest.TestCase):
         self.assertDictEqual(gltf_header, tile.body.gltf.header)
 
     def test_read_and_write(self):
-        tile_content = read_file(Path("tests/fixtures/buildings.b3dm"))
+        tile_content: B3dm = read_file(Path("tests/fixtures/buildings.b3dm"))  # type: ignore [assignment]
         self.assertEqual(tile_content.header.tile_byte_length, 6176)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
         self.assertEqual(tile_content.header.ft_bin_byte_length, 0)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Literal, TYPE_CHECKING, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -45,11 +45,11 @@ ComponentNumpyType = Union[
 
 PropertyLiteralType = Literal["SCALAR", "VEC2", "VEC3", "VEC4"]
 
+BatchTableHeaderDataType = Dict[str, Union[List[Any], Dict[str, Any]]]
+
 
 class BatchTableHeader:
-    def __init__(
-        self, data: dict[str, list[Any] | dict[str, Any]] | None = None
-    ) -> None:
+    def __init__(self, data: BatchTableHeaderDataType | None = None) -> None:
         if data is not None:
             self.data = data
         else:

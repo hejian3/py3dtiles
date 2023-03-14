@@ -6,7 +6,12 @@ import numpy as np
 from plyfile import PlyData, PlyElement
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
+from py3dtiles.typing import (
+    MetadataReaderType,
+    OffsetScaleType,
+    PortionItemType,
+    PortionsType,
+)
 
 
 def get_metadata(
@@ -31,7 +36,7 @@ def get_metadata(
     ).transpose()
     aabb = np.array((np.min(data, axis=0), np.max(data, axis=0)))
 
-    pointcloud_file_portions = [(str(path), (0, point_count))]
+    pointcloud_file_portions: PortionsType = [(str(path), (0, point_count))]
 
     return {
         "portions": pointcloud_file_portions,
@@ -46,7 +51,7 @@ def get_metadata(
 def run(
     filename: str,
     offset_scale: OffsetScaleType,
-    portion: PortionType,
+    portion: PortionItemType,
     transformer: Optional[Transformer],
 ) -> Generator[Tuple, None, None]:
     """

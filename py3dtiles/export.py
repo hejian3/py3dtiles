@@ -69,6 +69,10 @@ class Node:
         return tiles
 
     def to_tileset_r(self, error):
+        if self.box is None:
+            raise RuntimeError(
+                "The attribute box cannot be None. Use the method to_tileset."
+            )
         (c1, c2) = (self.box.min, self.box.max)
         center = [(c1[i] + c2[i]) / 2 for i in range(3)]
         x_axis = [(c2[0] - c1[0]) / 2, 0, 0]
@@ -164,8 +168,8 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
 
     # Export b3dm & tileset
     tileset = tree.to_tileset(transform)
-    f = open("tileset.json", "w")
-    f.write(json.dumps(tileset))
+    with open("tileset.json", "w") as f:
+        f.write(json.dumps(tileset))
     print("Creating tiles...")
     nodes = tree.all_nodes()
     identity = np.identity(4).flatten("F")
@@ -195,8 +199,9 @@ def arrays2tileset(positions, normals, bboxes, transform, ids=None):
                 bt = BatchTable()
                 bt.add_property_as_json("id", gids)
             b3dm = B3dm.from_gltf(gltf, bt).to_array()
-            f = open(f"tiles/{node.id}.b3dm", "wb")
-            f.write(b3dm)
+
+            with open(f"tiles/{node.id}.b3dm", "wb") as f:
+                f.write(b3dm.tobytes())
 
 
 def divide(

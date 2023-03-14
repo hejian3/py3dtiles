@@ -5,7 +5,7 @@ from typing import Generator, List, Optional, Tuple
 import numpy as np
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
+from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
 
 
 def get_metadata(
@@ -54,7 +54,7 @@ def get_metadata(
                 "the size of seek_values should be equal to steps,"
                 f"currently steps = {steps} and len(seek_values) = {len(seek_values)}"
             )
-        portions = [
+        portions: List[PortionItemType] = [
             (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
         ]
 
@@ -76,7 +76,7 @@ def get_metadata(
 def run(
     filename: str,
     offset_scale: OffsetScaleType,
-    portion: PortionType,
+    portion: PortionItemType,
     transformer: Optional[Transformer],
 ) -> Generator[Tuple, None, None]:
     """

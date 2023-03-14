@@ -2,13 +2,13 @@ import json
 import math
 from pathlib import Path
 import subprocess
-from typing import Generator, Optional, Tuple
+from typing import Generator, List, Optional, Tuple
 
 import laspy
 import numpy as np
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
+from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
 
 
 def get_metadata(
@@ -33,7 +33,9 @@ def get_metadata(
 
         _1M = min(point_count, 1_000_000)
         steps = math.ceil(point_count / _1M)
-        portions = [(i * _1M, min(point_count, (i + 1) * _1M)) for i in range(steps)]
+        portions: List[PortionItemType] = [
+            (i * _1M, min(point_count, (i + 1) * _1M)) for i in range(steps)
+        ]
         for p in portions:
             pointcloud_file_portions += [(filename, p)]
 
@@ -55,7 +57,7 @@ def get_metadata(
 def run(
     filename: str,
     offset_scale: OffsetScaleType,
-    portion: PortionType,
+    portion: PortionItemType,
     transformer: Optional[Transformer],
 ) -> Generator[Tuple, None, None]:
     """

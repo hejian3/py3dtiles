@@ -83,8 +83,8 @@ class TilesetDictType(ThreeDDictBase):
     extensionsUsed: NotRequired[list[str]]
 
 
-PortionType = Tuple[int, ...]
-PortionsType = List[Tuple[str, PortionType]]
+PortionItemType = Tuple[int, ...]
+PortionsType = List[Tuple[str, PortionItemType]]
 
 
 class MetadataReaderType(TypedDict):

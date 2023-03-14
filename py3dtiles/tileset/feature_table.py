@@ -128,7 +128,7 @@ class FeatureTableHeader:
 
     def to_json(self):
         # length
-        jsond = {"POINTS_LENGTH": self.points_length}
+        jsond: dict[str, int | dict] = {"POINTS_LENGTH": self.points_length}
 
         # RTC (Relative To Center)
         if self.rtc:
