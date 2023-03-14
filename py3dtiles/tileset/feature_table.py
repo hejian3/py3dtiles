@@ -115,7 +115,7 @@ class FeatureTableHeader:
 
         # global semantics
         self.points_length = 0
-        self.rtc = None
+        self.rtc: tuple[float, float, float] | None = None
 
     def to_array(self) -> npt.NDArray[np.uint8]:
         jsond = self.to_json()
@@ -127,7 +127,9 @@ class FeatureTableHeader:
 
     def to_json(self) -> dict[str, Any]:
         # length
-        jsond: dict[str, Any] = {"POINTS_LENGTH": self.points_length}
+        jsond: dict[
+            str, int | dict | tuple[float, float, float] | list[float] | list[int]
+        ] = {"POINTS_LENGTH": self.points_length}
 
         # RTC (Relative To Center)
         if self.rtc is not None:
@@ -139,8 +141,16 @@ class FeatureTableHeader:
             jsond["POSITION"] = offset
         elif self.positions == SemanticPoint.POSITION_QUANTIZED:
             jsond["POSITION_QUANTIZED"] = offset
-            jsond["QUANTIZED_VOLUME_OFFSET"] = self.quantized_volume_offset
-            jsond["QUANTIZED_VOLUME_SCALE"] = self.quantized_volume_scale
+            if self.quantized_volume_offset is None:
+                raise InvalidPntsError(
+                    "If the position semantic is SemanticPoint.POSITION_QUANTIZED, the attribute quantized_volume_offset cannot be None."
+                )
+            if self.quantized_volume_scale is None:
+                raise InvalidPntsError(
+                    "If the position semantic is SemanticPoint.POSITION_QUANTIZED, the attribute quantized_volume_scale cannot be None."
+                )
+            jsond["QUANTIZED_VOLUME_OFFSET"] = list(self.quantized_volume_offset)
+            jsond["QUANTIZED_VOLUME_SCALE"] = list(self.quantized_volume_scale)
 
         # colors
         offset = {"byteOffset": self.colors_offset}
@@ -152,7 +162,7 @@ class FeatureTableHeader:
             jsond["RGB565"] = offset
 
         if self.constant_rgba is not None:
-            jsond["CONSTANT_RGBA"] = self.constant_rgba
+            jsond["CONSTANT_RGBA"] = list(self.constant_rgba)
 
         # normal
         offset = {"byteOffset": self.normal_offset}

@@ -21,9 +21,12 @@ class TestTileContentReader(unittest.TestCase):
         self.assertEqual(tile.header.bt_bin_byte_length, 0)
 
         feature_table = tile.body.feature_table
+        pt_color = feature_table.get_feature_color_at(0)
+        if pt_color is None:
+            raise RuntimeError("pt_color should not be None")
         assert_array_equal(
             np.array([44, 243, 209], dtype=np.uint8),
-            feature_table.get_feature_color_at(0),
+            pt_color,
         )
 
 
@@ -49,7 +52,7 @@ class TestTileBuilder(unittest.TestCase):
         t = Pnts.from_features(feature_table_header, position_array)
 
         # configure the tile
-        rtc = [1215012.8828876738, -4736313.051199594, 4081605.22126042]
+        rtc = (1215012.8828876738, -4736313.051199594, 4081605.22126042)
         t.body.feature_table.header.rtc = rtc
 
         # get an array
@@ -102,7 +105,7 @@ class TestTileBuilder(unittest.TestCase):
         t = Pnts.from_features(feature_table_header, position_array, color_array)
 
         # configure the tile
-        rtc = [1215012.8828876738, -4736313.051199594, 4081605.22126042]
+        rtc = (1215012.8828876738, -4736313.051199594, 4081605.22126042)
         t.body.feature_table.header.rtc = rtc
 
         # get an array
@@ -128,7 +131,10 @@ class TestTileBuilder(unittest.TestCase):
         self.assertEqual(t2.header.bt_bin_byte_length, 0)
 
         feature_table = t.body.feature_table
+        pt_color = feature_table.get_feature_color_at(0)
+        if pt_color is None:
+            raise RuntimeError("pt_color should not be None")
         assert_array_equal(
             np.array([44, 243, 209], dtype=np.uint8),
-            feature_table.get_feature_color_at(0),
+            pt_color,
         )

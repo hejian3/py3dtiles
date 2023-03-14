@@ -21,6 +21,7 @@ import zmq
 from py3dtiles.exceptions import (
     SrsInMissingException,
     SrsInMixinException,
+    TilerException,
     WorkerException,
 )
 from py3dtiles.reader import las_reader, ply_reader, xyz_reader
@@ -985,9 +986,9 @@ class _Convert:
         inv_aabb_size = (
             1.0 / np.maximum(MIN_POINT_SIZE, self.root_aabb[1] - self.root_aabb[0])
         ).astype(np.float32)
-        for child in range(8):
+        for child_num in range(8):
             tile_path = node_name_to_path(
-                self.out_folder, str(child).encode("ascii"), ".pnts"
+                self.out_folder, str(child_num).encode("ascii"), ".pnts"
             )
             if tile_path.exists():
                 tile_content = read_file(tile_path)
@@ -997,9 +998,12 @@ class _Convert:
                     np.float32
                 ).reshape((fth.points_length, 3))
                 if self.rgb:
-                    rgb = tile_content.body.feature_table.body.color.reshape(
-                        (fth.points_length, 3)
-                    )
+                    tile_color = tile_content.body.feature_table.body.color
+                    if tile_color is None:
+                        raise TilerException(
+                            "tile_content.body.feature_table.body.color shouldn't be None here. Seems to be a py3dtiles issue."
+                        )
+                    rgb = tile_color.reshape((fth.points_length, 3))
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
                 if self.classification:

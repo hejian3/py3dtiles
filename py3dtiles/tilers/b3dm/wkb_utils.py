@@ -1,5 +1,6 @@
 import math
 import struct
+from typing import List
 
 from earcut.earcut import earcut
 import numpy as np
@@ -33,7 +34,7 @@ class TriangleSoup:
         for additional_wkb in associated_data:
             multipolygons.append(parse(bytes(additional_wkb)))
 
-        triangles_array = [[] for _ in range(len(multipolygons))]
+        triangles_array: List[List] = [[] for _ in range(len(multipolygons))]
         for i in range(len(multipolygons[0])):
             polygon = multipolygons[0][i]
             additional_polygons = [mp[i] for mp in multipolygons[1:]]
@@ -238,7 +239,7 @@ def triangulate(polygon, additional_polygons=None):
 
     triangles_idx = earcut(polygon_2d, holes, 2)
 
-    arrays = [[] for _ in range(len(additional_polygons) + 1)]
+    arrays: List[List] = [[] for _ in range(len(additional_polygons) + 1)]
     for i in range(0, len(triangles_idx), 3):
         t = triangles_idx[i : i + 3]
         p0 = unflatten(polygon, holes, t[0])

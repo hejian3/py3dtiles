@@ -68,19 +68,19 @@ def print_b3dm_info(tile: B3dm) -> None:
 
 def main(args):
     try:
-        tile = read_file(args.file)
+        tile_content = read_file(args.file)
     except ValueError as e:
         print(f"Error when reading the file {args.file}")
         raise e
 
-    magic = tile.header.magic_value
-
-    if magic == b"pnts":
-        print_pnts_info(tile)
-    elif magic == b"b3dm":
-        print_b3dm_info(tile)
+    if isinstance(tile_content, Pnts):
+        print_pnts_info(tile_content)
+    elif isinstance(tile_content, B3dm):
+        print_b3dm_info(tile_content)
     else:
-        raise RuntimeError("Unsupported format " + str(magic))
+        with args.file.open("b") as f:
+            magic = f.read(4)
+        raise RuntimeError(f"Unsupported format {magic!r}")
 
 
 def init_parser(subparser):

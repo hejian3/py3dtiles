@@ -2,15 +2,22 @@ import json
 import unittest
 
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.exceptions import Invalid3dtilesError
-from py3dtiles.tileset.batch_table import BatchTable, BatchTableBody, BatchTableHeader
+from py3dtiles.tileset.batch_table import (
+    BatchTable,
+    BatchTableBody,
+    BatchTableHeader,
+    BatchTableHeaderDataType,
+    ComponentNumpyType,
+)
 from py3dtiles.tileset.content import PntsHeader
 
 
 class TestBatchTableHeader(unittest.TestCase):
     def test_header_as_array_of_values(self):
-        input_data = {
+        input_data: BatchTableHeaderDataType = {
             "id": ["unique id", "another unique id"],
             "displayName": ["Building name", "Another building name"],
             "yearBuilt": [1999, 2015],
@@ -150,9 +157,9 @@ class TestBatchTable(unittest.TestCase):
         batch_table_json = batch_table_header.to_array()
 
         # binary part
-        batch_table_body_binary = [
-            np.array([1, 2, 3, 4], dtype=np.ubyte),
-            np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc),
+        batch_table_body_binary: list[npt.NDArray[ComponentNumpyType]] = [
+            np.array([1, 2, 3, 4], dtype=np.uint8),
+            np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.int32),
         ]
         batch_table_body = BatchTableBody(batch_table_body_binary)
 
@@ -184,7 +191,7 @@ class TestBatchTable(unittest.TestCase):
         batch_table_header = BatchTableHeader(batch_table_header_dict)
 
         # binary part
-        batch_table_body_binary = [
+        batch_table_body_binary: list[npt.NDArray[ComponentNumpyType]] = [
             np.array([1, 2, 3, 4], dtype=np.ubyte),
             np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc),
         ]
@@ -216,7 +223,7 @@ class TestBatchTable(unittest.TestCase):
         batch_table_json = batch_table_header.to_array()
 
         # binary part
-        batch_table_body_binary = [
+        batch_table_body_binary: list[npt.NDArray[ComponentNumpyType]] = [
             np.array([1, 2, 3, 4], dtype=np.ubyte),
             np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.intc),
         ]
@@ -239,7 +246,7 @@ class TestBatchTable(unittest.TestCase):
             BatchTable.from_array(pnts_header, batch_table_array, 3)
 
         # import the array (wrong byteOffset)
-        batch_table_header.data["binProperty2"]["byteOffset"] = 6
+        batch_table_header.data["binProperty2"]["byteOffset"] = 6  # type: ignore [call-overload]
         batch_table_json = batch_table_header.to_array()
         batch_table_array = np.concatenate(
             (batch_table_json, batch_table_body.to_array())

@@ -12,25 +12,33 @@ from py3dtiles.tileset.tile_content_reader import read_file
 
 class TestTileContentReader(unittest.TestCase):
     def test_read(self):
-        tile = read_file(
+        tile_content = read_file(
             Path("tests/fixtures/dragon_low.b3dm")
         )  # TODO re-export b3dm once feature table is added
+        if not isinstance(tile_content, B3dm):
+            raise ValueError(
+                f"The file 'tests/fixtures/buildings.b3dm' is a b3dm, not a {type(tile_content)}"
+            )
 
-        self.assertEqual(tile.header.version, 1.0)
-        self.assertEqual(tile.header.tile_byte_length, 47246)
-        self.assertEqual(tile.header.ft_json_byte_length, 20)
-        self.assertEqual(tile.header.ft_bin_byte_length, 0)
-        self.assertEqual(tile.header.bt_json_byte_length, 0)
-        self.assertEqual(tile.header.bt_bin_byte_length, 0)
+        self.assertEqual(tile_content.header.version, 1.0)
+        self.assertEqual(tile_content.header.tile_byte_length, 47246)
+        self.assertEqual(tile_content.header.ft_json_byte_length, 20)
+        self.assertEqual(tile_content.header.ft_bin_byte_length, 0)
+        self.assertEqual(tile_content.header.bt_json_byte_length, 0)
+        self.assertEqual(tile_content.header.bt_bin_byte_length, 0)
 
         with open("tests/fixtures/dragon_low_gltf_header.json") as f:
             gltf_header = json.loads(f.read())
-        self.assertDictEqual(gltf_header, tile.body.gltf.header)
+        self.assertDictEqual(gltf_header, tile_content.body.gltf.header)
 
     def test_read_and_write(self):
         tile_content = read_file(
             Path("tests/fixtures/buildings.b3dm")
         )  # TODO re-export b3dm once feature table is added
+        if not isinstance(tile_content, B3dm):
+            raise ValueError(
+                f"The file 'tests/fixtures/buildings.b3dm' is a b3dm, not a {type(tile_content)}"
+            )
 
         self.assertEqual(tile_content.header.tile_byte_length, 6180)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
