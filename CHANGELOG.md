@@ -6,21 +6,34 @@ All notable changes to this project will be documented in this file.
 
 ### BREAKING CHANGE
 
+- py3dtiles no longer support python 3.7 (it reaches EOL in june)
 - The function convert_to_ecef has been removed
 - Many imports have been changed, please update them accordingly:
-`from py3dtiles import B3dm` becomes `from py3dtiles.tileset.content import B3dm`
-`from py3dtiles import GlTF` becomes `from py3dtiles.tileset.content import GlTF`
-`from py3dtiles import Pnts` becomes `from py3dtiles.tileset.content import Pnts`
-`from py3dtiles import BatchTable` becomes `from py3dtiles.tileset.batch_table import BatchTable`
-`from py3dtiles import BoundingVolumeBox` becomes `from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox`
-`from py3dtiles import Extendable` becomes `from py3dtiles.tileset.extendable import Extendable`
-`from py3dtiles import Extension` becomes `from py3dtiles.tileset.extension import BaseExtension`
-`from py3dtiles import Tile` becomes `from py3dtiles.tileset.tile import Tile`
-`from py3dtiles import TileContent` becomes `from py3dtiles.tileset.tile_content import TileContent`
-`from py3dtiles import TileSet` becomes `from py3dtiles.tileset.tileset import TileSet`
-`from py3dtiles import TileContentReader` becomes `from py3dtiles.tileset.utils import TileContentReader`
-`from py3dtiles import TriangleSoup` becomes `from py3dtiles.tilers.b3dm.wkb_utils import TriangleSoup`
-`from py3dtiles import Feature` becomes `from py3dtiles.tileset.feature_table import Feature`
+    - `from py3dtiles import B3dm` becomes `from py3dtiles.tileset.content import B3dm`
+    - `from py3dtiles import GlTF` becomes `from py3dtiles.tileset.content import GlTF`
+    - `from py3dtiles import Pnts` becomes `from py3dtiles.tileset.content import Pnts`
+    - `from py3dtiles import BatchTable` becomes `from py3dtiles.tileset.batch_table import BatchTable`
+    - `from py3dtiles import BoundingVolumeBox` becomes `from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox`
+    - `from py3dtiles import Extendable` becomes `from py3dtiles.tileset.extendable import Extendable`
+    - `from py3dtiles import Extension` becomes `from py3dtiles.tileset.extension import BaseExtension`
+    - `from py3dtiles import Tile` becomes `from py3dtiles.tileset.tile import Tile`
+    - `from py3dtiles import TileContent` becomes `from py3dtiles.tileset.tile_content import TileContent`
+    - `from py3dtiles import TileSet` becomes `from py3dtiles.tileset.tileset import TileSet`
+    - `from py3dtiles import TileContentReader` becomes `from py3dtiles.tileset.utils import TileContentReader`
+    - `from py3dtiles import TriangleSoup` becomes `from py3dtiles.tilers.b3dm.wkb_utils import TriangleSoup`
+    - `from py3dtiles import Feature` becomes `from py3dtiles.tileset.feature_table import Feature`
+- The BoundingVolume class become an abstract class
+- The way of getting / setting `transform` has changed:
+    - The methods `set_transform` and `get_transform` of the class `Tile` has been removed, and the attribute `transform` of the class `Tile` has been renamed from `_transform` to `transform.` Please use the attribute directly.
+    - in the same vein, the method `set_transform` of the class `Tileset` has been removed
+    - The method set_from_array from the class BoundingVolumeBox has been removed, use set_from_list instead (with an ArrayLike)
+- some parameters types have been set to always be a flat numpy array of `np.float64`:
+    - `Tile.transform`
+    - The parameter `offset` of the method `BoundingVolumeBox.translate`
+    - The parameter `transform` of the method `BoundingVolumeBox.transform`
+    - The parameter `box_list` of the method `BoundingVolumeBox.set_from_list`
+    - The parameter `mins_maxs` of the method `BoundingVolumeBox.get_box_array_from_mins_maxs`
+    - The parameter `points` of the method `BoundingVolumeBox.get_box_array_from_point`
 
 ### Features
 
