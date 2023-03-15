@@ -15,7 +15,7 @@ def _flush(
     force_forward: bool = False,
     log_file: Optional[TextIO] = None,
     depth: int = 0,
-) -> Generator[Tuple, None, None]:
+) -> Generator[Tuple[bytes, bytes, int], None, None]:
     if depth >= max_depth:
         threshold = 0 if force_forward else 10_000
         if node.get_pending_points_count() > threshold:
@@ -76,10 +76,10 @@ def run(
     node_catalog: NodeCatalog,
     octree_metadata: OctreeMetadata,
     name: bytes,
-    tasks: List,
+    tasks: List[bytes],
     begin: float,
     log_file: Optional[TextIO],
-) -> Generator[Tuple, None, None]:
+) -> Generator[Tuple[bytes, bytes, int, int], None, None]:
 
     log_enabled = log_file is not None
 

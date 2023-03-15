@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from numba import njit  # type: ignore [attr-defined]
 from numba.typed import List
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.utils import aabb_size_to_subdivision_type, SubdivisionType
 from .distance import is_point_far_enough, xyz_to_key
@@ -92,7 +93,7 @@ class Grid:
             self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
             self.cells_classification.append(np.zeros((0, 1), dtype=np.uint8))
 
-    def __getstate__(self) -> dict:
+    def __getstate__(self) -> dict[str, Any]:
         return {
             "cell_count": self.cell_count,
             "spacing": self.spacing,
@@ -101,7 +102,7 @@ class Grid:
             "cells_classification": list(self.cells_classification),
         }
 
-    def __setstate__(self, state: dict) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         self.cell_count = state["cell_count"]
         self.spacing = state["spacing"]
         self.cells_xyz = List(state["cells_xyz"])
@@ -117,13 +118,15 @@ class Grid:
 
     def insert(
         self,
-        aabmin: np.ndarray,
-        inv_aabb_size: np.ndarray,
-        xyz: np.ndarray,
-        rgb: np.ndarray,
-        classification: np.ndarray,
+        aabmin: npt.NDArray[np.float32],
+        inv_aabb_size: npt.NDArray[np.float32],
+        xyz: npt.NDArray[np.float32],
+        rgb: npt.NDArray[np.uint8],
+        classification: npt.NDArray[np.uint8],
         force: bool = False,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+    ) -> tuple[
+        npt.NDArray[np.float32], npt.NDArray[np.uint8], npt.NDArray[np.uint8], bool
+    ]:
         return _insert(
             self.cells_xyz,
             self.cells_rgb,
@@ -147,7 +150,10 @@ class Grid:
         return False
 
     def balance(
-        self, aabb_size: np.ndarray, aabmin: np.ndarray, inv_aabb_size: np.ndarray
+        self,
+        aabb_size: npt.NDArray[np.float32],
+        aabmin: npt.NDArray[np.float32],
+        inv_aabb_size: npt.NDArray[np.float32],
     ) -> None:
         t = aabb_size_to_subdivision_type(aabb_size)
         self.cell_count[0] += 1
@@ -178,7 +184,9 @@ class Grid:
                 aabmin, inv_aabb_size, cellxyz, cellrgb, cellclassification, True
             )
 
-    def get_points(self, include_rgb: bool, include_classification: bool) -> np.ndarray:
+    def get_points(
+        self, include_rgb: bool, include_classification: bool
+    ) -> npt.NDArray[np.uint8]:
         xyz = []
         rgb = []
         classification = []

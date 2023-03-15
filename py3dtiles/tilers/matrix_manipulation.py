@@ -3,12 +3,14 @@ from typing import TypeVar
 import numpy as np
 import numpy.typing as npt
 
-T = TypeVar("T", bound=np.floating)
+T = TypeVar("T", bound=npt.NBitBase)
 
 
-def make_rotation_matrix(z1: npt.NDArray[T], z2: npt.NDArray[T]) -> npt.NDArray[T]:
-    v0: npt.NDArray[T] = z1 / np.linalg.norm(z1)
-    v1: npt.NDArray[T] = z2 / np.linalg.norm(z2)
+def make_rotation_matrix(
+    z1: "npt.NDArray[np.floating[T]]", z2: "npt.NDArray[np.floating[T]]"
+) -> "npt.NDArray[np.floating[T]]":
+    v0: "npt.NDArray[np.floating[T]]" = z1 / np.linalg.norm(z1)
+    v1: "npt.NDArray[np.floating[T]]" = z2 / np.linalg.norm(z2)
 
     angle = np.arccos(np.clip(np.dot(v0, v1), -1.0, 1.0))
     direction = np.cross(v0, v1)
@@ -37,7 +39,9 @@ def make_scale_matrix(factor: float) -> npt.NDArray[np.float32]:
     return np.diag([factor, factor, factor, 1.0])
 
 
-def make_translation_matrix(direction: npt.NDArray[T]) -> npt.NDArray[T]:
+def make_translation_matrix(
+    direction: "npt.NDArray[np.floating[T]]",
+) -> "npt.NDArray[np.floating[T]]":
     translation_matrix = np.identity(4, dtype=direction.dtype)
     translation_matrix[:3, 3] = direction[:3]
     return translation_matrix

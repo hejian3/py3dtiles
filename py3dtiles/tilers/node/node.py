@@ -60,22 +60,26 @@ class Node:
         "dirty",
     )
 
-    def __init__(self, name: bytes, aabb: np.ndarray, spacing: float) -> None:
+    def __init__(
+        self, name: bytes, aabb: npt.NDArray[np.float32], spacing: float
+    ) -> None:
         super().__init__()
         self.name = name
-        self.aabb = aabb.astype(np.float32)
-        self.aabb_size = np.maximum(aabb[1] - aabb[0], MIN_POINT_SIZE).astype(
+        self.aabb = aabb.astype(
             np.float32
-        )
-        self.inv_aabb_size = (1.0 / self.aabb_size).astype(np.float32)
-        self.aabb_center = ((aabb[0] + aabb[1]) * 0.5).astype(np.float32)
+        )  # todo remove astype once the whole typing is done (and issues with data type on numpy arrays fix).
+        self.aabb_size = np.maximum(self.aabb[1] - self.aabb[0], MIN_POINT_SIZE)
+        self.inv_aabb_size = 1.0 / self.aabb_size
+        self.aabb_center = (self.aabb[0] + self.aabb[1]) * 0.5
         self.spacing = spacing
-        self.pending_xyz: list[npt.NDArray] = []
-        self.pending_rgb: list[npt.NDArray] = []
-        self.pending_classification: list[npt.NDArray] = []
+        self.pending_xyz: list[npt.NDArray[np.float32]] = []
+        self.pending_rgb: list[npt.NDArray[np.uint8]] = []
+        self.pending_classification: list[npt.NDArray[np.uint8]] = []
         self.children: list[bytes] | None = None
         self.grid = Grid(self)
-        self.points: list[tuple[npt.NDArray, npt.NDArray, npt.NDArray]] = []
+        self.points: list[
+            tuple[npt.NDArray[np.float32], npt.NDArray[np.uint8], npt.NDArray[np.uint8]]
+        ] = []
         self.dirty = False
 
     def save_to_bytes(self) -> bytes:
@@ -99,9 +103,9 @@ class Node:
     def insert(
         self,
         scale: float,
-        xyz: npt.NDArray,
-        rgb: npt.NDArray,
-        classification: npt.NDArray,
+        xyz: npt.NDArray[np.float32],
+        rgb: npt.NDArray[np.uint8],
+        classification: npt.NDArray[np.uint8],
         make_empty_node: bool = False,
     ) -> None:
         if make_empty_node:
@@ -175,7 +179,11 @@ class Node:
 
     def _get_pending_points(
         self,
-    ) -> Iterator[tuple[bytes, np.ndarray, np.ndarray, np.ndarray]]:
+    ) -> Iterator[
+        tuple[
+            bytes, npt.NDArray[np.float32], npt.NDArray[np.uint8], npt.NDArray[np.uint8]
+        ]
+    ]:
         if not self.pending_xyz:
             return
 
@@ -236,7 +244,7 @@ class Node:
     @staticmethod
     def get_points(
         data: Node | DummyNode, include_rgb: bool, include_classification: bool
-    ) -> np.ndarray:  # todo remove staticmethod
+    ) -> npt.NDArray[np.uint8]:  # todo remove staticmethod
         if data.children is None:
             points = data.points
             xyz = (
@@ -270,7 +278,7 @@ class Node:
     def to_tileset(
         self,
         folder: Path,
-        scale: npt.NDArray[np.number],
+        scale: npt.NDArray[np.float32],
         parent_node: Node | None = None,
         depth: int = 0,
         pool_executor: ProcessPoolExecutor | None = None,
@@ -279,7 +287,7 @@ class Node:
         # if their size is below of 100 points, they will be merged in this node.
         children_tileset_parts: list[TileDictType] = []
         parameter_to_compute: list[
-            tuple[Node, Path, npt.NDArray[np.number], Node, int]
+            tuple[Node, Path, npt.NDArray[np.float32], Node, int]
         ] = []
         for child_name in self.get_child_names():
             child_node = node_from_name(child_name, self.aabb, self.spacing)

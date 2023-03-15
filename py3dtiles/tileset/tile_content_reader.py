@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 
 from py3dtiles.tileset.content import B3dm, Pnts
 
@@ -25,7 +26,7 @@ def read_file(tile_path: Path) -> TileContent:
         return tile_content
 
 
-def read_array(array: np.ndarray) -> TileContent | None:
+def read_array(array: npt.NDArray[np.uint8]) -> TileContent | None:
     magic = "".join([c.decode("UTF-8") for c in array[0:4].view("c")])
     if magic == "pnts":
         return Pnts.from_array(array)

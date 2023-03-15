@@ -128,7 +128,7 @@ class FeatureTableHeader:
 
     def to_json(self):
         # length
-        jsond: dict[str, int | dict] = {"POINTS_LENGTH": self.points_length}
+        jsond: dict[str, int | dict[str, int]] = {"POINTS_LENGTH": self.points_length}
 
         # RTC (Relative To Center)
         if self.rtc:
@@ -379,7 +379,7 @@ class FeatureTable:
         return np.concatenate((fth_arr, ftb_arr))
 
     @staticmethod
-    def from_array(th: TileContentHeader, array: np.ndarray) -> FeatureTable:
+    def from_array(th: TileContentHeader, array: npt.NDArray[np.uint8]) -> FeatureTable:
         # build feature table header
         fth_len = th.ft_json_byte_length
         fth_arr = array[0:fth_len]

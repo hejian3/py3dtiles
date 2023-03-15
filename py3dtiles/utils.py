@@ -3,10 +3,16 @@ from __future__ import annotations
 from enum import Enum
 from io import StringIO
 from pathlib import Path, PurePath
-from typing import Callable, NamedTuple
+from typing import Callable, NamedTuple, TYPE_CHECKING, TypeVar
 
 import numpy as np
+import numpy.typing as npt
 from pyproj import CRS
+
+if TYPE_CHECKING:
+    from typing_extensions import ParamSpec
+
+T = TypeVar("T", bound=npt.NBitBase)
 
 
 def str_to_CRS(srs: str | CRS | None) -> CRS | None:
@@ -41,12 +47,17 @@ class ResponseType(Enum):
 
 
 class OctreeMetadata(NamedTuple):
-    aabb: np.ndarray
+    aabb: npt.NDArray[np.float32]
     spacing: float
     scale: float
 
 
-def profile(func: Callable) -> Callable:
+if TYPE_CHECKING:
+    Param = ParamSpec("Param")
+    RetType = TypeVar("RetType")
+
+
+def profile(func: Callable[Param, RetType]) -> Callable[Param, RetType]:
     from line_profiler import LineProfiler
 
     def wrapper(*args, **kwargs):
@@ -90,11 +101,11 @@ def node_name_to_path(
     return full_path
 
 
-def compute_spacing(aabb: np.ndarray) -> float:
+def compute_spacing(aabb: npt.NDArray[np.floating[T]]) -> float:
     return float(np.linalg.norm(aabb[1] - aabb[0]) / 125)
 
 
-def aabb_size_to_subdivision_type(size: np.ndarray) -> SubdivisionType:
+def aabb_size_to_subdivision_type(size: npt.NDArray[np.floating[T]]) -> SubdivisionType:
     if size[2] / min(size[0], size[1]) < 0.5:
         return SubdivisionType.QUADTREE
     else:
@@ -102,12 +113,12 @@ def aabb_size_to_subdivision_type(size: np.ndarray) -> SubdivisionType:
 
 
 def split_aabb(
-    aabb: np.ndarray, index: int, force_quadtree: bool = False
-) -> np.ndarray:
+    aabb: npt.NDArray[np.floating[T]], index: int, force_quadtree: bool = False
+) -> npt.NDArray[np.floating[T]]:
     half = (aabb[1] - aabb[0]) * 0.5
     t = aabb_size_to_subdivision_type(half)
 
-    new_aabb = np.array([np.copy(aabb[0]), aabb[0] + half])
+    new_aabb = np.array([aabb[0], aabb[0] + half])
     if index & 4:
         new_aabb[0][0] += half[0]
         new_aabb[1][0] += half[0]

@@ -73,13 +73,13 @@ class Worker(Process):
     def __init__(
         self,
         activity_graph: bool,
-        transformer: Transformer,
+        transformer: Optional[Transformer],
         octree_metadata: OctreeMetadata,
         folder: Path,
         write_rgb: bool,
         write_classification: bool,
         verbosity: int,
-        uri: str,
+        uri: bytes,
     ) -> None:
         super().__init__()
         self.activity_graph = activity_graph
@@ -95,9 +95,9 @@ class Worker(Process):
         self.context = zmq.Context()
 
     def run(self):
-        self.skt: zmq.sugar.socket.Socket = self.context.socket(zmq.DEALER)
+        self.skt: zmq.Socket[bytes] = self.context.socket(zmq.DEALER)
 
-        self.skt.connect(self.uri)
+        self.skt.connect(self.uri)  # type: ignore [arg-type]
 
         startup_time = time.time()
         idle_time = 0.0
@@ -297,7 +297,13 @@ class ZmqManager:
     We can also request general status.
     """
 
-    def __init__(self, number_of_jobs: int, process_args: tuple):
+    def __init__(
+        self,
+        number_of_jobs: int,
+        process_args: Tuple[
+            bool, Optional[Transformer], OctreeMetadata, Path, bool, bool, int
+        ],
+    ):
         """
         For the process_args argument, see the init method of Worker
         to get the list of needed parameters.
@@ -310,10 +316,13 @@ class ZmqManager:
         self.socket.bind(URI)
         # Useful only when TCP is used to get the URI with the opened port
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
+        if not isinstance(self.uri, bytes):
+            raise RuntimeError(
+                "The uri returned by self.socket.getsockopt should be bytes."
+            )
 
         self.processes = [
-            Worker(*process_args, self.uri)  # type: ignore [call-arg]
-            for _ in range(number_of_jobs)
+            Worker(*process_args, self.uri) for _ in range(number_of_jobs)
         ]
         for p in self.processes:
             p.start()
@@ -496,7 +505,7 @@ class _Convert:
         classification: bool = True,
         graph: bool = False,
         color_scale: Optional[float] = None,
-        verbose: bool = False,
+        verbose: int = False,
     ):
         """
         :param files: Filenames to process. The file must use the .las, .laz, .xyz or .ply format.
@@ -1007,9 +1016,13 @@ class _Convert:
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
                 if self.classification:
-                    classification = tile_content.body.batch_table.get_binary_property(
-                        "Classification"
-                    ).reshape(-1, 1)
+                    classification = (
+                        tile_content.body.batch_table.get_binary_property(
+                            "Classification"
+                        )
+                        .astype(np.uint8)
+                        .reshape(-1, 1)
+                    )
                 else:
                     classification = np.zeros((fth.points_length, 1), dtype=np.uint8)
                 root_node.grid.insert(

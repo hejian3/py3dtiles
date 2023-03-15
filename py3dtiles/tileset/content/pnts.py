@@ -60,7 +60,7 @@ class Pnts(TileContent):
         return Pnts(PntsHeader(), pnts_body)
 
     @staticmethod
-    def from_array(array: npt.NDArray) -> Pnts:
+    def from_array(array: npt.NDArray[np.uint8]) -> Pnts:
         """
         Creates a Pnts from an array
         """
@@ -117,7 +117,7 @@ class PntsHeader(TileContentHeader):
         return np.concatenate((header_arr, header_arr2.view(np.uint8)))
 
     @staticmethod
-    def from_array(array: npt.NDArray) -> PntsHeader:
+    def from_array(array: npt.NDArray[np.uint8]) -> PntsHeader:
         """
         Create a PntsHeader from an array
         """
@@ -142,7 +142,7 @@ class PntsBody(TileContentBody):
         self.feature_table = FeatureTable()
         self.batch_table = BatchTable()
 
-    def to_array(self) -> npt.NDArray:
+    def to_array(self) -> npt.NDArray[np.uint8]:
         """
         Returns the body as a numpy array.
         """
@@ -151,7 +151,7 @@ class PntsBody(TileContentBody):
         return np.concatenate((feature_table_array, batch_table_array))
 
     @staticmethod
-    def from_array(header: PntsHeader, array: npt.NDArray) -> PntsBody:
+    def from_array(header: PntsHeader, array: npt.NDArray[np.uint8]) -> PntsBody:
         """
         Creates a PntsBody from an array and the header
         """
