@@ -2,12 +2,14 @@ import json
 
 import numpy as np
 import pytest
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from py3dtiles.tilers.b3dm import wkb_utils
+from py3dtiles.tilers.b3dm.wkb_utils import PolygonType
 
 
 @pytest.fixture
-def clockwise_star():
+def clockwise_star() -> PolygonType:
     with open("tests/fixtures/star_clockwise.geojson") as f:
         star_geo = json.load(f)
         coords = star_geo["features"][0]["geometry"]["coordinates"]
@@ -21,7 +23,7 @@ def clockwise_star():
 
 
 @pytest.fixture
-def counterclockwise_star():
+def counterclockwise_star() -> PolygonType:
     with open("tests/fixtures/star_counterclockwise.geojson") as f:
         star_geo = json.load(f)
         coords = star_geo["features"][0]["geometry"]["coordinates"]
@@ -35,7 +37,7 @@ def counterclockwise_star():
 
 
 @pytest.fixture
-def counterclockwise_zx_star():
+def counterclockwise_zx_star() -> PolygonType:
     with open("tests/fixtures/star_zx_counter_clockwise.geojson") as f:
         star_geo = json.load(f)
         coords = star_geo["features"][0]["geometry"]["coordinates"]
@@ -49,7 +51,7 @@ def counterclockwise_zx_star():
 
 
 @pytest.fixture
-def big_poly():
+def big_poly() -> PolygonType:
     with open("tests/fixtures/big_polygon_counter_clockwise.geojson") as f:
         big_poly = json.load(f)
         coords = big_poly["features"][0]["geometry"]["coordinates"]
@@ -63,7 +65,7 @@ def big_poly():
 
 
 @pytest.fixture
-def complex_polygon():
+def complex_polygon() -> PolygonType:
     # tricky polygon 1:
     # 0x---------x 4
     #   \        |
@@ -84,7 +86,7 @@ def complex_polygon():
     ]
 
 
-def test_triangulate_winding_order_simple():
+def test_triangulate_winding_order_simple() -> None:
     # simple case: a square on xy plane, counter-clockwise
     polygon = [
         [
@@ -139,7 +141,7 @@ def test_triangulate_winding_order_simple():
     ), "Check winding order is coherent with vertex order: clockwise (triangle2)"
 
 
-def test_triangulate_winding_order_complex(complex_polygon):
+def test_triangulate_winding_order_complex(complex_polygon: PolygonType) -> None:
     triangles = wkb_utils.triangulate(complex_polygon)
     assert len(triangles[0]) == 3, "Should generate 2 triangles"
     crossprod_triangle1 = np.cross(
@@ -151,7 +153,7 @@ def test_triangulate_winding_order_complex(complex_polygon):
     ), "Check winding order is coherent with vertex order: counter-clockwise"
 
 
-def test_triangulate_winding_order_stars(clockwise_star):
+def test_triangulate_winding_order_stars(clockwise_star: PolygonType) -> None:
     triangles = wkb_utils.triangulate(clockwise_star)
     crossprod_triangle1 = np.cross(
         triangles[0][0][1] - triangles[0][0][0], triangles[0][0][2] - triangles[0][0][0]
@@ -162,7 +164,9 @@ def test_triangulate_winding_order_stars(clockwise_star):
     ), "Check winding order is coherent with vertex order: clockwise"
 
 
-def test_triangulate_winding_order_counter_clockwise_stars(counterclockwise_star):
+def test_triangulate_winding_order_counter_clockwise_stars(
+    counterclockwise_star: PolygonType,
+) -> None:
     triangles = wkb_utils.triangulate(counterclockwise_star)
     crossprod_triangle1 = np.cross(
         triangles[0][0][1] - triangles[0][0][0], triangles[0][0][2] - triangles[0][0][0]
@@ -173,7 +177,9 @@ def test_triangulate_winding_order_counter_clockwise_stars(counterclockwise_star
     ), "Check winding order is coherent with vertex order: counter-clockwise"
 
 
-def test_triangulate_winding_order_counter_clockwise_zx_stars(counterclockwise_zx_star):
+def test_triangulate_winding_order_counter_clockwise_zx_stars(
+    counterclockwise_zx_star: PolygonType,
+) -> None:
     triangles = wkb_utils.triangulate(counterclockwise_zx_star)
     crossprod_triangle1 = np.cross(
         triangles[0][0][1] - triangles[0][0][0], triangles[0][0][2] - triangles[0][0][0]
@@ -185,7 +191,7 @@ def test_triangulate_winding_order_counter_clockwise_zx_stars(counterclockwise_z
     ), "Check winding order is coherent with vertex order: counter-clockwise in zx plane"
 
 
-def test_big_poly_winding_order(big_poly):
+def test_big_poly_winding_order(big_poly: PolygonType) -> None:
     triangles = wkb_utils.triangulate(big_poly)
     crossprod_triangle1 = np.cross(
         triangles[0][0][1] - triangles[0][0][0], triangles[0][0][2] - triangles[0][0][0]
@@ -199,13 +205,17 @@ def test_big_poly_winding_order(big_poly):
 ################
 # benchmarking #
 ################
-def test_benchmark_triangulate(complex_polygon, benchmark):
+def test_benchmark_triangulate(
+    complex_polygon: PolygonType, benchmark: BenchmarkFixture
+) -> None:
     benchmark(wkb_utils.triangulate, complex_polygon)
 
 
-def test_benchmark_star(clockwise_star, benchmark):
+def test_benchmark_star(
+    clockwise_star: PolygonType, benchmark: BenchmarkFixture
+) -> None:
     benchmark(wkb_utils.triangulate, clockwise_star)
 
 
-def test_benchmark_big_poly(big_poly, benchmark):
+def test_benchmark_big_poly(big_poly: PolygonType, benchmark: BenchmarkFixture) -> None:
     benchmark(wkb_utils.triangulate, big_poly)

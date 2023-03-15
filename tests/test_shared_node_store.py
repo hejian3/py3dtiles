@@ -8,7 +8,7 @@ from py3dtiles.tilers.node import SharedNodeStore
 class TestSharedNodeStore(unittest.TestCase):
     TMP_DIR = Path("tmp/")
 
-    def test_remove_oldest_nodes(self):
+    def test_remove_oldest_nodes(self) -> None:
         shared_node_store = SharedNodeStore(TestSharedNodeStore.TMP_DIR)
 
         self.assertEqual(len(shared_node_store.data), 0)

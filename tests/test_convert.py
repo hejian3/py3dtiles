@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import shutil
+from typing import Generator
 from unittest.mock import patch
 
 import laspy
@@ -19,12 +20,12 @@ DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
 @fixture()
-def tmp_dir():
+def tmp_dir() -> Generator[Path, None, None]:
     yield Path("tmp/")
     shutil.rmtree("./tmp", ignore_errors=True)
 
 
-def test_convert(tmp_dir):
+def test_convert(tmp_dir: Path) -> None:
     path = DATA_DIRECTORY / "ripple.las"
     convert(path, outfolder=tmp_dir)
 
@@ -45,7 +46,7 @@ def test_convert(tmp_dir):
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_without_srs(tmp_dir):
+def test_convert_without_srs(tmp_dir: Path) -> None:
     with raises(SrsInMissingException):
         convert(
             DATA_DIRECTORY / "without_srs.las",
@@ -79,7 +80,7 @@ def test_convert_without_srs(tmp_dir):
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_with_srs(tmp_dir):
+def test_convert_with_srs(tmp_dir: Path) -> None:
     convert(
         DATA_DIRECTORY / "with_srs_3857.las",
         outfolder=tmp_dir,
@@ -103,7 +104,7 @@ def test_convert_with_srs(tmp_dir):
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_simple_xyz(tmp_dir):
+def test_convert_simple_xyz(tmp_dir: Path) -> None:
     convert(
         DATA_DIRECTORY / "simple.xyz",
         outfolder=tmp_dir,
@@ -130,7 +131,7 @@ def test_convert_simple_xyz(tmp_dir):
     assert box == expecting_box
 
 
-def test_convert_ply(tmp_dir):
+def test_convert_ply(tmp_dir: Path) -> None:
     convert(DATA_DIRECTORY / "simple.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -147,7 +148,7 @@ def test_convert_ply(tmp_dir):
     assert box == expecting_box
 
 
-def test_convert_ply_with_wrong_classification(tmp_dir):
+def test_convert_ply_with_wrong_classification(tmp_dir: Path) -> None:
     # Buggy feature name, classification is lost.
     convert(
         DATA_DIRECTORY / "simple.ply",
@@ -169,7 +170,7 @@ def test_convert_ply_with_wrong_classification(tmp_dir):
         )
 
 
-def test_convert_ply_with_good_classification(tmp_dir):
+def test_convert_ply_with_good_classification(tmp_dir: Path) -> None:
     EXPECTED_LABELS = np.array([0, 1, 2, -1], dtype=np.uint8)
     # Change the classification property name in the tested .ply file
     ply_data = plyfile.PlyData.read(DATA_DIRECTORY / "simple.ply")
@@ -202,7 +203,7 @@ def test_convert_ply_with_good_classification(tmp_dir):
     modified_ply_filename.unlink()
 
 
-def test_convert_mix_las_xyz(tmp_dir):
+def test_convert_mix_las_xyz(tmp_dir: Path) -> None:
     convert(
         [DATA_DIRECTORY / "simple.xyz", DATA_DIRECTORY / "with_srs_3857.las"],
         outfolder=tmp_dir,
@@ -246,7 +247,7 @@ def test_convert_mix_las_xyz(tmp_dir):
     assert box == expecting_box
 
 
-def test_convert_mix_input_crs(tmp_dir):
+def test_convert_mix_input_crs(tmp_dir: Path) -> None:
     with raises(SrsInMixinException):
         convert(
             [
@@ -283,7 +284,7 @@ def test_convert_mix_input_crs(tmp_dir):
     assert tmp_dir.exists()
 
 
-def test_convert_xyz_exception_in_run(tmp_dir):
+def test_convert_xyz_exception_in_run(tmp_dir: Path) -> None:
     with patch("py3dtiles.reader.xyz_reader.run") as mock_run, raises(
         Exception, match="An exception occurred in a worker: Exception in run"
     ):
@@ -296,7 +297,7 @@ def test_convert_xyz_exception_in_run(tmp_dir):
         )
 
 
-def test_convert_las_exception_in_run(tmp_dir):
+def test_convert_las_exception_in_run(tmp_dir: Path) -> None:
     with patch("py3dtiles.reader.las_reader.run") as mock_run, raises(
         Exception, match="An exception occurred in a worker: Exception in run"
     ):
@@ -309,7 +310,7 @@ def test_convert_las_exception_in_run(tmp_dir):
         )
 
 
-def test_convert_export_folder_already_exists(tmp_dir):
+def test_convert_export_folder_already_exists(tmp_dir: Path) -> None:
 
     tmp_dir.mkdir()
     assert not (tmp_dir / "tileset.json").exists()
@@ -333,7 +334,7 @@ def test_convert_export_folder_already_exists(tmp_dir):
     assert (tmp_dir / "tileset.json").exists()
 
 
-def test_convert_many_point_same_location(tmp_dir):
+def test_convert_many_point_same_location(tmp_dir: Path) -> None:
     tmp_dir.mkdir()
 
     # This is how the file has been generated.

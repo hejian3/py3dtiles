@@ -14,7 +14,7 @@ DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 class TestTileSet(unittest.TestCase):
     @classmethod
-    def build_sample(cls):
+    def build_sample(cls) -> TileSet:
         """
         Programmatically define a tileset sample encountered in the
         TileSet json header specification cf
@@ -36,14 +36,14 @@ class TestTileSet(unittest.TestCase):
 
         return tile_set
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         tile_set = TileSet()
         self.assertDictEqual(tile_set._asset, {"version": "1.0"})
         self.assertDictEqual(tile_set._extensions, {})
         self.assertEqual(tile_set.geometric_error, 500)
         self.assertIsNotNone(tile_set.root_tile)
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         self.assertDictEqual(
             self.build_sample().to_dict(),
             {
@@ -73,7 +73,7 @@ class TestTileSet(unittest.TestCase):
             },
         )
 
-    def test_from_dict(self):
+    def test_from_dict(self) -> None:
         tmp_dir = Path("tmp/")
         tmp_dir.mkdir(exist_ok=True)
 

@@ -9,7 +9,7 @@ from py3dtiles.tileset.tile_content_reader import read_file
 
 
 class TestTileContentReader(unittest.TestCase):
-    def test_read(self):
+    def test_read(self) -> None:
         tile = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
 
         self.assertEqual(tile.header.version, 1.0)
@@ -26,7 +26,7 @@ class TestTileContentReader(unittest.TestCase):
 
 
 class TestTileBuilder(unittest.TestCase):
-    def test_build_without_colors(self):
+    def test_build_without_colors(self) -> None:
         tread = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
         f0_ref = tread.body.feature_table.feature(0).positions
 
@@ -66,7 +66,7 @@ class TestTileBuilder(unittest.TestCase):
         self.assertAlmostEqual(f0_ref["Y"], f0["Y"])
         self.assertAlmostEqual(f0_ref["Z"], f0["Z"])
 
-    def test_build(self):
+    def test_build(self) -> None:
         tread = read_file(Path("tests/fixtures/pointCloudRGB.pnts"))
 
         # numpy dtype for positions and colors

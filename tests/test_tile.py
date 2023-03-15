@@ -1,6 +1,7 @@
 import copy
 from pathlib import Path
 import shutil
+from typing import Generator
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -19,7 +20,7 @@ DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def tmp_dir():
+def tmp_dir() -> Generator[Path, None, None]:
     tmp_dir = Path("tmp/")
     tmp_dir.mkdir(exist_ok=True)
     convert(DATA_DIRECTORY / "simple.xyz", outfolder=tmp_dir, overwrite=True)
@@ -29,7 +30,7 @@ def tmp_dir():
 
 
 class TestTileContentManagement:
-    def test_init_without_data(self, tmp_dir):
+    def test_init_without_data(self, tmp_dir: Path) -> None:
         tile = Tile()
 
         assert tile.tile_content is None
@@ -39,7 +40,7 @@ class TestTileContentManagement:
         ):
             tile.get_or_fetch_content(tmp_dir)
 
-    def test_with_tile_content(self, tmp_dir):
+    def test_with_tile_content(self, tmp_dir: Path) -> None:
         tile = Tile()
 
         pnts = Pnts(PntsHeader(), PntsBody())
@@ -48,7 +49,7 @@ class TestTileContentManagement:
         assert tile.get_or_fetch_content(None) == pnts
         assert tile.content_uri is None
 
-    def test_with_path_content(self, tmp_dir):
+    def test_with_path_content(self, tmp_dir: Path) -> None:
         tile_path = Path("r.pnts")
         tile = Tile(content_uri=tile_path)
 
@@ -56,7 +57,7 @@ class TestTileContentManagement:
         assert isinstance(tile.get_or_fetch_content(tmp_dir), Pnts)
         assert isinstance(tile.tile_content, Pnts)
 
-    def test_write(self, tmp_dir):
+    def test_write(self, tmp_dir: Path) -> None:
         tile = Tile()
         pnts = Pnts(PntsHeader(), PntsBody())
         tile.tile_content = pnts
@@ -84,7 +85,7 @@ class TestTileContentManagement:
 
 
 class TestTile:
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         tile = Tile()
         assert tile.bounding_volume is None
         assert tile.geometric_error == 500
@@ -101,7 +102,7 @@ class TestTile:
         assert tile.children == []
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
 
-    def test_transform(self):
+    def test_transform(self) -> None:
         tile = Tile()
 
         assert_array_equal(tile.transform, np.identity(4).reshape(-1))
@@ -151,7 +152,7 @@ class TestTile:
             ),
         )
 
-    def test_refine_mode(self):
+    def test_refine_mode(self) -> None:
         tile = Tile()
         assert tile.get_refine_mode() == "ADD"
 
@@ -161,7 +162,7 @@ class TestTile:
         tile.set_refine_mode("REPLACE")
         assert tile.get_refine_mode() == "REPLACE"
 
-    def test_children(self):
+    def test_children(self) -> None:
         tile1 = Tile()
 
         assert tile1.children == []
@@ -184,7 +185,7 @@ class TestTile:
         assert tile1.get_all_children() == [tile11, tile111, tile12]
         assert tile11.get_all_children() == [tile111]
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         tile = Tile()
 
         with pytest.raises(AttributeError, match="Bounding volume is not set"):

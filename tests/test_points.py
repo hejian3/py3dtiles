@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from py3dtiles.tilers.node import Grid, Node
 from py3dtiles.tilers.node.distance import is_point_far_enough
@@ -20,17 +21,17 @@ sample_points = np.array(
 
 
 @pytest.fixture
-def node():
+def node() -> Node:
     bbox = np.array([[0, 0, 0], [2, 2, 2]])
     return Node(b"noeud", bbox, compute_spacing(bbox))
 
 
 @pytest.fixture
-def grid(node):
+def grid(node: Node) -> Grid:
     return Grid(node)
 
 
-def test_grid_insert(grid, node):
+def test_grid_insert(grid: Grid, node: Node) -> None:
     assert (
         grid.insert(node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification)[
             0
@@ -45,20 +46,22 @@ def test_grid_insert(grid, node):
     )
 
 
-def test_grid_insert_perf(grid, node, benchmark):
+def test_grid_insert_perf(grid: Grid, node: Node, benchmark: BenchmarkFixture) -> None:
     benchmark(
         grid.insert, node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification
     )
 
 
-def test_grid_getpoints(grid, node):
+def test_grid_getpoints(grid: Grid, node: Node) -> None:
     grid.insert(node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification)
     points = grid.get_points(True, True)
     ref = np.hstack([to_insert.view(np.uint8), rgb, classification])[0]
     assert_array_equal(points, ref)
 
 
-def test_grid_getpoints_perf(grid, node, benchmark):
+def test_grid_getpoints_perf(
+    grid: Grid, node: Node, benchmark: BenchmarkFixture
+) -> None:
     assert (
         grid.insert(node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification)[
             0
@@ -68,14 +71,14 @@ def test_grid_getpoints_perf(grid, node, benchmark):
     benchmark(grid.get_points, True, True)
 
 
-def test_grid_get_point_count(grid, node):
+def test_grid_get_point_count(grid: Grid, node: Node) -> None:
     grid.insert(node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification)
     assert len(grid.get_points(False, False)) == 1 * (3 * 4)
     grid.insert(node.aabb[0], node.inv_aabb_size, to_insert, rgb, classification)
     assert len(grid.get_points(False, False)) == 1 * (3 * 4)
 
 
-def test_is_point_far_enough():
+def test_is_point_far_enough() -> None:
     points = np.array(
         [
             [1, 1, 1],
@@ -88,29 +91,29 @@ def test_is_point_far_enough():
     assert is_point_far_enough(points, xyz2, 0.25**2)
 
 
-def test_is_point_far_enough_perf(benchmark):
+def test_is_point_far_enough_perf(benchmark: BenchmarkFixture) -> None:
     benchmark(is_point_far_enough, sample_points, xyz, 0.25**2)
 
 
-def test_short_name_to_path():
+def test_short_name_to_path() -> None:
     short_tile_name = b""
     path = node_name_to_path(Path("work"), short_tile_name)
     assert str(path) == "work/r"
 
 
-def test_long_name_to_path():
+def test_long_name_to_path() -> None:
     long_tile_name = b"110542453782"
     path = node_name_to_path(Path("work"), long_tile_name)
     assert str(path) == "work/11054245/r3782"
 
 
-def test_long_name_to_path_with_extension():
+def test_long_name_to_path_with_extension() -> None:
     long_tile_name = b"110542453782"
     path = node_name_to_path(Path("work"), long_tile_name, suffix=".pnts")
     assert str(path) == "work/11054245/r3782.pnts"
 
 
-def test_long_name_to_path_with_short_split():
+def test_long_name_to_path_with_short_split() -> None:
     long_tile_name = b"110542453782"
     path = node_name_to_path(Path("work"), long_tile_name, split_len=2)
     assert str(path) == "work/11/05/42/45/37/r82"

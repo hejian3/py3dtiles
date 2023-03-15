@@ -5,6 +5,7 @@ The example that is run in the test (`simple.ply`) comes from the [CGAL reposito
 """
 
 from pathlib import Path
+from typing import Any, Dict, Generator
 
 import numpy as np
 import plyfile
@@ -17,17 +18,17 @@ DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
 @fixture
-def ply_filepath():
+def ply_filepath() -> Generator[Path, None, None]:
     yield DATA_DIRECTORY / "simple.ply"
 
 
 @fixture
-def buggy_ply_filepath():
+def buggy_ply_filepath() -> Generator[Path, None, None]:
     yield DATA_DIRECTORY / "buggy.ply"
 
 
 @fixture(params=["wrongname", "vertex"])
-def buggy_ply_data(request):
+def buggy_ply_data(request) -> Generator[Dict[str, Any], None, None]:  # type: ignore [no-untyped-def]
     """This ply data does not contain any 'vertex' element!"""
     types = [("x", np.float32, (5,)), ("y", np.float32, (5,)), ("z", np.float32, (5,))]
     data = [(np.random.sample(5), np.random.sample(5), np.random.sample(5))]
@@ -43,7 +44,7 @@ def buggy_ply_data(request):
     }
 
 
-def test_ply_get_metadata(ply_filepath):
+def test_ply_get_metadata(ply_filepath: Path) -> None:
     ply_metadata = ply_reader.get_metadata(path=ply_filepath)
     expected_point_count = 22300
     expected_aabb = (
@@ -67,14 +68,16 @@ def test_ply_get_metadata(ply_filepath):
     assert np.all(ply_metadata["avg_min"] == expected_aabb[0])
 
 
-def test_ply_get_metadata_buggy(buggy_ply_data, buggy_ply_filepath):
+def test_ply_get_metadata_buggy(
+    buggy_ply_data: Dict[str, Any], buggy_ply_filepath: Path
+) -> None:
     buggy_ply_data["data"].write(buggy_ply_filepath)
     with raises(KeyError, match=buggy_ply_data["msg"]):
         _ = ply_reader.get_metadata(path=buggy_ply_filepath)
     buggy_ply_filepath.unlink()
 
 
-def test_create_plydata_with_renamed_property(ply_filepath):
+def test_create_plydata_with_renamed_property(ply_filepath: Path) -> None:
     ply_data = plyfile.PlyData.read(ply_filepath)
     modified_ply_data = ply_reader.create_plydata_with_renamed_property(
         ply_data, "label", "classification"

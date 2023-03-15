@@ -15,7 +15,7 @@ from py3dtiles.tileset.content import PntsHeader
 
 
 class TestBatchTableHeader(unittest.TestCase):
-    def test_header_as_array_of_values(self):
+    def test_header_as_array_of_values(self) -> None:
         input_data: BatchTableHeaderDataType = {
             "id": ["unique id", "another unique id"],
             "displayName": ["Building name", "Another building name"],
@@ -35,11 +35,11 @@ class TestBatchTableHeader(unittest.TestCase):
 
 
 class TestBatchTableBody(unittest.TestCase):
-    def test_empty_body(self):
+    def test_empty_body(self) -> None:
         btb = BatchTableBody()
         np.testing.assert_equal(btb.to_array(), np.array([], np.uint8))
 
-    def test_non_empty_body(self):
+    def test_non_empty_body(self) -> None:
         btb = BatchTableBody(
             [
                 np.array([1, 2, 3], np.ubyte),
@@ -59,7 +59,7 @@ class TestBatchTableBody(unittest.TestCase):
 
 class TestBatchTable(unittest.TestCase):
     @staticmethod
-    def get_batch_table_header_dict_only_binary():
+    def get_batch_table_header_dict_only_binary() -> BatchTableHeaderDataType:
         return {
             "binProperty1": {
                 "byteOffset": 0,
@@ -74,20 +74,20 @@ class TestBatchTable(unittest.TestCase):
         }
 
     @staticmethod
-    def get_batch_table_header_dict_only_json():
+    def get_batch_table_header_dict_only_json() -> BatchTableHeaderDataType:
         return {
             "property1": [1, 2, 3, 4],
             "property2": [["a", "b"], ["a", "b"], ["a", "b"], ["a", "b"]],
         }
 
-    def test_add_property_as_json(self):
+    def test_add_property_as_json(self) -> None:
         bt = BatchTable()
         bt.add_property_as_json("property_1", [1, 2, 3])
         self.assertTrue(set(bt.header.data.keys()) == {"property_1"})
         self.assertEqual(bt.header.data["property_1"], [1, 2, 3])
         self.assertEqual(bt.body.data, [])
 
-    def test_add_property_as_binary(self):
+    def test_add_property_as_binary(self) -> None:
         bt = BatchTable()
 
         bt.add_property_as_binary(
@@ -112,12 +112,12 @@ class TestBatchTable(unittest.TestCase):
         self.assertEqual(len(bt.body.data), 2)
         np.testing.assert_equal(bt.body.data[1], np.array([4, 5, 6], np.single))
 
-    def test_to_array_with_empty_body(self):
+    def test_to_array_with_empty_body(self) -> None:
         bt = BatchTable()
         bt.add_property_as_json("property_1", [1, 2, 3])
         self.assertTrue(np.array_equal(bt.to_array(), bt.header.to_array()))
 
-    def test_to_array_with_non_empty_body(self):
+    def test_to_array_with_non_empty_body(self) -> None:
         bt = BatchTable()
         bt.add_property_as_binary(
             "property_1", np.array([1, 2, 3], np.uint8), "UNSIGNED_BYTE", "SCALAR"
@@ -132,7 +132,7 @@ class TestBatchTable(unittest.TestCase):
             )
         )
 
-    def test_from_array_only_json(self):
+    def test_from_array_only_json(self) -> None:
         # build a minimal batch table
         batch_table_dict = self.get_batch_table_header_dict_only_json()
         batch_table_header = BatchTableHeader(batch_table_dict)
@@ -148,7 +148,7 @@ class TestBatchTable(unittest.TestCase):
         self.assertListEqual(batch_table.body.data, [])
         self.assertDictEqual(batch_table.header.data, batch_table_dict)
 
-    def test_from_array_only_binary(self):
+    def test_from_array_only_binary(self) -> None:
         # build a minimal batch table
         # json part
         batch_table_header_dict = self.get_batch_table_header_dict_only_binary()
@@ -180,7 +180,7 @@ class TestBatchTable(unittest.TestCase):
         np.testing.assert_equal(batch_table_body_binary[0], batch_table.body.data[0])
         np.testing.assert_equal(batch_table_body_binary[1], batch_table.body.data[1])
 
-    def test_from_array_mix_of_json_and_binary(self):
+    def test_from_array_mix_of_json_and_binary(self) -> None:
         # build a minimal batch table
         # json part
         batch_table_header_dict = {
@@ -214,7 +214,7 @@ class TestBatchTable(unittest.TestCase):
         np.testing.assert_equal(batch_table_body_binary[0], batch_table.body.data[0])
         np.testing.assert_equal(batch_table_body_binary[1], batch_table.body.data[1])
 
-    def test_from_array_with_wrong_offset(self):
+    def test_from_array_with_wrong_offset(self) -> None:
         # build a minimal batch table
         # json part
         batch_table_header_dict = self.get_batch_table_header_dict_only_binary()

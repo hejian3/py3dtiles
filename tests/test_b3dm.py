@@ -11,7 +11,7 @@ from py3dtiles.tileset.tile_content_reader import read_file
 
 
 class TestTileContentReader(unittest.TestCase):
-    def test_read(self):
+    def test_read(self) -> None:
         tile: B3dm = read_file(Path("tests/fixtures/dragon_low.b3dm"))  # type: ignore [assignment]
 
         self.assertEqual(tile.header.version, 1.0)
@@ -25,7 +25,7 @@ class TestTileContentReader(unittest.TestCase):
             gltf_header = json.loads(f.read())
         self.assertDictEqual(gltf_header, tile.body.gltf.header)
 
-    def test_read_and_write(self):
+    def test_read_and_write(self) -> None:
         tile_content: B3dm = read_file(Path("tests/fixtures/buildings.b3dm"))  # type: ignore [assignment]
         self.assertEqual(tile_content.header.tile_byte_length, 6176)
         self.assertEqual(tile_content.header.ft_json_byte_length, 0)
@@ -46,7 +46,7 @@ class TestTileContentReader(unittest.TestCase):
 
 
 class TestTileContentBuilder(unittest.TestCase):
-    def test_build(self):
+    def test_build(self) -> None:
         with open("tests/fixtures/building.wkb", "rb") as f:
             wkb = f.read()
         ts = TriangleSoup.from_wkb_multipolygon(wkb)
@@ -85,7 +85,7 @@ class TestTileContentBuilder(unittest.TestCase):
 
 
 class TestTexturedTileBuilder(unittest.TestCase):
-    def test_build(self):
+    def test_build(self) -> None:
         with open("tests/fixtures/square.wkb", "rb") as f:
             wkb = f.read()
         with open("tests/fixtures/squareUV.wkb", "rb") as f:

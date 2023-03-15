@@ -18,21 +18,21 @@ DUMMY_MATRIX = [
 
 class TestBoundingVolumeBox(unittest.TestCase):
     @classmethod
-    def build_box_sample(cls):
+    def build_box_sample(cls) -> BoundingVolumeBox:
         bounding_volume_box = BoundingVolumeBox()
         bounding_volume_box.set_from_list(DUMMY_MATRIX)
         return bounding_volume_box
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         self.assertTrue(bounding_volume_box._box.ndim == 0)
 
-    def test_set_from_list(self):
+    def test_set_from_list(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         bounding_volume_box.set_from_list(DUMMY_MATRIX)
         assert_array_equal(bounding_volume_box._box, np.array(DUMMY_MATRIX))
 
-    def test_set_from_invalid_list(self):
+    def test_set_from_invalid_list(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
 
         # Empty list
@@ -60,20 +60,20 @@ class TestBoundingVolumeBox(unittest.TestCase):
             bounding_volume_box.set_from_list(DUMMY_MATRIX[:-1] + [[1]])
         self.assertTrue(bounding_volume_box._box.ndim == 0)
 
-    def test_set_from_points(self):
+    def test_set_from_points(self) -> None:
         pass
 
-    def test_set_from_invalid_points(self):
+    def test_set_from_invalid_points(self) -> None:
         # what if I give only one point ?
         pass
 
-    def test_is_only_box(self):
+    def test_is_only_box(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         self.assertTrue(bounding_volume_box.is_box())
         self.assertFalse(bounding_volume_box.is_region())
         self.assertFalse(bounding_volume_box.is_sphere())
 
-    def test_get_center(self):
+    def test_get_center(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         with self.assertRaises(AttributeError):
             bounding_volume_box.get_center()
@@ -81,7 +81,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()
         assert_array_equal(bounding_volume_box.get_center(), [1, 2, 3])
 
-    def test_translate(self):
+    def test_translate(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         with self.assertRaises(AttributeError):
             bounding_volume_box.translate(np.array([-1, -2, -3]))
@@ -100,7 +100,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
         # fmt: on
         assert_array_equal(bounding_volume_box._box, expected_result)
 
-    def test_transform(self):
+    def test_transform(self) -> None:
         bounding_volume_box = TestBoundingVolumeBox.build_box_sample()
 
         # Assert box hasn't change after transformation with identity matrix
@@ -132,7 +132,7 @@ class TestBoundingVolumeBox(unittest.TestCase):
         # fmt: on
         assert_array_equal(bounding_volume_box._box, expected_result)
 
-    def test_get_corners(self):
+    def test_get_corners(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         with self.assertRaises(AttributeError):
             bounding_volume_box.get_corners()
@@ -152,10 +152,10 @@ class TestBoundingVolumeBox(unittest.TestCase):
             ],
         )
 
-    def test_get_canonical_as_array(self):
+    def test_get_canonical_as_array(self) -> None:
         pass
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         bounding_volume_box = BoundingVolumeBox()
         with self.assertRaises(AttributeError):
             bounding_volume_box.to_dict()
