@@ -47,7 +47,7 @@ class ResponseType(Enum):
 
 
 class OctreeMetadata(NamedTuple):
-    aabb: npt.NDArray[np.float32]
+    aabb: npt.NDArray[np.float64]
     spacing: float
     scale: float
 

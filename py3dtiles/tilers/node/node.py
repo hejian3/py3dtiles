@@ -61,7 +61,7 @@ class Node:
     )
 
     def __init__(
-        self, name: bytes, aabb: npt.NDArray[np.float32], spacing: float
+        self, name: bytes, aabb: npt.NDArray[np.float64 | np.float32], spacing: float
     ) -> None:
         super().__init__()
         self.name = name
