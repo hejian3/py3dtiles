@@ -1,32 +1,36 @@
+from __future__ import annotations
+
 import math
 import struct
 from typing import List
 
 from earcut.earcut import earcut
 import numpy as np
+import numpy.typing as npt
+
+CoordinateType = npt.NDArray[np.float32]
+LineType = List[CoordinateType]
+PolygonType = List[LineType]
+MultiPolygonsType = List[PolygonType]
+
+PolygonAsTriangleType = List[npt.NDArray[np.float32]]  # the array shape is 3, 3
 
 
 class TriangleSoup:
     def __init__(self):
-        self.triangles = []
+        self.triangles: list[PolygonAsTriangleType] = []
 
     @staticmethod
-    def from_wkb_multipolygon(wkb, associated_data=None):
+    def from_wkb_multipolygon(
+        wkb: bytes, associated_data: list[bytes] | None = None
+    ) -> TriangleSoup:
         """
-        Parameters
-        ----------
-        wkb : string
-            Well-Known Binary binary string describing a multipolygon
+        :param wkb: Well-Known Binary binary string describing a multipolygon
 
-        associated_data : array
-            array of multipolygons containing data attached to the wkb
+        :param associated_data: array of multipolygons containing data attached to the wkb
             parameter multipolygon. Must be the same size as wkb.
-
-        Returns
-        -------
-        ts : TriangleSoup
         """
-        multipolygons = [parse(bytes(wkb))]
+        multipolygons: list[MultiPolygonsType] = [parse(bytes(wkb))]
 
         if associated_data is None:
             associated_data = []
@@ -34,9 +38,11 @@ class TriangleSoup:
         for additional_wkb in associated_data:
             multipolygons.append(parse(bytes(additional_wkb)))
 
-        triangles_array: List[List] = [[] for _ in range(len(multipolygons))]
+        triangles_array: list[PolygonAsTriangleType] = [
+            [] for _ in range(len(multipolygons))
+        ]
         for i in range(len(multipolygons[0])):
-            polygon = multipolygons[0][i]
+            polygon: PolygonType = multipolygons[0][i]
             additional_polygons = [mp[i] for mp in multipolygons[1:]]
             triangles = triangulate(polygon, additional_polygons)
             for array, tri in zip(triangles_array, triangles):
@@ -47,46 +53,29 @@ class TriangleSoup:
 
         return ts
 
-    def get_position_array(self):
+    def get_position_array(self) -> bytes:
         """
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Binary array of vertex positions
+        Returns a binary array of vertex positions
         """
 
         vertex_triangles = self.triangles[0]
         vertex_array = vertex_attribute_to_array(vertex_triangles)
-        return b"".join(vertex_array)
+        return b"".join([vertex.tobytes() for vertex in vertex_array])
 
-    def get_data_array(self, index):
+    def get_data_array(self, index: int) -> bytes:
         """
-        Parameters
-        ----------
-        index: int
-            The index of the associated data
-
-        Returns
-        -------
-        Binary array of vertex data
+        Returns a binary array of vertex data
         """
 
         vertex_triangles = self.triangles[1 + index]
         vertex_array = vertex_attribute_to_array(vertex_triangles)
-        return b"".join(vertex_array)
+        return b"".join([vertex.tobytes() for vertex in vertex_array])
 
-    def get_normal_array(self):
+    def get_normal_array(self) -> bytes:
         """
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Binary array of vertice normals
+        Returns a binary array of vertex normals
         """
-        normals = []
+        normals: list[CoordinateType] = []
         for t in self.triangles[0]:
             U = t[1] - t[0]
             V = t[2] - t[0]
@@ -98,30 +87,25 @@ class TriangleSoup:
                 normals.append(N / norm)
 
         vertex_array = face_attribute_to_array(normals)
-        return b"".join(vertex_array)
+        return b"".join([vertex.tobytes() for vertex in vertex_array])
 
-    def get_bbox(self):
+    def get_bbox(self) -> list[npt.NDArray[np.float32]]:
         """
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Array [[minX, minY, minZ],[maxX, maxY, maxZ]]
+        Returns the bbox in this format: [[minX, minY, minZ],[maxX, maxY, maxZ]]
         """
         mins = np.array([np.min(t, 0) for t in self.triangles[0]])
         maxs = np.array([np.max(t, 0) for t in self.triangles[0]])
         return [np.min(mins, 0), np.max(maxs, 0)]
 
 
-def face_attribute_to_array(triangles):
+def face_attribute_to_array(triangles: list[CoordinateType]) -> list[CoordinateType]:
     array = []
     for face in triangles:
         array += [face, face, face]
     return array
 
 
-def vertex_attribute_to_array(triangles):
+def vertex_attribute_to_array(triangles: PolygonAsTriangleType) -> list[CoordinateType]:
     array = []
     for face in triangles:
         for vertex in face:
@@ -129,8 +113,8 @@ def vertex_attribute_to_array(triangles):
     return array
 
 
-def parse(wkb):
-    multipolygon = []
+def parse(wkb: bytes) -> MultiPolygonsType:
+    multipolygon: MultiPolygonsType = []
     byteorder = struct.unpack("b", wkb[0:1])
     bo = "<" if byteorder[0] else ">"
     geomtype = struct.unpack(bo + "I", wkb[1:5])[0]
@@ -167,7 +151,9 @@ def parse(wkb):
     return multipolygon
 
 
-def triangulate(polygon, additional_polygons=None):
+def triangulate(
+    polygon: PolygonType, additional_polygons: list[PolygonType] | None = None
+) -> list[PolygonAsTriangleType]:
     """
     Triangulates 3D polygons
     """
@@ -239,7 +225,9 @@ def triangulate(polygon, additional_polygons=None):
 
     triangles_idx = earcut(polygon_2d, holes, 2)
 
-    arrays: List[List] = [[] for _ in range(len(additional_polygons) + 1)]
+    arrays: list[PolygonAsTriangleType] = [
+        [] for _ in range(len(additional_polygons) + 1)
+    ]
     for i in range(0, len(triangles_idx), 3):
         t = triangles_idx[i : i + 3]
         p0 = unflatten(polygon, holes, t[0])
@@ -251,22 +239,22 @@ def triangulate(polygon, additional_polygons=None):
         cross_product = np.cross(p1 - p0, p2 - p0)
         invert = np.dot(vect_prod, cross_product) < 0
         if invert:
-            arrays[0].append([p1, p0, p2])
+            arrays[0].append(np.array([p1, p0, p2], dtype=np.float32))
         else:
-            arrays[0].append([p0, p1, p2])
-        for array, p in zip(arrays[1:], additional_polygons):
-            pp0 = unflatten(p, holes, t[0])
-            pp1 = unflatten(p, holes, t[1])
-            pp2 = unflatten(p, holes, t[2])
+            arrays[0].append(np.array([p0, p1, p2], dtype=np.float32))
+        for array, additional_polygon in zip(arrays[1:], additional_polygons):
+            pp0 = unflatten(additional_polygon, holes, t[0])
+            pp1 = unflatten(additional_polygon, holes, t[1])
+            pp2 = unflatten(additional_polygon, holes, t[2])
             if invert:
-                array.append([pp1, pp0, pp2])
+                array.append(np.array([pp1, pp0, pp2], dtype=np.float32))
             else:
-                array.append([pp0, pp1, pp2])
+                array.append(np.array([pp0, pp1, pp2], dtype=np.float32))
 
     return arrays
 
 
-def unflatten(array, lengths, index):
+def unflatten(array: PolygonType, lengths: list[int], index: int) -> CoordinateType:
     for i in reversed(range(len(lengths))):
         lgth = lengths[i]
         if index >= lgth:
