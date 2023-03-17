@@ -3,7 +3,7 @@ import argparse
 from py3dtiles import convert, export, info, merger
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Read/write 3dtiles files",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

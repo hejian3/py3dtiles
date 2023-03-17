@@ -1,4 +1,6 @@
+import argparse
 from pathlib import Path
+from typing import Any
 
 from py3dtiles.tileset.content import B3dm, Pnts
 from py3dtiles.tileset.tile_content_reader import read_file
@@ -62,7 +64,7 @@ def print_b3dm_info(tile: B3dm) -> None:
         print("Tile with no body")
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     try:
         tile_content = read_file(args.file)
     except ValueError as e:
@@ -79,7 +81,9 @@ def main(args):
         raise RuntimeError(f"Unsupported format {magic!r}")
 
 
-def init_parser(subparser):
+def init_parser(
+    subparser: "argparse._SubParsersAction[Any]",
+) -> argparse.ArgumentParser:
     # arg parse
     parser = subparser.add_parser(
         "info", help="Extract information from a 3DTiles file"

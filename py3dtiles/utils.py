@@ -10,6 +10,7 @@ import numpy.typing as npt
 from pyproj import CRS
 
 if TYPE_CHECKING:
+    from py3dtiles.tilers.node import Node
     from typing_extensions import ParamSpec
 
 T = TypeVar("T", bound=npt.NBitBase)
@@ -135,7 +136,7 @@ def split_aabb(
     return new_aabb
 
 
-def make_aabb_cubic(aabb):
+def make_aabb_cubic(aabb: npt.NDArray[np.floating[T]]) -> npt.NDArray[np.floating[T]]:
     s = max(aabb[1] - aabb[0])
     aabb[1][0] = aabb[0][0] + s
     aabb[1][1] = aabb[0][1] + s
@@ -143,10 +144,14 @@ def make_aabb_cubic(aabb):
     return aabb
 
 
-def node_from_name(name, parent_aabb, parent_spacing):
+def node_from_name(
+    name: bytes,
+    parent_aabb: npt.NDArray[np.floating[T]],
+    parent_spacing: float,
+) -> Node:
     from py3dtiles.tilers.node import Node
 
     spacing = parent_spacing * 0.5
     aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
-    #  let's build a new Node
-    return Node(name, aabb, spacing)
+    # let's build a new Node
+    return Node(name, aabb.astype(np.float64), spacing)

@@ -46,7 +46,7 @@ class TileContentHeader(ABC):
     magic_value: Literal[b"b3dm", b"pnts"]
     version: int
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tile_byte_length = 0
         self.ft_json_byte_length = 0
         self.ft_bin_byte_length = 0

@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 import json
 from pathlib import Path
 import pickle
-from typing import Any, Generator, Iterator, TYPE_CHECKING
+from typing import Any, Generator, Iterator, TYPE_CHECKING, TypedDict
 
 import numpy as np
 import numpy.typing as npt
@@ -25,16 +25,29 @@ from .points_grid import Grid
 
 if TYPE_CHECKING:
     from .node_catalog import NodeCatalog
+    from typing_extensions import NotRequired
 
 
-def node_to_tileset(args):
+def node_to_tileset(
+    args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int]
+) -> TileDictType | None:
     return args[0].to_tileset(args[1], args[2], args[3], args[4], None)
 
 
+class DummyNodeDictType(TypedDict):
+    children: NotRequired[list[bytes]]
+    grid: NotRequired[Grid]
+    points: NotRequired[
+        list[
+            tuple[npt.NDArray[np.float32], npt.NDArray[np.uint8], npt.NDArray[np.uint8]]
+        ]
+    ]
+
+
 class DummyNode:
-    def __init__(self, _bytes):
+    def __init__(self, _bytes: DummyNodeDictType) -> None:
         if "children" in _bytes:
-            self.children = _bytes["children"]
+            self.children: list[bytes] | None = _bytes["children"]
             self.grid = _bytes["grid"]
         else:
             self.children = None

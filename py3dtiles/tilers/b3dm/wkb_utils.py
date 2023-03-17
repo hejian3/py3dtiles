@@ -17,7 +17,7 @@ PolygonAsTriangleType = List[npt.NDArray[np.float32]]  # the array shape is 3, 3
 
 
 class TriangleSoup:
-    def __init__(self):
+    def __init__(self) -> None:
         self.triangles: list[PolygonAsTriangleType] = []
 
     @staticmethod

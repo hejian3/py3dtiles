@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypeVar, Union
@@ -338,7 +339,9 @@ def merge(folder: Union[str, Path], overwrite: bool = False, verbose: int = 0) -
         json.dump(tileset, f)
 
 
-def init_parser(subparser):
+def init_parser(
+    subparser: "argparse._SubParsersAction[Any]",
+) -> argparse.ArgumentParser:
     parser = subparser.add_parser(
         "merge", help="Merge several pointcloud tilesets in 1 tileset"
     )
@@ -355,5 +358,5 @@ def init_parser(subparser):
     return parser
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     return merge(args.folder, args.overwrite, args.verbose)

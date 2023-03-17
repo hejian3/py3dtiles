@@ -1058,6 +1058,9 @@ class _Convert:
         ).to_tileset(self.out_folder, self.root_scale, None, 0, pool_executor)
         pool_executor.shutdown()
 
+        if root_tileset is None:
+            raise RuntimeError("root_tileset cannot be None here")
+
         root_tileset["transform"] = transform.T.reshape(16).tolist()
         root_tileset[
             "refine"

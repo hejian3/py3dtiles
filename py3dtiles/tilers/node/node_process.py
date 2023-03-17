@@ -40,9 +40,11 @@ def _flush(
             )
 
 
-def _balance(node_catalog, node, max_depth=1, depth=0):
+def _balance(
+    node_catalog: NodeCatalog, node: Node, max_depth: int = 1, depth: int = 0
+) -> None:
     if depth >= max_depth:
-        return 0
+        return
 
     if node.needs_balance():
         node.grid.balance(node.aabb_size, node.aabb[0], node.inv_aabb_size)
