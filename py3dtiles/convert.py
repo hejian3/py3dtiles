@@ -28,8 +28,7 @@ from py3dtiles.tilers.matrix_manipulation import (
     make_scale_matrix,
     make_translation_matrix,
 )
-from py3dtiles.tilers.node import Node, node_process, SharedNodeStore
-from py3dtiles.tilers.node.node_catalog import NodeCatalog
+from py3dtiles.tilers.node import Node, NodeCatalog, NodeProcess, SharedNodeStore
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.tile_content_reader import read_file
@@ -227,7 +226,7 @@ class Worker(Process):
 
             node_catalog = NodeCatalog(node, name, self.octree_metadata)
 
-            generator = node_process.RunGenerator(
+            node_process = NodeProcess(
                 node_catalog,
                 self.octree_metadata,
                 name,
@@ -235,7 +234,7 @@ class Worker(Process):
                 begin,
                 log_file,
             )
-            for proc_name, proc_data, proc_point_count in generator:
+            for proc_name, proc_data, proc_point_count in node_process.run():
                 self.skt.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
@@ -247,16 +246,12 @@ class Worker(Process):
                     block=False,
                 )
 
-            total_point_count = generator.total_point_count
-
             if log_enabled:
                 print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
 
             # save node state on disk
             if len(name) > 0:
-                data = node_catalog.dump(
-                    name, node_process.infer_depth_from_name(name) - 1
-                )
+                data = node_catalog.dump(name, node_process.infer_depth_from_name() - 1)
             else:
                 data = b""
 
@@ -269,7 +264,7 @@ class Worker(Process):
                     pickle.dumps(
                         {
                             "name": name,
-                            "total": total_point_count,
+                            "total": node_process.total_point_count,
                             "data": data,
                         }
                     ),
