@@ -377,8 +377,8 @@ class Node:
                 parent_node.name,
                 np.concatenate((parent_xyz, parent_rgb, parent_classification)),
                 folder,
-                parent_rgb is not None,
-                parent_classification is not None,
+                len(parent_rgb) != 0,
+                len(parent_classification) != 0,
             )
             pnts_path.unlink()
             prune = True

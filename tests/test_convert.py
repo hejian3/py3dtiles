@@ -45,6 +45,35 @@ def test_convert(tmp_dir):
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
+def test_convert_with_prune(tmp_dir):
+    # This file has 1 point at (-2, -2, -2) and 20001 at (1, 1, 1)
+    # like this, it triggers the prune mechanism
+    laz_path = DATA_DIRECTORY / "stacked_points.las"
+
+    convert(
+        laz_path,
+        outfolder=tmp_dir,
+        jobs=1,
+        rgb=False,  # search bound cases by disabling rgb export
+    )
+
+    # basic asserts
+    tileset_path = tmp_dir / "tileset.json"
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [1.5, 1.5, 1.5, 1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5]
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == expecting_box
+
+    assert Path(tmp_dir, "r0.pnts").exists()
+
+    with laspy.open(laz_path) as f:
+        las_point_count = f.header.point_count
+
+    assert las_point_count == number_of_points_in_tileset(tileset_path)
+
+
 def test_convert_without_srs(tmp_dir):
     with raises(SrsInMissingException):
         convert(
