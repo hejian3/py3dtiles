@@ -79,7 +79,7 @@ def run(
     tasks: List,
     begin: float,
     log_file: Optional[TextIO],
-) -> Generator[Tuple, None, None]:
+) -> Generator[Tuple, None, int]:
 
     log_enabled = log_file is not None
 
@@ -134,6 +134,36 @@ def run(
             log_file,
         ):
             total -= flush_point_count
-            yield flush_name, flush_data, flush_point_count, total
+            yield flush_name, flush_data, flush_point_count
 
     _balance(node_catalog, node, halt_at_depth - 1)
+
+    return total
+
+
+class RunGenerator:
+    """
+    A class that wrap the run function-generator to store the total point count returned.
+    """
+
+    def __init__(
+        self,
+        node_catalog: NodeCatalog,
+        octree_metadata: OctreeMetadata,
+        name: bytes,
+        tasks: List,
+        begin: float,
+        log_file: Optional[TextIO],
+    ) -> None:
+        self.generator = run(
+            node_catalog,
+            octree_metadata,
+            name,
+            tasks,
+            begin,
+            log_file,
+        )
+
+    def __iter__(self) -> Generator[Tuple, None, None]:
+        # The value returned (not yield) by run will be stored in self.total_point_count
+        self.total_point_count = yield from self.generator

@@ -28,9 +28,7 @@ from py3dtiles.tilers.matrix_manipulation import (
     make_scale_matrix,
     make_translation_matrix,
 )
-from py3dtiles.tilers.node import Node
-from py3dtiles.tilers.node import node_process
-from py3dtiles.tilers.node import SharedNodeStore
+from py3dtiles.tilers.node import Node, node_process, SharedNodeStore
 from py3dtiles.tilers.node.node_catalog import NodeCatalog
 from py3dtiles.tilers.pnts import pnts_writer
 from py3dtiles.tilers.pnts.constants import MIN_POINT_SIZE
@@ -219,7 +217,6 @@ class Worker(Process):
             log_file = None
 
         work = content[1:]
-        total_point_count = 0
         i = 0
         while i < len(work):
             name = work[i]
@@ -230,14 +227,15 @@ class Worker(Process):
 
             node_catalog = NodeCatalog(node, name, self.octree_metadata)
 
-            for proc_name, proc_data, proc_point_count, point_count in node_process.run(
+            generator = node_process.RunGenerator(
                 node_catalog,
                 self.octree_metadata,
                 name,
                 tasks,
                 begin,
                 log_file,
-            ):
+            )
+            for proc_name, proc_data, proc_point_count in generator:
                 self.skt.send_multipart(
                     [
                         ResponseType.NEW_TASK.value,
@@ -248,7 +246,8 @@ class Worker(Process):
                     copy=False,
                     block=False,
                 )
-                total_point_count = point_count
+
+            total_point_count = generator.total_point_count
 
             if log_enabled:
                 print(f"save on disk {name} [{time.time() - begin}]", file=log_file)
