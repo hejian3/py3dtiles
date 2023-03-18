@@ -17,19 +17,18 @@ To use py3dtiles from sources:
 
 .. code-block:: shell
 
-    $ apt install git python3 python3-pip virtualenv libopenblas-base liblas-c3
+    $ apt install git python3 python3-pip virtualenv
     $ git clone git@gitlab.com:Oslandia/py3dtiles.git
     $ cd py3dtiles
     $ virtualenv -p python3 venv
     $ . venv/bin/activate
-    (venv)$ pip install -e .
-    (venv)$ python setup.py install
+    (venv)$ pip install .
 
 If you want to run unit tests:
 
 .. code-block:: shell
 
-    (venv)$ pip install pytest pytest-benchmark
+    (venv)$ pip install -e .[dev]
     (venv)$ pytest
 
 
@@ -41,8 +40,8 @@ laspy, see [this link]](https://laspy.readthedocs.io/en/latest/installation.html
 
 .. code-block:: shell
 
-  # install liblaszip, for instance on ubuntu 22.04
-  apt-get install -y liblaszip8
+  $ # install liblaszip, for instance on ubuntu 22.04
+  $ apt-get install -y liblaszip8
 
-  # Install with LAZ support via laszip
-  pip install laspy[laszip]
+  $ # Install with LAZ support via laszip
+  $ pip install laspy[laszip]
