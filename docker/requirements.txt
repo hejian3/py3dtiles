@@ -1,0 +1,13 @@
+certifi==2022.12.7
+Cython==0.29.33
+earcut==1.1.5
+laspy==2.4.1
+llvmlite==0.39.1
+lz4==4.3.2
+numba==0.56.4
+numpy==1.22.4
+plyfile==0.8
+psutil==5.9.4
+psycopg2-binary==2.9.5
+pyproj==3.4.1
+pyzmq==25.0.1

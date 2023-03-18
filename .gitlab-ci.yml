@@ -201,6 +201,26 @@ windows-test:
     changes:
       - "**/*.py"
 
+docker-build:
+  stage: 🤞 test
+  tags:
+    - linux_vm
+  script:
+    - docker build . -t py3dtiles -f docker/Dockerfile
+    - mkdir data
+    - cp tests/fixtures/simple.ply data
+    - docker run -it --rm \
+      --mount type=bind,source="$(pwd)"/data,target=/app/data/ \
+      py3dtiles \
+      py3dtiles convert simple.ply # convert then check if there is the right amount of points in the tileset
+    - python -c "from py3dtiles.tileset.utils import number_of_points_in_tileset;from pathlib import Path;exit(number_of_points_in_tileset(Path('data/3dtiles/tileset.json')) != 22300);"
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
+
 sonarcloud-check:
   stage: 🤞 test
   needs: [test]
