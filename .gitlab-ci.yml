@@ -108,8 +108,8 @@ test:
       - ${PIP_CACHE_DIR}
   before_script:
     - pip install -U pip setuptools
-  script:
     - pip install .[dev]
+  script:
     - pytest
     # TODO move that in unit tests
     - py3dtiles info tests/fixtures/pointCloudRGB.pnts
@@ -200,6 +200,24 @@ windows-test:
       - master
     changes:
       - "**/*.py"
+
+test-api-doc-examples:
+  stage: 🤞 test
+  image:
+    name: python:3.10-slim
+  cache:
+    - paths:
+      - ${PIP_CACHE_DIR}
+  before_script:
+    - pip install .
+  script:
+    - python tests/test_code_examples.py
+  only:
+    refs:
+      - merge_requests
+      - develop
+      - tags
+      - master
 
 sonarcloud-check:
   stage: 🤞 test
