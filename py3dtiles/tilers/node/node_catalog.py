@@ -10,7 +10,7 @@ from py3dtiles.tilers.node.node import Node
 from py3dtiles.utils import split_aabb
 
 if TYPE_CHECKING:
-    from py3dtiles.convert import OctreeMetadata
+    from py3dtiles.utils import OctreeMetadata
 
 
 class NodeCatalog:
