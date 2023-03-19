@@ -2,6 +2,7 @@ import json
 import struct
 
 import numpy as np
+import numpy.typing as npt
 
 
 class GlTF:
@@ -12,7 +13,7 @@ class GlTF:
         self.header = {}
         self.body = None
 
-    def to_array(self):  # glb
+    def to_array(self) -> npt.NDArray[np.uint8]:  # glb
         scene = json.dumps(self.header, separators=(",", ":"))
 
         # body must be 4-byte aligned

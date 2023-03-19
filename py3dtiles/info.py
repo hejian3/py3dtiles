@@ -85,7 +85,7 @@ def init_parser(
     subparser: "argparse._SubParsersAction[Any]",
 ) -> argparse.ArgumentParser:
     # arg parse
-    parser = subparser.add_parser(
+    parser: argparse.ArgumentParser = subparser.add_parser(
         "info", help="Extract information from a 3DTiles file"
     )
 

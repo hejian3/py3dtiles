@@ -1202,7 +1202,7 @@ class _Convert:
 def init_parser(
     subparser: "argparse._SubParsersAction[Any]",
 ) -> argparse.ArgumentParser:
-    parser = subparser.add_parser(
+    parser: argparse.ArgumentParser = subparser.add_parser(
         "convert",
         help="Convert input 3D data to a 3dtiles tileset.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

@@ -130,7 +130,7 @@ class Grid:
     ) -> tuple[
         npt.NDArray[np.float32], npt.NDArray[np.uint8], npt.NDArray[np.uint8], bool
     ]:
-        return _insert(
+        return _insert(  # type: ignore [no-any-return]
             self.cells_xyz,
             self.cells_rgb,
             self.cells_classification,

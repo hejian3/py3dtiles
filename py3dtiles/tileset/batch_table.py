@@ -145,7 +145,7 @@ class BatchTable:
         else:
             raise ValueError(f"The property {property_name_to_fetch} is not found")
 
-    def to_array(self) -> npt.NDArray[np.ubyte]:
+    def to_array(self) -> npt.NDArray[np.uint8]:
         batch_table_header_array = self.header.to_array()
         batch_table_body_array = self.body.to_array()
 

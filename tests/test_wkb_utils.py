@@ -12,7 +12,7 @@ from py3dtiles.tilers.b3dm.wkb_utils import PolygonType
 def clockwise_star() -> PolygonType:
     with open("tests/fixtures/star_clockwise.geojson") as f:
         star_geo = json.load(f)
-        coords = star_geo["features"][0]["geometry"]["coordinates"]
+        coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
         polygon = coords[0]
         for i in range(len(polygon)):
@@ -26,7 +26,7 @@ def clockwise_star() -> PolygonType:
 def counterclockwise_star() -> PolygonType:
     with open("tests/fixtures/star_counterclockwise.geojson") as f:
         star_geo = json.load(f)
-        coords = star_geo["features"][0]["geometry"]["coordinates"]
+        coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
         polygon = coords[0]
         for i in range(len(polygon)):
@@ -40,7 +40,7 @@ def counterclockwise_star() -> PolygonType:
 def counterclockwise_zx_star() -> PolygonType:
     with open("tests/fixtures/star_zx_counter_clockwise.geojson") as f:
         star_geo = json.load(f)
-        coords = star_geo["features"][0]["geometry"]["coordinates"]
+        coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
         polygon = coords[0]
         for i in range(len(polygon)):
@@ -54,7 +54,7 @@ def counterclockwise_zx_star() -> PolygonType:
 def big_poly() -> PolygonType:
     with open("tests/fixtures/big_polygon_counter_clockwise.geojson") as f:
         big_poly = json.load(f)
-        coords = big_poly["features"][0]["geometry"]["coordinates"]
+        coords: PolygonType = big_poly["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
         polygon = coords[0]
         for i in range(len(polygon)):

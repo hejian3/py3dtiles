@@ -337,7 +337,7 @@ def init_parser(
     subparser: "argparse._SubParsersAction[Any]",
 ) -> argparse.ArgumentParser:
     descr = "Generate a tileset from a set of geometries"
-    parser = subparser.add_parser("export", help=descr)
+    parser: argparse.ArgumentParser = subparser.add_parser("export", help=descr)
 
     group = parser.add_mutually_exclusive_group()
 
