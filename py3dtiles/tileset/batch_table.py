@@ -40,7 +40,7 @@ ComponentLiteralType = Literal[
 ]
 
 ComponentNumpyType = Union[
-    np.byte, np.ubyte, np.short, np.ushort, np.intc, np.uintc, np.single, np.double
+    np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.float32, np.float64
 ]
 
 PropertyLiteralType = Literal["SCALAR", "VEC2", "VEC3", "VEC4"]
@@ -55,14 +55,14 @@ class BatchTableHeader:
         else:
             self.data = {}
 
-    def to_array(self) -> npt.NDArray[np.ubyte]:
+    def to_array(self) -> npt.NDArray[np.uint8]:
         if not self.data:
-            return np.empty((0,), dtype=np.ubyte)
+            return np.empty((0,), dtype=np.uint8)
 
         json_str = json.dumps(self.data, separators=(",", ":"))
         if len(json_str) % 8 != 0:
             json_str += " " * (8 - len(json_str) % 8)
-        return np.frombuffer(json_str.encode("utf-8"), dtype=np.ubyte)
+        return np.frombuffer(json_str.encode("utf-8"), dtype=np.uint8)
 
 
 class BatchTableBody:
@@ -72,17 +72,17 @@ class BatchTableBody:
         else:
             self.data = []
 
-    def to_array(self) -> npt.NDArray[np.ubyte]:
+    def to_array(self) -> npt.NDArray[np.uint8]:
         if not self.data:
-            return np.empty((0,), dtype=np.ubyte)
+            return np.empty((0,), dtype=np.uint8)
 
         if self.nbytes % 8 != 0:
             padding_str = " " * (8 - self.nbytes % 8)
-            padding = np.frombuffer(padding_str.encode("utf-8"), dtype=np.ubyte)
+            padding = np.frombuffer(padding_str.encode("utf-8"), dtype=np.uint8)
             self.data.append(padding)
 
         return np.concatenate(
-            [data.view(np.ubyte) for data in self.data], dtype=np.ubyte
+            [data.view(np.uint8) for data in self.data], dtype=np.uint8
         )
 
     @property
@@ -154,7 +154,7 @@ class BatchTable:
     @staticmethod
     def from_array(
         tile_header: TileContentHeader,
-        array: npt.NDArray[np.ubyte],
+        array: npt.NDArray[np.uint8],
         batch_len: int | None = None,
     ) -> BatchTable:
         batch_table = BatchTable()
