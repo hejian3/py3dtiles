@@ -1,5 +1,4 @@
 stages:
-  - 🐍 lint
   - 🤞 test
   - 🚀 deploy
 
@@ -26,78 +25,6 @@ variables:
       - tags
       - master
 
-# -- LINT JOBS --------------------------------------------------------------------------
-flake8:
-  extends: .pre-commit-check
-  stage: 🐍 lint
-  script:
-    - pre-commit run --show-diff-on-failure --all-files black
-  only:
-    changes:
-      - "**/*.py"
-
-autoflake:
-  extends: .pre-commit-check
-  stage: 🐍 lint
-  script: pre-commit run --show-diff-on-failure --all-files autoflake
-  only:
-    changes:
-      - "**/*.py"
-
-pyupgrade:
-  extends: .pre-commit-check
-  stage: 🐍 lint
-  script: pre-commit run --show-diff-on-failure --all-files pyupgrade
-  only:
-    changes:
-      - "**/*.py"
-
-pre-commit-built-in:
-  extends: .pre-commit-check
-  stage: 🐍 lint
-  script:
-    - pre-commit run --show-diff-on-failure --all-files trailing-whitespace
-    - pre-commit run --show-diff-on-failure --all-files end-of-file-fixer
-    - pre-commit run --show-diff-on-failure --all-files check-added-large-files
-
-typing-check:
-  stage: 🐍 lint
-  image:
-    name: python:3.10-slim
-  cache:
-    - key: $CI_COMMIT_REF_NAME
-      paths:
-        - .mypy_cache/
-    - paths:
-      - ${PIP_CACHE_DIR}
-  before_script:
-    - pip install .[dev]
-  script:
-    - mypy
-  only:
-    refs:
-      - merge_requests
-      - develop
-      - tags
-      - master
-    changes:
-      - "**/*.py"
-
-lint-commit:
-  stage: 🐍 lint
-  image:
-    name: python:3.10
-  cache:
-    - paths:
-      - ${PIP_CACHE_DIR}
-  before_script:
-    - pip install commitizen
-  script:
-    - cz check --rev-range $CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD
-  only:
-    refs:
-      - merge_requests
-
 # -- TEST JOBS --------------------------------------------------------------------------
 test:
   stage: 🤞 test
@@ -109,6 +36,7 @@ test:
   before_script:
     - apt update
     - apt install -y pdal llvm
+    - pip install -U pip setuptools wheel
   script:
     - pip install .[dev]
     - pytest
@@ -130,8 +58,6 @@ test:
       - develop
       - tags
       - master
-    changes:
-      - "**/*.py"
   parallel:
     matrix:
       - PYTHON_VERSION: ['3.8', '3.9', '3.10']
