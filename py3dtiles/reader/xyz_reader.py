@@ -8,9 +8,7 @@ from pyproj import Transformer
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
 
 
-def get_metadata(
-    path: Path, color_scale: Optional[float] = None, fraction: int = 100
-) -> MetadataReaderType:
+def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
     aabb = None
     count = 0
     seek_values = []
@@ -66,7 +64,6 @@ def get_metadata(
     return {
         "portions": pointcloud_file_portions,
         "aabb": aabb,
-        "color_scale": color_scale,
         "crs_in": None,
         "point_count": point_count,
         "avg_min": aabb[0],
@@ -78,6 +75,7 @@ def run(
     offset_scale: OffsetScaleType,
     portion: PortionType,
     transformer: Optional[Transformer],
+    color_scale: Optional[float],
 ) -> Generator[Tuple, None, None]:
     """
     Reads points from a xyz file
@@ -88,6 +86,8 @@ def run(
     - 3 features mean XYZ
     - 4 features mean XYZI
     - 6 features mean XYZRGB
+
+    NOTE: we assume RGB are 8 bits components.
 
     (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
     """
@@ -137,7 +137,10 @@ def run(
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors: 3 last columns of the point cloud
-            colors = points[:, -3:].astype(np.uint8)
+            if color_scale is None:
+                colors = points[:, -3:].astype(np.uint8)
+            else:
+                colors = np.clip(points[:, -3:] * color_scale, 0, 255).astype(np.uint8)
 
             classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
 

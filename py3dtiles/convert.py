@@ -77,6 +77,7 @@ class Worker:
         octree_metadata: OctreeMetadata,
         folder: Path,
         write_rgb: bool,
+        color_scale: Optional[float],
         write_classification: bool,
         verbosity: int,
         uri: str,
@@ -86,6 +87,7 @@ class Worker:
         self.octree_metadata = octree_metadata
         self.folder = folder
         self.write_rgb = write_rgb
+        self.color_scale = color_scale
         self.write_classification = write_classification
         self.verbosity = verbosity
         self.uri = uri
@@ -184,6 +186,7 @@ class Worker:
             parameters["offset_scale"],
             parameters["portion"],
             self.transformer,
+            self.color_scale,
         )
         for coords, colors, classification in reader_gen:
             self.skt.send_multipart(
@@ -509,7 +512,7 @@ class _Convert:
         :param rgb: Export rgb attributes.
         :param classification: Export classification attribute.
         :param graph: Produce debug graphs (requires pygal).
-        :param color_scale: Force color scale
+        :param color_scale: Scale the color with the specified amount. Useful to lighten or darken black pointclouds with only intensity.
 
         :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
         :raises SrsInMixinException: if the input files have different CRS
@@ -529,7 +532,9 @@ class _Convert:
         self.benchmark = benchmark
         self.startup = None
 
-        self.file_info = self.get_file_info(color_scale, crs_in, force_crs_in)
+        self.color_scale = color_scale
+
+        self.file_info = self.get_file_info(crs_in, force_crs_in)
 
         transformer = self.get_transformer(crs_out)
         (
@@ -569,6 +574,7 @@ class _Convert:
                 octree_metadata,
                 self.out_folder,
                 self.rgb,
+                self.color_scale,
                 self.classification,
                 self.verbose,
             ),
@@ -578,14 +584,12 @@ class _Convert:
 
     def get_file_info(
         self,
-        color_scale: Optional[float],
         crs_in: Optional[CRS],
         force_crs_in: bool = False,
     ) -> Dict[str, Any]:
 
         pointcloud_file_portions = []
         aabb = None
-        color_scale_by_file = {}
         total_point_count = 0
         avg_min = np.array([0.0, 0.0, 0.0])
 
@@ -600,7 +604,7 @@ class _Convert:
                     f"the available extensions are: {READER_MAP.keys()}"
                 )
 
-            file_info = reader.get_metadata(file, color_scale=color_scale)
+            file_info = reader.get_metadata(file)
 
             pointcloud_file_portions += file_info["portions"]
             if aabb is None:
@@ -608,7 +612,6 @@ class _Convert:
             else:
                 aabb[0] = np.minimum(aabb[0], file_info["aabb"][0])
                 aabb[1] = np.maximum(aabb[1], file_info["aabb"][1])
-            color_scale_by_file[str(file)] = file_info["color_scale"]
 
             file_crs_in = file_info["crs_in"]
             if file_crs_in is not None:
@@ -625,7 +628,6 @@ class _Convert:
         return {
             "portions": pointcloud_file_portions,
             "aabb": aabb,
-            "color_scale": color_scale_by_file,
             "crs_in": crs_in,
             "point_count": total_point_count,
             "avg_min": avg_min,
@@ -963,9 +965,6 @@ class _Convert:
                             self.rotation_matrix[:3, :3].T
                             if self.rotation_matrix is not None
                             else None,
-                            self.file_info["color_scale"].get(file)
-                            if self.file_info["color_scale"] is not None
-                            else None,
                         ),
                         "portion": portion,
                     }
@@ -1163,7 +1162,7 @@ class _Convert:
             )
             time_left = (100 - percent) * now / (percent + 0.001)
             print(
-                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]",
+                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]      ",
                 end="",
                 flush=True,
             )
