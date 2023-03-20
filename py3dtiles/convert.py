@@ -61,7 +61,11 @@ READER_MAP = {
 }
 
 
-class Worker(Process):
+def worker_target(*args):
+    return Worker(*args).run()
+
+
+class Worker:
     """
     This class waits from jobs commands from the Zmq socket.
     """
@@ -77,7 +81,6 @@ class Worker(Process):
         verbosity: int,
         uri: str,
     ) -> None:
-        super().__init__()
         self.activity_graph = activity_graph
         self.transformer = transformer
         self.octree_metadata = octree_metadata
@@ -306,7 +309,7 @@ class ZmqManager:
         self.uri = self.socket.getsockopt(zmq.LAST_ENDPOINT)
 
         self.processes = [
-            Worker(*process_args, self.uri)  # type: ignore [call-arg]
+            Process(target=worker_target, args=(*process_args, self.uri))
             for _ in range(number_of_jobs)
         ]
         for p in self.processes:
@@ -607,7 +610,7 @@ class _Convert:
                 aabb[1] = np.maximum(aabb[1], file_info["aabb"][1])
             color_scale_by_file[str(file)] = file_info["color_scale"]
 
-            file_crs_in = str_to_CRS(file_info["srs_in"])
+            file_crs_in = file_info["crs_in"]
             if file_crs_in is not None:
                 if crs_in is None:
                     crs_in = file_crs_in

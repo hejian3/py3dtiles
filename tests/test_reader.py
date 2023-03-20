@@ -54,7 +54,7 @@ def test_ply_get_metadata(ply_filepath):
         "portions",
         "aabb",
         "color_scale",
-        "srs_in",
+        "crs_in",
         "point_count",
         "avg_min",
     ]
@@ -62,7 +62,7 @@ def test_ply_get_metadata(ply_filepath):
     assert np.all(ply_metadata["aabb"][0] == expected_aabb[0])
     assert np.all(ply_metadata["aabb"][1] == expected_aabb[1])
     assert ply_metadata["color_scale"] is None
-    assert ply_metadata["srs_in"] is None
+    assert ply_metadata["crs_in"] is None
     assert ply_metadata["point_count"] == expected_point_count
     assert np.all(ply_metadata["avg_min"] == expected_aabb[0])
 

@@ -107,8 +107,6 @@ test:
     - paths:
       - ${PIP_CACHE_DIR}
   before_script:
-    - apt update
-    - apt install -y pdal llvm
     - pip install -U pip setuptools
   script:
     - pip install .[dev]
@@ -137,6 +135,24 @@ test:
     matrix:
       - PYTHON_VERSION: ['3.8', '3.9', '3.10']
 
+windows-test:
+  stage: 🤞 test
+  tags:
+    - windows
+  before_script:
+    - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    - choco install -y python --version=3.9.5
+    - RefreshEnv
+    - python -m pip install --upgrade pip setuptools wheel
+    - python -m pip install .[dev]
+  script:
+    - pytest
+    - py3dtiles info tests/fixtures/pointCloudRGB.pnts
+  only:
+    refs:
+      - tags
+      - master
+
 3d-tiles-validator:
   stage: 🤞 test
   image:
@@ -149,7 +165,7 @@ test:
       - ${PIP_CACHE_DIR}
   before_script:
     - apt update
-    - apt install -y python3-pip pdal llvm liblaszip8
+    - apt install -y python3-pip liblaszip8
     - pip install -U pip setuptools
     - pip install .
     - pip install laspy[laszip]

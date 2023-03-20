@@ -15,6 +15,7 @@ from typing import (
 
 import numpy as np
 import numpy.typing as npt
+from pyproj import CRS
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
@@ -92,7 +93,7 @@ class MetadataReaderType(TypedDict):
     portions: PortionsType
     aabb: npt.NDArray[np.double]
     color_scale: float | None
-    srs_in: str | None
+    crs_in: CRS | None
     point_count: int
     avg_min: npt.NDArray[np.double]
 
