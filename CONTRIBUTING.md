@@ -5,7 +5,7 @@ If you think you've found a bug in py3dtiles, first search the py3dtiles issues.
 
 If a related issue does not exist, submit a new one. Please include as much of the following information as is relevant:
 - Sample data to reproduce the issue
-- Screenshot of the generated tileset if appropriate. Tileset can be visualized with tools like giro3d or CesiumIon
+- Screenshot of the generated tileset if appropriate. Tileset can be visualized with tools like giro3d or other 3dtiles viewers.
 - The type and version of the OS and the version of python used
 - The exact version of py3dtiles. Did this work in a previous version or a next one?
 - Add the tag `Bug`
@@ -49,8 +49,7 @@ To use it, you must install the development dependencies:
 Then you have to install pre-commit:
 `$ pre-commit install -c .pre-commit-config.yaml -f --install-hooks -t pre-push -t pre-commit -t commit-msg`
 
-You could choose not to install the pre-commit hooks (by removing `-t pre-commit`) or not at all pre-commit but this is strongly not recommended.
-With this stage, it avoids completely to have an extra commit like "fix: fix pre-commit" and to have previous commits that don't work properly.
+You can choose not to install the pre-commit hooks (by removing `-t pre-commit`) or not at all pre-commit but remember that each individual commits of the merge request must pass all these checks. You must rebase correctly your branch for this purpose.
 
 If you want to commit without pre-commit verifications, you need to add the `-n` (or `--no-verify`) flag to the command `git commit`.
 
@@ -65,7 +64,7 @@ There are no automatic checks yet, so if your modifications change the API, reme
 We use the linter [commitizen](https://github.com/commitizen-tools/commitizen) with the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) configuration (the default one).
 
 ### Code linters
-We use the linter [flake8](https://flake8.pycqa.org/en/latest/) spiced up with some plugins (flake8-import-order, flake8-bugbear, flake8-comprehensions, flake8-simplify, flake8-builtins, flake8-pie). In addition, there are [pyupgrade](https://github.com/asottile/pyupgrade) and [autoflake](https://github.com/PyCQA/autoflake).
+We use the linter [flake8](https://flake8.pycqa.org/en/latest/) spiced up with some plugins. In addition, there are [pyupgrade](https://github.com/asottile/pyupgrade) and [autoflake](https://github.com/PyCQA/autoflake).
 
 These linters detect paterns that can be simplified, modernized or that are prone to future bugs. But they also remove useless variables, imports and passes. Flake8 only raises errors without fixing them. Pyupgrade and autoflake directly fix found issues.
 
@@ -77,16 +76,16 @@ The code of py3dtiles is formatted by [black](https://github.com/ambv/black).
 ### Type annotations
 Typing annotations are verified with [mypy](https://mypy.readthedocs.io/en/stable/). The whole configuration can be found in the `mypy.ini` file. Generic types have been written (to be reused) in the `py3dtiles/typing.py`.
 
-It is strongly discouraged to ignore an error (with the comment `type: ignore`) because it degrades the efficiency of typing. However, if you need to add one, you should specify the ignored error like this:: `# type: ignore [arg-type]`
+It is strongly discouraged to ignore an error (with the comment `type: ignore`) because it degrades the efficiency of typing. However, if you need to add one, you should specify the ignored error like this:: `# type: ignore [arg-type]` and explain the reason in a comment for future reference.
 
 ### Tests
-Your changes must be covered by tests as much as possible. There is a target of 80% coverage.
+Your changes must be covered by tests as much as possible. We target a 80% coverage.
 
 The CI runs the tests on each supported version of python. Currently, part of the tests are written with the pytest framework and another part with the unittest framework. All new tests must be written with pytest and gradually, the tests written with unittest will be migrated to pytest.
 
 ### Checking the validity of generated 3D tiles
 This step could be done only with the CI. With the [3d-tiles-validator](https://github.com/CesiumGS/3d-tiles-validator) tool, the job converts 2 point clouds, merges them and checks if the tilesets and tile contents are valid.
 
-### Opening a MR
-A description must be added explaining the objectives of the MR and the changes and additions made. If the MR is linked and solves an issue, you have to specify it in the description.
-If a CI step failed, this must also be specified.
+### Opening a merge request (MR)
+A description must be added explaining the objectives of the MR and the rationale of the changes made. If the MR solves an issue, please specify it in the MR description and in the commit message with a `Fixes #<issue number>. It's also possible (and very welcomed) to mention related issues (or if the issue is not fully fixed) with `Mention #<issue number>.
+If a CI step failed and you don't know how to fix it, don't hesitate to ask for help!

@@ -33,4 +33,4 @@ Documentation :
 
 Contributing :
 
-You can find the contributing guide here: `<CONTRIBUTING.md>`_
+You can find the contributing guide here: `<CONTRIBUTING.md>`_.
