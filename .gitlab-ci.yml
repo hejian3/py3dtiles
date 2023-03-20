@@ -109,6 +109,7 @@ test:
   before_script:
     - apt update
     - apt install -y pdal llvm
+    - pip install -U pip setuptools
   script:
     - pip install .[dev]
     - pytest
@@ -149,6 +150,7 @@ test:
   before_script:
     - apt update
     - apt install -y python3-pip pdal llvm liblaszip8
+    - pip install -U pip setuptools
     - pip install .
     - pip install laspy[laszip]
     - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1843_5175.laz
