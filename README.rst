@@ -30,3 +30,7 @@ Documentation :
 
 - master: https://oslandia.gitlab.io/py3dtiles/master
 - last stable: https://oslandia.gitlab.io/py3dtiles/
+
+Contributing :
+
+You can find the contributing guide here: `<CONTRIBUTING.md>`_
