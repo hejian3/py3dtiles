@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from py3dtiles.tileset.content import Pnts
+from py3dtiles.tileset.content import Pnts, PntsHeader
 from py3dtiles.tileset.feature_table import FeatureTableHeader, SemanticPoint
 from py3dtiles.tileset.tile_content_reader import read_file
 
@@ -56,9 +56,21 @@ class TestTileBuilder(unittest.TestCase):
         tile_arr = t.to_array()
         t2 = Pnts.from_array(tile_arr)
         self.assertEqual(t2.header.version, 1.0)
+
+        # Test the tile byte length
         self.assertEqual(t2.header.tile_byte_length, 12152)
+        self.assertEqual(
+            t2.header.tile_byte_length % 8, 0
+        )  # tile bytes must be 8-byte aligned
+
+        # Test the feature table byte lengths
+        json_feature_table_end = PntsHeader.BYTE_LENGTH + t2.header.ft_json_byte_length
+        self.assertEqual(json_feature_table_end % 8, 0)
         self.assertEqual(t2.header.ft_json_byte_length, 124)
+        bin_feature_table_end = json_feature_table_end + t2.header.ft_bin_byte_length
+        self.assertEqual(bin_feature_table_end % 8, 0)
         self.assertEqual(t2.header.ft_bin_byte_length, 12000)
+
         self.assertEqual(t2.header.bt_json_byte_length, 0)
         self.assertEqual(t2.header.bt_bin_byte_length, 0)
 
@@ -97,9 +109,21 @@ class TestTileBuilder(unittest.TestCase):
         tile_arr = t.to_array()
         t2 = Pnts.from_array(tile_arr)
         self.assertEqual(t2.header.version, 1.0)
+
+        # Test the tile byte length
         self.assertEqual(t2.header.tile_byte_length, 15176)
+        self.assertEqual(
+            t2.header.tile_byte_length % 8, 0
+        )  # tile bytes must be 8-byte aligned
+
+        # Test the feature table byte lengths
+        json_feature_table_end = PntsHeader.BYTE_LENGTH + t2.header.ft_json_byte_length
+        self.assertEqual(json_feature_table_end % 8, 0)
         self.assertEqual(t2.header.ft_json_byte_length, 148)
+        bin_feature_table_end = json_feature_table_end + t2.header.ft_bin_byte_length
+        self.assertEqual(bin_feature_table_end % 8, 0)
         self.assertEqual(t2.header.ft_bin_byte_length, 15000)
+
         self.assertEqual(t2.header.bt_json_byte_length, 0)
         self.assertEqual(t2.header.bt_bin_byte_length, 0)
 
