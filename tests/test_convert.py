@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 import json
 import multiprocessing
 from pathlib import Path
@@ -628,3 +629,44 @@ def test_convert_many_point_same_location(tmp_dir):
 
     tileset_path = tmp_dir / "tiles" / "tileset.json"
     assert number_of_points_in_tileset(tileset_path) == 30000
+
+
+@mark.parametrize(
+    "rgb_bool,classif_bool",
+    [(True, True), (False, True), (True, False), (False, False)],
+)
+def test_convert_rgb_classif(rgb_bool, classif_bool, tmp_dir):
+
+    if not classif_bool:
+        expected_raise = raises(
+            ValueError, match="The property Classification is not found"
+        )
+    else:
+        # Ideally one does not raise if classification is required but pytest won't implement such
+        # a feature (see https://github.com/pytest-dev/pytest/issues/1830). This solution is
+        # suggested by a comment in this thread (see
+        # https://github.com/pytest-dev/pytest/issues/1830#issuecomment-425653756).
+        expected_raise = nullcontext()
+
+    input_filepath = DATA_DIRECTORY / "simple_with_classification.ply"
+    convert(
+        input_filepath, rgb=rgb_bool, classification=classif_bool, outfolder=tmp_dir
+    )
+
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    ply_data = plyfile.PlyData.read(input_filepath)
+    ply_point_count = ply_data.elements[0].count
+
+    assert ply_point_count == number_of_points_in_tileset(tmp_dir / "tileset.json")
+
+    for out_filename in tmp_dir.iterdir():
+        if out_filename.name == "tileset.json":
+            continue
+        tile_content = tile_content_reader.read_file(out_filename)
+        assert rgb_bool ^ (tile_content.body.feature_table.body.color is None)
+        with expected_raise:
+            bt_prop = tile_content.body.batch_table.get_binary_property(
+                "Classification"
+            )
+            assert len(bt_prop) > 0
