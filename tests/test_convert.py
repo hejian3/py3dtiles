@@ -16,6 +16,7 @@ from py3dtiles.convert import convert
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
 from py3dtiles.reader.ply_reader import create_plydata_with_renamed_property
 from py3dtiles.tileset import tile_content_reader
+from py3dtiles.tileset.tileset import TileSet
 from py3dtiles.tileset.utils import number_of_points_in_tileset
 
 DATA_DIRECTORY = Path(__file__).parent / "fixtures"
@@ -660,10 +661,8 @@ def test_convert_rgb_classif(rgb_bool, classif_bool, tmp_dir):
 
     assert ply_point_count == number_of_points_in_tileset(tmp_dir / "tileset.json")
 
-    for out_filename in tmp_dir.iterdir():
-        if out_filename.name == "tileset.json":
-            continue
-        tile_content = tile_content_reader.read_file(out_filename)
+    tileset = TileSet.from_file(tmp_dir / "tileset.json")
+    for tile_content in tileset.get_all_tile_contents():
         assert rgb_bool ^ (tile_content.body.feature_table.body.color is None)
         with expected_raise:
             bt_prop = tile_content.body.batch_table.get_binary_property(
