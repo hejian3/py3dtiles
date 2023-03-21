@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.exceptions import TilerException
 from py3dtiles.typing import BoundingVolumeBoxDictType
 from .bounding_volume import BoundingVolume
 
@@ -183,13 +184,13 @@ class BoundingVolumeBox(BoundingVolume):
         # If there is no child, no modifications are done.
         for child in owner.children:
             if child.bounding_volume is None:
-                raise ValueError("Child should have a bounding volume.")
+                raise TilerException("Child should have a bounding volume.")
 
             bounding_volume = copy.deepcopy(child.bounding_volume)
             bounding_volume.transform(child.transform)
             if not bounding_volume.is_box():
-                raise AttributeError(
-                    "All children should also have a box as bounding volume"
+                raise TilerException(
+                    "All children must also have a box as bounding volume "
                     "if the parent has a bounding box"
                 )
             self.add(bounding_volume)

@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 
+from py3dtiles.exceptions import Invalid3dtilesError
 from py3dtiles.tileset.batch_table import BatchTable, BatchTableBody, BatchTableHeader
 from py3dtiles.tileset.content import PntsHeader
 
@@ -232,7 +233,8 @@ class TestBatchTable(unittest.TestCase):
 
         # import the array (wrong batch_len)
         with self.assertRaisesRegex(
-            ValueError, "The byte offset is 4 but the byte offset computed is 3"
+            Invalid3dtilesError,
+            "The byte offset is 4 but the byte offset computed is 3",
         ):
             BatchTable.from_array(pnts_header, batch_table_array, 3)
 
@@ -244,6 +246,7 @@ class TestBatchTable(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError, "The byte offset is 6 but the byte offset computed is 4"
+            Invalid3dtilesError,
+            "The byte offset is 6 but the byte offset computed is 4",
         ):
             BatchTable.from_array(pnts_header, batch_table_array, 4)

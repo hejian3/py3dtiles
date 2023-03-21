@@ -6,6 +6,7 @@ from numba import njit  # type: ignore [attr-defined]
 from numba.typed import List
 import numpy as np
 
+from py3dtiles.exceptions import TilerException
 from py3dtiles.utils import aabb_size_to_subdivision_type, SubdivisionType
 from .distance import is_point_far_enough, xyz_to_key
 
@@ -155,9 +156,9 @@ class Grid:
         if t != SubdivisionType.QUADTREE:
             self.cell_count[2] += 1
         if self.cell_count[0] > 8:
-            raise ValueError(
-                f"The first value of the attribute cell count should be lower or equal to 8,"
-                f"actual it is {self.cell_count[0]}"
+            raise TilerException(
+                f"The first value of the attribute cell count must be lower or equal to 8, "
+                f"currently, it is {self.cell_count[0]}"
             )
 
         old_cells_xyz = self.cells_xyz

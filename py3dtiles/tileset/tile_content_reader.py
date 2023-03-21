@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from py3dtiles.tileset.content import B3dm, Pnts
+from py3dtiles.exceptions import Invalid3dtilesError
+from .content import B3dm, Pnts
 
 if TYPE_CHECKING:
     from .content import TileContent
@@ -19,7 +20,7 @@ def read_file(tile_path: Path) -> TileContent:
         arr = np.frombuffer(data, dtype=np.uint8)
         tile_content = read_array(arr)
         if tile_content is None or tile_content.header is None:
-            raise ValueError(
+            raise Invalid3dtilesError(
                 f"The file {tile_path} doesn't contain a valid TileContent data."
             )
         return tile_content

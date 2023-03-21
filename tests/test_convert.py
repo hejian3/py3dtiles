@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import laspy
 import numpy as np
+from numpy.testing import assert_array_equal
 import plyfile
 from pyproj import CRS
 from pytest import fixture, mark, raises
@@ -110,11 +111,11 @@ def test_convert_without_srs(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt1.colors["Red"] == 187
-    assert pt1.colors["Green"] == 187
-    assert pt1.colors["Blue"] == 187
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((187, 187, 187), dtype=np.uint8))
 
 
 def test_convert_las_color_scale(tmp_dir):
@@ -126,10 +127,10 @@ def test_convert_las_color_scale(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r2.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 187
-    assert pt1.colors["Green"] == 187
-    assert pt1.colors["Blue"] == 187
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((187, 187, 187), dtype=np.uint8))
     convert(
         DATA_DIRECTORY / "without_srs.las",
         overwrite=True,
@@ -139,11 +140,11 @@ def test_convert_las_color_scale(tmp_dir):
     )
     tile1 = tile_content_reader.read_file(tmp_dir / "r2.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # it should clamp to 255
-    assert pt1.colors["Red"] == 206
-    assert pt1.colors["Green"] == 206
-    assert pt1.colors["Blue"] == 206
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((206, 206, 206), dtype=np.uint8))
 
     convert(
         DATA_DIRECTORY / "without_srs.las",
@@ -154,11 +155,11 @@ def test_convert_las_color_scale(tmp_dir):
     )
     tile1 = tile_content_reader.read_file(tmp_dir / "r2.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # it should clamp to 255
-    assert pt1.colors["Red"] == 255
-    assert pt1.colors["Green"] == 255
-    assert pt1.colors["Blue"] == 255
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((255, 255, 255), dtype=np.uint8))
 
 
 def test_convert_with_srs(tmp_dir):
@@ -219,27 +220,27 @@ def test_convert_xyz_with_rgb(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r1.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt1.colors["Red"] == 10
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((10, 0, 0), dtype=np.uint8))
 
     tile2 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
     assert tile2.body.feature_table.nb_points() == 1
-    pt2 = tile2.body.feature_table.feature(0)
+    pt2_color = tile2.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt2.colors["Red"] == 0
-    assert pt2.colors["Green"] == 0
-    assert pt2.colors["Blue"] == 200
+    if pt2_color is None:
+        raise RuntimeError("pt2_color shouldn't be None.")
+    assert_array_equal(pt2_color, np.array((0, 0, 200), dtype=np.uint8))
 
     tile3 = tile_content_reader.read_file(tmp_dir / "r7.pnts")
     assert tile3.body.feature_table.nb_points() == 1
-    pt3 = tile3.body.feature_table.feature(0)
+    pt3_color = tile3.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt3.colors["Red"] == 0
-    assert pt3.colors["Green"] == 10
-    assert pt3.colors["Blue"] == 0
+    if pt3_color is None:
+        raise RuntimeError("pt3_color shouldn't be None.")
+    assert_array_equal(pt3_color, np.array((0, 10, 0), dtype=np.uint8))
 
 
 def test_convert_xyz_with_rgb_color_scale(tmp_dir):
@@ -247,27 +248,27 @@ def test_convert_xyz_with_rgb_color_scale(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r1.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt1.colors["Red"] == 15
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((15, 0, 0), dtype=np.uint8))
 
     tile2 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
     assert tile2.body.feature_table.nb_points() == 1
-    pt2 = tile2.body.feature_table.feature(0)
+    pt2_color = tile2.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt2.colors["Red"] == 0
-    assert pt2.colors["Green"] == 0
-    assert pt2.colors["Blue"] == 255
+    if pt2_color is None:
+        raise RuntimeError("pt2_color shouldn't be None.")
+    assert_array_equal(pt2_color, np.array((0, 0, 255), dtype=np.uint8))
 
     tile3 = tile_content_reader.read_file(tmp_dir / "r7.pnts")
     assert tile3.body.feature_table.nb_points() == 1
-    pt3 = tile3.body.feature_table.feature(0)
+    pt3_color = tile3.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
-    assert pt3.colors["Red"] == 0
-    assert pt3.colors["Green"] == 15
-    assert pt3.colors["Blue"] == 0
+    if pt3_color is None:
+        raise RuntimeError("pt3_color shouldn't be None.")
+    assert_array_equal(pt3_color, np.array((0, 15, 0), dtype=np.uint8))
 
 
 def test_convert_ply(tmp_dir):
@@ -288,10 +289,10 @@ def test_convert_ply(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 5293
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 0, 0), dtype=np.uint8))
 
 
 def test_convert_ply_with_color(tmp_dir):
@@ -306,31 +307,31 @@ def test_convert_ply_with_color(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 128
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 128, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 10
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((10, 0, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 20
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 0, 20), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 40
-    assert pt1.colors["Green"] == 40
-    assert pt1.colors["Blue"] == 40
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((40, 40, 40), dtype=np.uint8))
 
     # 16 bits colors
     # every value should be divided by 256
@@ -349,32 +350,31 @@ def test_convert_ply_with_color(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    print(pt1.colors)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 0, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 1
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((1, 0, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 4
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 0, 4), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 255
-    assert pt1.colors["Green"] == 255
-    assert pt1.colors["Blue"] == 255
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((255, 255, 255), dtype=np.uint8))
 
 
 def test_convert_ply_with_color_scale(tmp_dir):
@@ -390,31 +390,31 @@ def test_convert_ply_with_color_scale(tmp_dir):
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 255
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 255, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 30
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 0
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((30, 0, 0), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 0
-    assert pt1.colors["Green"] == 0
-    assert pt1.colors["Blue"] == 60
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((0, 0, 60), dtype=np.uint8))
 
     tile1 = tile_content_reader.read_file(tmp_dir / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
-    pt1 = tile1.body.feature_table.feature(0)
-    assert pt1.colors["Red"] == 120
-    assert pt1.colors["Green"] == 120
-    assert pt1.colors["Blue"] == 120
+    pt1_color = tile1.body.feature_table.get_feature_color_at(0)
+    if pt1_color is None:
+        raise RuntimeError("pt1_color shouldn't be None.")
+    assert_array_equal(pt1_color, np.array((120, 120, 120), dtype=np.uint8))
 
 
 def test_convert_ply_with_wrong_classification(tmp_dir):

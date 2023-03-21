@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 
 import lz4.frame as gzip
 
+from py3dtiles.exceptions import TilerException
 from py3dtiles.utils import node_name_to_path
 
 
@@ -54,7 +55,7 @@ class SharedNodeStore:
         if metadata is not None:
             tmp_data = self.data[metadata[1]]
             if tmp_data is None:
-                raise RuntimeError(
+                raise TilerException(
                     "tmp_data shouldn't be None if metadata is not None."
                 )
             else:
@@ -83,7 +84,7 @@ class SharedNodeStore:
             self.memory_size["content"] -= getsizeof(meta)
             content = self.data[meta[1]]
             if content is None:
-                raise ValueError(
+                raise TilerException(
                     f"{name!r} is present in self.metadata but not in self.data."
                 )
             self.memory_size["content"] -= len(content)
@@ -137,7 +138,7 @@ def _remove_all(store: SharedNodeStore) -> Tuple[int, int]:
             continue
         data = store.data[meta[1]]
         if data is None:
-            raise ValueError(
+            raise TilerException(
                 f"{name!r} is present in self.metadata but not in self.data."
             )
         node_path = node_name_to_path(store.folder, name)

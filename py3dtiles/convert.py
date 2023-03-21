@@ -997,11 +997,11 @@ class _Convert:
                 tile_content = read_file(tile_path)
 
                 fth = tile_content.body.feature_table.header
-                xyz = tile_content.body.feature_table.body.positions_arr.view(
+                xyz = tile_content.body.feature_table.body.position.view(
                     np.float32
                 ).reshape((fth.points_length, 3))
                 if self.rgb:
-                    rgb = tile_content.body.feature_table.body.colors_arr.reshape(
+                    rgb = tile_content.body.feature_table.body.color.reshape(
                         (fth.points_length, 3)
                     )
                 else:

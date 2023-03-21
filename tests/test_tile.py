@@ -7,6 +7,7 @@ from numpy.testing import assert_array_equal
 import pytest
 
 from py3dtiles.convert import convert
+from py3dtiles.exceptions import InvalidTilesetError, TilerException
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import (
     Pnts,
@@ -62,7 +63,7 @@ class TestTileContentManagement:
         tile.tile_content = pnts
 
         with pytest.raises(
-            ValueError, match="tile.content_uri is null, cannot write tile content"
+            TilerException, match="tile.content_uri is null, cannot write tile content"
         ):
             tile.write_content(tmp_dir)
 
@@ -77,7 +78,7 @@ class TestTileContentManagement:
 
         tile.tile_content = None
         with pytest.raises(
-            ValueError,
+            TilerException,
             match="The tile has no tile content. A tile content should be added in the tile.",
         ):
             tile.write_content(tmp_dir)
@@ -155,7 +156,7 @@ class TestTile:
         tile = Tile()
         assert tile.get_refine_mode() == "ADD"
 
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidTilesetError):
             tile.set_refine_mode("replace")
 
         tile.set_refine_mode("REPLACE")
@@ -187,7 +188,7 @@ class TestTile:
     def test_to_dict(self):
         tile = Tile()
 
-        with pytest.raises(AttributeError, match="Bounding volume is not set"):
+        with pytest.raises(InvalidTilesetError, match="Bounding volume is not set"):
             tile.to_dict()
 
         bounding_volume = BoundingVolumeBox()

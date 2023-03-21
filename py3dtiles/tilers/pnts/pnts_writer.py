@@ -15,6 +15,7 @@ from py3dtiles.tileset.feature_table import (
     FeatureTable,
     FeatureTableBody,
     FeatureTableHeader,
+    SemanticPoint,
 )
 from py3dtiles.utils import node_name_to_path
 
@@ -37,16 +38,12 @@ def points_to_pnts(
     if count == 0:
         return 0, None
 
-    pdt = np.dtype([("X", "<f4"), ("Y", "<f4"), ("Z", "<f4")])
-    cdt = (
-        np.dtype([("Red", "u1"), ("Green", "u1"), ("Blue", "u1")])
-        if include_rgb
-        else None
-    )
-
     ft = FeatureTable()
-    ft.header = FeatureTableHeader.from_dtype(pdt, cdt, count)
+    ft.header = FeatureTableHeader.from_semantic(
+        SemanticPoint.POSITION, SemanticPoint.RGB if include_rgb else None, None, count
+    )
     ft.body = FeatureTableBody.from_array(ft.header, points)
+
     bt = BatchTable()
     if include_classification:
         sdt = np.dtype([("Classification", "u1")])

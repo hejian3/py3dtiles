@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.tileset.bounding_volume import BoundingVolume
-from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
-from py3dtiles.tileset.content import TileContent
+from py3dtiles.exceptions import InvalidTilesetError, TilerException
 from py3dtiles.typing import RefineType, TileDictType
+from .bounding_volume import BoundingVolume
+from .bounding_volume_box import BoundingVolumeBox
+from .content import TileContent
 from .extendable import Extendable
 from .tile_content_reader import read_file
 
@@ -54,7 +55,7 @@ class Tile(Extendable):
                 "The support of bounding volume region and sphere is not implemented yet"
             )
         else:
-            raise ValueError(
+            raise InvalidTilesetError(
                 f"The bounding volume {list(tile_dict['boundingVolume'].keys())[0]} is unknown"
             )
 
@@ -104,7 +105,7 @@ class Tile(Extendable):
 
     def set_refine_mode(self, mode: RefineType) -> None:
         if mode != "ADD" and mode != "REPLACE":
-            raise ValueError(
+            raise InvalidTilesetError(
                 f"Unknown refinement mode {mode}. Should be either 'ADD' or 'REPLACE'."
             )
         self._refine = mode
@@ -137,9 +138,11 @@ class Tile(Extendable):
 
     def sync_bounding_volume_with_children(self) -> None:
         if self.bounding_volume is None:
-            raise AttributeError("This Tile has no bounding volume: exiting.")
+            raise TilerException("This Tile has no bounding volume.")
         if not self.bounding_volume.is_box():
-            raise NotImplementedError("Don't know how to sync non box bounding volume.")
+            raise NotImplementedError(
+                "Don't know yet how to sync non box bounding volume."
+            )
 
         # We consider that whatever information is present it is the
         # proper one (in other terms: when they are no sub-tiles this tile
@@ -161,13 +164,13 @@ class Tile(Extendable):
         """
 
         if self.tile_content is None:
-            raise ValueError(
+            raise TilerException(
                 "The tile has no tile content. "
                 "A tile content should be added in the tile."
             )
 
         if self.content_uri is None:
-            raise ValueError("tile.content_uri is null, cannot write tile content")
+            raise TilerException("tile.content_uri is null, cannot write tile content")
 
         if self.content_uri.is_absolute():
             content_path = self.content_uri
@@ -192,12 +195,12 @@ class Tile(Extendable):
         if self.bounding_volume is not None:
             bounding_volume = self.bounding_volume
         else:
-            raise AttributeError("Bounding volume is not set")
+            raise InvalidTilesetError("Bounding volume is not set")
         bounding_volume_dict = bounding_volume.to_dict()
 
         refine = self._refine
         if refine not in ["ADD", "REPLACE"]:
-            raise ValueError(
+            raise InvalidTilesetError(
                 f"refine should be either ADD or REPLACE, currently {refine}."
             )
 
