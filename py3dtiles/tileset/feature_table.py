@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from enum import Enum
 import json
-from typing import Any, Literal, Sequence, TYPE_CHECKING
+from typing import Literal, Sequence, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import InvalidPntsError
+from py3dtiles.typing import FeatureTableHeaderDataType
 
 if TYPE_CHECKING:
     from py3dtiles.tileset.content import PntsHeader
@@ -125,11 +126,9 @@ class FeatureTableHeader:
             json_str += " " * (8 - n % 8)
         return np.frombuffer(json_str.encode("utf-8"), dtype=np.uint8)
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> FeatureTableHeaderDataType:
         # length
-        jsond: dict[
-            str, int | dict | tuple[float, float, float] | list[float] | list[int]
-        ] = {"POINTS_LENGTH": self.points_length}
+        jsond: FeatureTableHeaderDataType = {"POINTS_LENGTH": self.points_length}
 
         # RTC (Relative To Center)
         if self.rtc is not None:
@@ -162,7 +161,9 @@ class FeatureTableHeader:
             jsond["RGB565"] = offset
 
         if self.constant_rgba is not None:
-            jsond["CONSTANT_RGBA"] = list(self.constant_rgba)
+            # cannot give the shape of self.constant_rgba to mypy
+            constant_rgba_tuple: tuple[int, int, int, int] = tuple(self.constant_rgba)  # type: ignore [assignment]
+            jsond["CONSTANT_RGBA"] = constant_rgba_tuple
 
         # normal
         offset = {"byteOffset": self.normal_offset}

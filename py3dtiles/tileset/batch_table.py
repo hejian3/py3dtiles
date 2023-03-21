@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Literal, TYPE_CHECKING, Union
+from typing import Any, Literal, TYPE_CHECKING, Union
 
 import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import Invalid3dtilesError
+from py3dtiles.typing import BatchTableHeaderDataType
 
 if TYPE_CHECKING:
     from py3dtiles.tileset.content import TileContentHeader
@@ -46,8 +47,6 @@ ComponentNumpyType = Union[
 ]
 
 PropertyLiteralType = Literal["SCALAR", "VEC2", "VEC3", "VEC4"]
-
-BatchTableHeaderDataType = Dict[str, Union[List[Any], Dict[str, Any]]]
 
 
 class BatchTableHeader:

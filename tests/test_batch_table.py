@@ -9,10 +9,10 @@ from py3dtiles.tileset.batch_table import (
     BatchTable,
     BatchTableBody,
     BatchTableHeader,
-    BatchTableHeaderDataType,
     ComponentNumpyType,
 )
 from py3dtiles.tileset.content import PntsHeader
+from py3dtiles.typing import BatchTableHeaderDataType
 
 
 class TestBatchTableHeader(unittest.TestCase):
