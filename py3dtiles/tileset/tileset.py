@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Generator, TYPE_CHECKING
 
 from py3dtiles.typing import AssetDictType, GeometricErrorType, TilesetDictType
 from .extendable import Extendable
 from .tile import Tile
+
+if TYPE_CHECKING:
+    from .content import TileContent
 
 
 class TileSet(Extendable):
@@ -29,6 +33,19 @@ class TileSet(Extendable):
         tileset.root_uri = root_uri
 
         return tileset
+
+    @staticmethod
+    def from_file(filepath: Path) -> TileSet:
+        with open(filepath) as f:
+            tileset_dict = json.load(f)
+        return TileSet.from_dict(tileset_dict, filepath.parent)
+
+    def get_all_tile_contents(
+        self,
+    ) -> Generator[TileContent | TileSet | None, None, None]:
+        tiles = [self.root_tile] + self.root_tile.get_all_children()
+        for tile in tiles:
+            yield tile.get_or_fetch_content(self.root_uri)
 
     def add_asset_extras(self, comment: str) -> None:
         """
