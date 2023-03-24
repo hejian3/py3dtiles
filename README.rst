@@ -33,4 +33,4 @@ Documentation :
 
 **build exe**
 
-- pyinstaller .\py3dtiles\command_line.py -F --clean
+- pyinstaller ./py3dtiles/command_line.py -F --clean
