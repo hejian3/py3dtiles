@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 
 from py3dtiles import convert, export, info, merger
 
@@ -36,4 +37,5 @@ def main():
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
