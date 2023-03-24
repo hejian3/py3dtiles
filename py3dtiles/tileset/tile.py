@@ -9,7 +9,7 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import InvalidTilesetError, TilerException
-from py3dtiles.typing import RefineType, TileDictType
+from py3dtiles.typings import RefineType, TileDictType
 from .bounding_volume import BoundingVolume
 from .bounding_volume_box import BoundingVolumeBox
 from .content import TileContent

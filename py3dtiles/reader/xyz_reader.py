@@ -5,7 +5,7 @@ from typing import Generator, List, Optional, Tuple
 import numpy as np
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionType
+from py3dtiles.typings import MetadataReaderType, OffsetScaleType, PortionType
 
 
 def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:

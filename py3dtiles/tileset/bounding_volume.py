@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.typing import BoundingVolumeDictType
+from py3dtiles.typings import BoundingVolumeDictType
 from .extendable import Extendable
 
 if TYPE_CHECKING:

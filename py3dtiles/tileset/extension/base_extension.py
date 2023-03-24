@@ -1,4 +1,4 @@
-from py3dtiles.typing import ExtensionDictType
+from py3dtiles.typings import ExtensionDictType
 
 
 class BaseExtension:

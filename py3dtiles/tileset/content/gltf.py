@@ -86,7 +86,7 @@ class GlTF:
             GlTF.HEADER_LENGTH + GlTF.CHUNK_HEADER_LENGTH
         )  # Skip the header and the JSON chunk header
         header = struct.unpack(
-            str(json_chunk_length) + "s", array[index : index + json_chunk_length]
+            str(json_chunk_length) + "s", array[index: index + json_chunk_length]
         )[0]
         gltf.header = json.loads(header.decode("ascii"))
 
