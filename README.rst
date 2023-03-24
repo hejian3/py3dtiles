@@ -30,3 +30,6 @@ Documentation :
 
 - master: https://oslandia.gitlab.io/py3dtiles/master
 - last stable: https://oslandia.gitlab.io/py3dtiles/
+
+**build exe**
+pyinstaller .\py3dtiles\command_line.py -F --clean
