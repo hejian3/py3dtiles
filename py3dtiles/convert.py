@@ -640,7 +640,7 @@ class _Convert:
                     "None file has a input srs specified. Should be provided."
                 )
 
-            transformer = Transformer.from_crs(self.file_info["crs_in"], crs_out)
+            transformer = Transformer.from_crs(self.file_info["crs_in"], crs_out, always_xy=True)
         else:
             transformer = None
 
