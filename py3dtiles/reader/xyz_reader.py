@@ -143,5 +143,5 @@ def run(
                 colors = np.clip(points[:, -3:] * color_scale, 0, 255).astype(np.uint8)
 
             classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
-
-            yield coords, colors, classification
+            intensity = np.zeros((points.shape[0], 1), dtype=np.uint8)
+            yield coords, colors, classification, intensity

@@ -29,12 +29,12 @@ def points_to_pnts(
     out_folder: Path,
     include_rgb: bool,
     include_classification: bool,
+    include_intensity: bool
 ) -> tuple[int, Path | None]:
     count = int(
         len(points)
-        / (3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0))
+        / (3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0) + (1 if include_intensity else 0))
     )
-
     if count == 0:
         return 0, None
 
@@ -51,6 +51,16 @@ def points_to_pnts(
         bt.add_property_as_binary(
             "Classification",
             points[offset : offset + count * sdt.itemsize],
+            "UNSIGNED_BYTE",
+            "SCALAR",
+        )
+
+    if include_intensity:
+        sdt = np.dtype([("Intensity", "u1")])
+        offset = count * (3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0))
+        bt.add_property_as_binary(
+            "Intensity",
+            points[offset: offset + count * sdt.itemsize],
             "UNSIGNED_BYTE",
             "SCALAR",
         )
@@ -78,12 +88,13 @@ def node_to_pnts(
     out_folder: Path,
     include_rgb: bool,
     include_classification: bool,
+    include_intensity: bool,
 ) -> int:
     points = py3dtiles.tilers.node.Node.get_points(
-        node, include_rgb, include_classification
+        node, include_rgb, include_classification, include_intensity
     )
     point_nb, _ = points_to_pnts(
-        name, points, out_folder, include_rgb, include_classification
+        name, points, out_folder, include_rgb, include_classification, include_intensity
     )
     return point_nb
 
@@ -93,6 +104,7 @@ def run(
     folder: Path,
     write_rgb: bool,
     write_classification: bool,
+    write_intensity: bool
 ) -> Generator[int, None, None]:
     # we can safely write the .pnts file
     if len(data) > 0:
@@ -100,5 +112,5 @@ def run(
         total = 0
         for name in root:
             node = py3dtiles.tilers.node.DummyNode(pickle.loads(root[name]))
-            total += node_to_pnts(name, node, folder, write_rgb, write_classification)
+            total += node_to_pnts(name, node, folder, write_rgb, write_classification, write_intensity)
         yield total

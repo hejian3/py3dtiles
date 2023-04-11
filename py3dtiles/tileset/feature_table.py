@@ -356,7 +356,6 @@ class FeatureTableBody:
         category: SemanticCategory,
     ) -> npt.NDArray:
         check_semantic_type(semantic, category)
-
         semantic_array = array[
             offset : offset + SEMANTIC_ITEM_SIZE_MAP[semantic] * nb_points
         ].view(SEMANTIC_TYPE_MAP[semantic])

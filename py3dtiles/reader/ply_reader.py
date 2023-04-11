@@ -112,8 +112,8 @@ def run(
             )
         else:
             classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
-
-        yield coords, colors, classification
+        intensity = ply_vertices["intensity"]
+        yield coords, colors, classification, intensity
 
 
 def create_plydata_with_renamed_property(

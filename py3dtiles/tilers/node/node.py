@@ -55,6 +55,7 @@ class Node:
         "pending_xyz",
         "pending_rgb",
         "pending_classification",
+        "pending_intensity",
         "children",
         "grid",
         "points",
@@ -74,9 +75,10 @@ class Node:
         self.pending_xyz: list[npt.NDArray] = []
         self.pending_rgb: list[npt.NDArray] = []
         self.pending_classification: list[npt.NDArray] = []
+        self.pending_intensity: list[npt.NDArray] = []
         self.children: list[bytes] | None = None
         self.grid = Grid(self)
-        self.points: list[tuple[npt.NDArray, npt.NDArray, npt.NDArray]] = []
+        self.points: list[tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]] = []
         self.dirty = False
 
     def save_to_bytes(self) -> bytes:
@@ -103,6 +105,7 @@ class Node:
         xyz: npt.NDArray,
         rgb: npt.NDArray,
         classification: npt.NDArray,
+        intensity: npt.NDArray,
         make_empty_node: bool = False,
     ) -> None:
         if make_empty_node:
@@ -110,12 +113,13 @@ class Node:
             self.pending_xyz += [xyz]
             self.pending_rgb += [rgb]
             self.pending_classification += [classification]
+            self.pending_intensity += [intensity]
             return
 
         # fastpath
         if self.children is None:
-            self.points.append((xyz, rgb, classification))
-            count = sum([xyz.shape[0] for xyz, rgb, classification in self.points])
+            self.points.append((xyz, rgb, classification, intensity))
+            count = sum([xyz.shape[0] for xyz, rgb, classification, intensity in self.points])
             # stop subdividing if spacing is 1mm
             if count >= 20000 and self.spacing > 0.001 * scale:
                 self._split(scale)
@@ -128,8 +132,9 @@ class Node:
             remainder_xyz,
             remainder_rgb,
             remainder_classification,
+            remainder_intensity,
             needs_balance,
-        ) = self.grid.insert(self.aabb[0], self.inv_aabb_size, xyz, rgb, classification)
+        ) = self.grid.insert(self.aabb[0], self.inv_aabb_size, xyz, rgb, classification, intensity)
 
         if needs_balance:
             self.grid.balance(self.aabb_size, self.aabb[0], self.inv_aabb_size)
@@ -141,6 +146,7 @@ class Node:
             self.pending_xyz += [remainder_xyz]
             self.pending_rgb += [remainder_rgb]
             self.pending_classification += [remainder_classification]
+            self.pending_intensity +=[remainder_intensity]
 
     def needs_balance(self) -> bool:
         if self.children is not None:
@@ -148,27 +154,29 @@ class Node:
         return False
 
     def flush_pending_points(self, catalog: NodeCatalog, scale: float) -> None:
-        for name, xyz, rgb, classification in self._get_pending_points():
-            catalog.get_node(name).insert(scale, xyz, rgb, classification)
+        for name, xyz, rgb, classification, intensity in self._get_pending_points():
+            catalog.get_node(name).insert(scale, xyz, rgb, classification, intensity)
         self.pending_xyz = []
         self.pending_rgb = []
         self.pending_classification = []
+        self.pending_intensity = []
 
-    def dump_pending_points(self) -> list[tuple[bytes, bytes, int]]:
+    def dump_pending_points(self) -> list[tuple[bytes, bytes, int, int]]:
         result = [
             (
                 name,
                 pickle.dumps(
-                    {"xyz": xyz, "rgb": rgb, "classification": classification}
+                    {"xyz": xyz, "rgb": rgb, "classification": classification, "intensity": intensity}
                 ),
                 len(xyz),
             )
-            for name, xyz, rgb, classification in self._get_pending_points()
+            for name, xyz, rgb, classification, intensity in self._get_pending_points()
         ]
 
         self.pending_xyz = []
         self.pending_rgb = []
         self.pending_classification = []
+        self.pending_intensity = []
         return result
 
     def get_pending_points_count(self) -> int:
@@ -183,6 +191,7 @@ class Node:
         pending_xyz_arr = np.concatenate(self.pending_xyz)
         pending_rgb_arr = np.concatenate(self.pending_rgb)
         pending_classification_arr = np.concatenate(self.pending_classification)
+        pending_intensity_arr = np.concatenate(self.pending_intensity)
         t = aabb_size_to_subdivision_type(self.aabb_size)
         if t == SubdivisionType.QUADTREE:
             indices = xyz_to_child_index(
@@ -212,19 +221,19 @@ class Node:
             mask = np.where(indices - child == 0)
             xyz = pending_xyz_arr[mask]
             if len(xyz) > 0:
-                yield name, xyz, pending_rgb_arr[mask], pending_classification_arr[mask]
+                yield name, xyz, pending_rgb_arr[mask], pending_classification_arr[mask], pending_intensity_arr[mask]
 
     def _split(self, scale: float) -> None:
         self.children = []
-        for xyz, rgb, classification in self.points:
-            self.insert(scale, xyz, rgb, classification)
+        for xyz, rgb, classification, intensity in self.points:
+            self.insert(scale, xyz, rgb, classification, intensity)
         self.points = []
 
     def get_point_count(
         self, node_catalog: NodeCatalog, max_depth: int, depth: int = 0
     ) -> int:
         if self.children is None:
-            return sum([xyz.shape[0] for xyz, rgb, classification in self.points])
+            return sum([xyz.shape[0] for xyz, rgb, classification, intensity in self.points])
         else:
             count = self.grid.get_point_count()
             if depth < max_depth:
@@ -236,33 +245,40 @@ class Node:
 
     @staticmethod
     def get_points(
-        data: Node | DummyNode, include_rgb: bool, include_classification: bool
+        data: Node | DummyNode, include_rgb: bool, include_classification: bool, include_intensity: bool
     ) -> np.ndarray:  # todo remove staticmethod
         if data.children is None:
             points = data.points
             xyz = (
-                np.concatenate(tuple([xyz for xyz, rgb, classification in points]))
+                np.concatenate(tuple([xyz for xyz, rgb, classification, intensity in points]))
                 .view(np.uint8)
                 .ravel()
             )
 
             if include_rgb:
                 rgb = np.concatenate(
-                    tuple([rgb for xyz, rgb, classification in points])
+                    tuple([rgb for xyz, rgb, classification, intensity in points])
                 ).ravel()
             else:
                 rgb = np.array([], dtype=np.uint8)
 
             if include_classification:
                 classification = np.concatenate(
-                    tuple([classification for xyz, rgb, classification in points])
+                    tuple([classification for xyz, rgb, classification, intensity in points])
                 ).ravel()
             else:
                 classification = np.array([], dtype=np.uint8)
 
-            return np.concatenate((xyz, rgb, classification))
+            if include_intensity:
+                intensity = np.concatenate(
+                    tuple([intensity for xyz, rgb, classification, intensity in points])
+                ).ravel()
+            else:
+                intensity = np.array([], dtype=np.uint8)
+
+            return np.concatenate((xyz, rgb, classification, intensity))
         else:
-            return data.grid.get_points(include_rgb, include_classification)
+            return data.grid.get_points(include_rgb, include_classification, include_intensity)
 
     def get_child_names(self) -> Generator[bytes, None, None]:
         for number_child in range(8):
@@ -340,6 +356,13 @@ class Node:
             else:
                 parent_classification = np.array([], dtype=np.uint8)
 
+            if "Intensity" in parent_tile.body.batch_table.header.data:
+                parent_intensity =  (
+                    parent_tile.body.batch_table.get_binary_property("Intensity")
+                )
+            else:
+                parent_intensity = np.array([], dtype=np.uint8)
+
             parent_xyz_float = parent_xyz.reshape((parent_fth.points_length, 3))
             # update aabb based on real values
             parent_aabb = np.array(
@@ -368,6 +391,14 @@ class Node:
                     )
                 )
 
+            if "Intensity" in tile.body.batch_table.header.data:
+                parent_intensity =np.concatenate(
+                    (
+                        parent_intensity,
+                        tile.body.batch_table.get_binary_property("Intensity"),
+                    )
+                )
+
             # update aabb
             xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
 
@@ -382,11 +413,12 @@ class Node:
             points_to_pnts(
                 parent_node.name,
                 np.concatenate(
-                    (parent_xyz.view(np.uint8), parent_rgb, parent_classification)
+                    (parent_xyz.view(np.uint8), parent_rgb, parent_classification, parent_intensity)
                 ),
                 folder,
                 len(parent_rgb) != 0,
                 len(parent_classification) != 0,
+                len(parent_intensity) != 0,
             )
             pnts_path.unlink()
             prune = True

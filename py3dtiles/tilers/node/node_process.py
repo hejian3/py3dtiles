@@ -127,6 +127,7 @@ class NodeProcess:
                 data["xyz"],
                 data["rgb"],
                 data["classification"],
+                data["intensity"],
                 halt_at_depth == 0,
             )
 

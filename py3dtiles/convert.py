@@ -79,6 +79,7 @@ class Worker:
         write_rgb: bool,
         color_scale: Optional[float],
         write_classification: bool,
+        write_intensity: bool,
         verbosity: int,
         uri: str,
     ) -> None:
@@ -89,6 +90,7 @@ class Worker:
         self.write_rgb = write_rgb
         self.color_scale = color_scale
         self.write_classification = write_classification
+        self.write_intensity = write_intensity
         self.verbosity = verbosity
         self.uri = uri
 
@@ -188,13 +190,13 @@ class Worker:
             self.transformer,
             self.color_scale,
         )
-        for coords, colors, classification in reader_gen:
+        for coords, colors, classification, intensity in reader_gen:
             self.skt.send_multipart(
                 [
                     ResponseType.NEW_TASK.value,
                     b"",
                     pickle.dumps(
-                        {"xyz": coords, "rgb": colors, "classification": classification}
+                        {"xyz": coords, "rgb": colors, "classification": classification, "intensity": intensity}
                     ),
                     struct.pack(">I", len(coords)),
                 ],
@@ -205,7 +207,7 @@ class Worker:
 
     def execute_write_pnts(self, data, node_name):
         pnts_writer_gen = pnts_writer.run(
-            data, self.folder, self.write_rgb, self.write_classification
+            data, self.folder, self.write_rgb, self.write_classification, self.write_intensity
         )
         for total in pnts_writer_gen:
             self.skt.send_multipart(
@@ -494,6 +496,7 @@ class _Convert:
         benchmark: Optional[str] = None,
         rgb: bool = True,
         classification: bool = True,
+        intensity: bool = True,
         graph: bool = False,
         color_scale: Optional[float] = None,
         verbose: bool = False,
@@ -511,6 +514,7 @@ class _Convert:
         :param benchmark: Print summary at the end of the process
         :param rgb: Export rgb attributes.
         :param classification: Export classification attribute.
+        :param intensity: Export intensity attribute.
         :param graph: Produce debug graphs (requires pygal).
         :param color_scale: Scale the color with the specified amount. Useful to lighten or darken black pointclouds with only intensity.
 
@@ -522,6 +526,7 @@ class _Convert:
         self.cache_size = cache_size
         self.rgb = rgb
         self.classification = classification
+        self.intensity = intensity
 
         # allow str directly if only one input
         files = [files] if isinstance(files, (str, Path)) else files
@@ -576,6 +581,7 @@ class _Convert:
                 self.rgb,
                 self.color_scale,
                 self.classification,
+                self.intensity,
                 self.verbose,
             ),
         )
@@ -1012,16 +1018,25 @@ class _Convert:
                     ).reshape(-1, 1)
                 else:
                     classification = np.zeros((fth.points_length, 1), dtype=np.uint8)
+
+                if self.intensity:
+                    intensity = tile_content.body.batch_table.get_binary_property(
+                        "Intensity"
+                    ).reshape(-1, 1)
+                else:
+                    intensity = np.zeros((fth.points_length, 1), dtype=np.uint8)
+
                 root_node.grid.insert(
                     self.root_aabb[0].astype(np.float32),
                     inv_aabb_size,
                     xyz.copy(),
                     rgb,
                     classification,
+                    intensity
                 )
 
         pnts_writer.node_to_pnts(
-            b"", root_node, self.out_folder, self.rgb, self.classification
+            b"", root_node, self.out_folder, self.rgb, self.classification, self.intensity
         )
 
         pool_executor = concurrent.futures.ProcessPoolExecutor()
@@ -1226,6 +1241,9 @@ def init_parser(subparser):
         "--classification", help="Export classification attributes", action="store_true"
     )
     parser.add_argument(
+        "--intensity", help="Export intensity attributes", action="store_true"
+    )
+    parser.add_argument(
         "--graph", help="Produce debug graphes (requires pygal)", action="store_true"
     )
     parser.add_argument("--color_scale", help="Force color scale", type=float)
@@ -1253,6 +1271,7 @@ def main(args):
             benchmark=args.benchmark,
             rgb=not args.no_rgb,
             classification=args.classification,
+            intensity=args.intensity,
             graph=args.graph,
             color_scale=args.color_scale,
             verbose=args.verbose,
