@@ -1,7 +1,6 @@
 import argparse
 import concurrent.futures
 import json
-from multiprocessing import cpu_count, Process
 import os
 from pathlib import Path, PurePath
 import pickle
@@ -523,6 +522,10 @@ class _Convert:
 
         """
         self.jobs = jobs
+        if sys.platform == "win32":
+            # Work around https://bugs.python.org/issue45077
+            self.jobs = min(jobs, 61)
+        print(f'_Convert_.self.jobs={self.jobs}')
         self.cache_size = cache_size
         self.rgb = rgb
         self.classification = classification
@@ -1039,7 +1042,7 @@ class _Convert:
             b"", root_node, self.out_folder, self.rgb, self.classification, self.intensity
         )
 
-        pool_executor = concurrent.futures.ProcessPoolExecutor()
+        pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=16)
         root_tileset = node_from_name(
             b"", self.root_aabb, self.root_spacing
         ).to_tileset(self.out_folder, self.root_scale, None, 0, pool_executor)
